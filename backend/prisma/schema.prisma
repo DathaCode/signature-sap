@@ -1,0 +1,157 @@
+// Signature Shades Warehouse Management System
+// Database Schema for PostgreSQL with Prisma ORM
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+enum ControlSide {
+  LEFT
+  RIGHT
+}
+
+enum ChainOrMotor {
+  PLASTIC
+  STAINLESS_STEEL
+  AUTOMATE_1_1NM_LI_ION_QUIET
+  AUTOMATE_0_7NM_LI_ION_QUIET
+  AUTOMATE_2NM_LI_ION
+  AUTOMATE_3NM_LI_ION
+  ALPHA_1NM_BATTERY
+}
+
+enum InventoryCategory {
+  FABRIC
+  BOTTOM_BAR
+  MOTOR
+  CHAIN
+}
+
+enum TransactionType {
+  ADDITION
+  DEDUCTION
+  ADJUSTMENT
+}
+
+enum UnitType {
+  MM
+  UNITS
+}
+
+enum WorksheetType {
+  FABRIC_CUT
+  TUBE_CUT
+  BOTH
+}
+
+// ============================================================================
+// MODELS
+// ============================================================================
+
+model Order {
+  id                  String            @id @default(uuid()) @db.Uuid
+  customerName        String            @map("customer_name") @db.VarChar(255)
+  orderDate           DateTime          @default(now()) @map("order_date") @db.Timestamp(6)
+  uploadedFileName    String            @map("uploaded_file_name") @db.VarChar(500)
+  status              String            @default("pending") @db.VarChar(50) // pending, confirmed, cancelled
+  createdAt           DateTime          @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt           DateTime          @updatedAt @map("updated_at") @db.Timestamp(6)
+  
+  // Relations
+  worksheetItems      WorksheetItem[]
+  inventoryTransactions InventoryTransaction[]
+
+  @@map("orders")
+  @@index([orderDate])
+  @@index([status])
+}
+
+model WorksheetItem {
+  id                  String            @id @default(uuid()) @db.Uuid
+  orderId             String            @map("order_id") @db.Uuid
+  blindNumber         String            @map("blind_number") @db.VarChar(50)
+  location            String            @db.VarChar(255)
+  
+  // Original dimensions from Excel
+  originalWidthMm     Int               @map("original_width_mm")
+  originalDropMm      Int               @map("original_drop_mm")
+  
+  // Calculated dimensions (Width - 28mm, Drop + 150mm)
+  widthMm             Int               @map("width_mm")
+  dropMm              Int               @map("drop_mm")
+  
+  controlSide         ControlSide       @map("control_side")
+  controlColor        String            @map("control_color") @db.VarChar(100)
+  chainOrMotor        ChainOrMotor      @map("chain_or_motor")
+  rollType            String            @map("roll_type") @db.VarChar(100)
+  fabricType          String            @map("fabric_type") @db.VarChar(255)
+  fabricColor         String            @map("fabric_color") @db.VarChar(100)
+  bottomRailType      String            @map("bottom_rail_type") @db.VarChar(100)
+  bottomRailColor     String            @map("bottom_rail_color") @db.VarChar(100)
+  
+  // Duplicate detection
+  highlightFlag       Boolean           @default(false) @map("highlight_flag")
+  
+  worksheetType       WorksheetType     @default(BOTH) @map("worksheet_type")
+  
+  createdAt           DateTime          @default(now()) @map("created_at") @db.Timestamp(6)
+  
+  // Relations
+  order               Order             @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("worksheet_items")
+  @@index([orderId])
+  @@index([fabricType, fabricColor]) // For duplicate detection queries
+}
+
+model InventoryItem {
+  id                  String            @id @default(uuid()) @db.Uuid
+  category            InventoryCategory
+  itemName            String            @map("item_name") @db.VarChar(255)
+  colorVariant        String?           @map("color_variant") @db.VarChar(100)
+  quantity            Decimal           @db.Decimal(12, 2)
+  unitType            UnitType          @map("unit_type")
+  minStockAlert       Decimal?          @map("min_stock_alert") @db.Decimal(12, 2)
+  
+  createdAt           DateTime          @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt           DateTime          @updatedAt @map("updated_at") @db.Timestamp(6)
+  
+  // Relations
+  transactions        InventoryTransaction[]
+
+  @@unique([category, itemName, colorVariant], name: "unique_inventory_item")
+  @@map("inventory_items")
+  @@index([category])
+  @@index([quantity]) // For low stock queries
+}
+
+model InventoryTransaction {
+  id                  String            @id @default(uuid()) @db.Uuid
+  inventoryItemId     String            @map("inventory_item_id") @db.Uuid
+  orderId             String?           @map("order_id") @db.Uuid
+  transactionType     TransactionType   @map("transaction_type")
+  quantityChange      Decimal           @map("quantity_change") @db.Decimal(12, 2)
+  newBalance          Decimal           @map("new_balance") @db.Decimal(12, 2)
+  notes               String?           @db.Text
+  
+  createdAt           DateTime          @default(now()) @map("created_at") @db.Timestamp(6)
+  
+  // Relations
+  inventoryItem       InventoryItem     @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+  order               Order?            @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@map("inventory_transactions")
+  @@index([inventoryItemId])
+  @@index([orderId])
+  @@index([transactionType])
+  @@index([createdAt])
+}

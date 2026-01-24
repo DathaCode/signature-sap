@@ -1,0 +1,40 @@
+{
+  "name": "signature-sap",
+  "version": "1.0.0",
+  "description": "Signature Shades Warehouse Management System - Production-grade web application for blinds manufacturing operations",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "build": "npm run build:backend && npm run build:frontend",
+    "build:backend": "cd backend && npm run build",
+    "build:frontend": "cd frontend && npm run build",
+    "prisma:studio": "cd backend && npm run prisma:studio",
+    "seed": "cd backend && npm run seed"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DathaCode/signature-sap.git"
+  },
+  "keywords": [
+    "warehouse",
+    "inventory",
+    "manufacturing",
+    "blinds",
+    "erp"
+  ],
+  "author": "Vidath",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/DathaCode/signature-sap/issues"
+  },
+  "homepage": "https://github.com/DathaCode/signature-sap#readme",
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

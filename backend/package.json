@@ -1,0 +1,54 @@
+{
+    "name": "signature-sap-backend",
+    "version": "1.0.0",
+    "description": "Backend API for Signature Shades Warehouse Management System",
+    "main": "dist/server.js",
+    "scripts": {
+        "dev": "tsx watch src/server.ts",
+        "build": "tsc",
+        "start": "node dist/server.js",
+        "prisma:generate": "prisma generate",
+        "prisma:migrate": "prisma migrate dev",
+        "prisma:push": "prisma db push",
+        "prisma:studio": "prisma studio",
+        "seed": "tsx prisma/seed.ts",
+        "lint": "eslint src/**/*.ts",
+        "test": "jest"
+    },
+    "keywords": [
+        "warehouse",
+        "inventory",
+        "blinds",
+        "manufacturing"
+    ],
+    "author": "Vidath",
+    "license": "ISC",
+    "dependencies": {
+        "@prisma/client": "^5.22.0",
+        "cors": "^2.8.5",
+        "dotenv": "^16.4.5",
+        "express": "^4.21.2",
+        "express-validator": "^7.2.1",
+        "helmet": "^8.0.0",
+        "jspdf": "^2.5.2",
+        "jspdf-autotable": "^3.8.4",
+        "multer": "^1.4.5-lts.1",
+        "papaparse": "^5.4.1",
+        "winston": "^3.17.0",
+        "xlsx": "^0.18.5",
+        "zod": "^3.24.1"
+    },
+    "devDependencies": {
+        "@types/cors": "^2.8.17",
+        "@types/express": "^5.0.0",
+        "@types/multer": "^1.4.12",
+        "@types/node": "^22.10.5",
+        "@types/papaparse": "^5.3.15",
+        "@typescript-eslint/eslint-plugin": "^8.19.1",
+        "@typescript-eslint/parser": "^8.19.1",
+        "eslint": "^9.18.0",
+        "prisma": "^5.22.0",
+        "tsx": "^4.19.2",
+        "typescript": "^5.7.3"
+    }
+}
