@@ -1,0 +1,78 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: signatureshades-db-local
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: signatureshades_dev
+      POSTGRES_PASSWORD: dev_password_123
+      POSTGRES_DB: signatureshades_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data_local:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U signatureshades_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - signatureshades-network
+
+  # Backend API (Development mode with hot-reload)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: development
+    container_name: signatureshades-api-local
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://signatureshades_dev:dev_password_123@postgres:5432/signatureshades_dev
+      PORT: 5000
+      CORS_ORIGIN: http://localhost:3000
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+      - ./backend/uploads:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - signatureshades-network
+    command: npm run dev
+
+  # Frontend (Development mode with hot-reload)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: development
+    container_name: signatureshades-web-local
+    restart: unless-stopped
+    environment:
+      VITE_API_URL: http://localhost:5000/api
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - signatureshades-network
+    command: npm run dev -- --host
+
+volumes:
+  postgres_data_local:
+    driver: local
+
+networks:
+  signatureshades-network:
+    driver: bridge

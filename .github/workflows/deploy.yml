@@ -1,0 +1,35 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Deploy to Oracle Cloud
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.ORACLE_VM_IP }}
+          username: ${{ secrets.ORACLE_VM_USER }}
+          key: ${{ secrets.ORACLE_SSH_KEY }}
+          script: |
+            cd ~/signatureshades
+            git pull origin main
+            chmod +x deploy.sh
+            ./deploy.sh
+
+      - name: Deployment Status
+        if: success()
+        run: echo "✅ Deployment completed successfully"
+
+      - name: Deployment Failed
+        if: failure()
+        run: echo "❌ Deployment failed - check logs"
