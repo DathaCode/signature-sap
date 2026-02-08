@@ -1,25 +1,13 @@
-import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient();
+// Fabric data from JSON (excluding G4 and G5)
+export const FABRIC_DATA = {
+    "Gracetech": { "Platinum P05": { "group": "G1", "colors": ["2001 White", "2002 White Beige", "2003 White Grey", "2004 Beige", "2005 Beige Grey", "2006 Grey", "2007 Black Grey", "2009 Black", "2050 White Pearl", "2066 Super White", "2067 Charcoal Grey", "2079 Charcoal", "2080 caramel", "2081 Casper", "2082 Fudge", "2083 Hammer", "2084 Cloud Grey", "2098A Black Copper"] }, "Platinum P10": { "group": "G1", "colors": ["2001 White", "2002 White Beige", "2003 White Grey", "2004 Beige", "2005 Beige Grey", "2006 Grey", "2007 Black Grey", "2009 Black", "2050 White Pearl", "2066 Super White", "2067 Charcoal Grey", "2079 Charcoal", "2080 caramel", "2081 Casper", "2082 Fudge", "2083 Hammer", "2084 Cloud Grey", "2098A Black Copper"] } },
+    "Textstyle": { "Balmoral Blockout": { "group": "G3", "colors": ["Armour", "Birch", "Bourneville", "Chrome", "Concrete", "Dove", "Jet", "Pearl", "Platinum", "Putty", "Pyrite", "Steel", "White"] }, "Balmoral Light Filtering": { "group": "G3", "colors": ["Armour", "Birch", "Bourneville", "Chrome", "Concrete", "Dove", "Jet", "Pearl", "Platinum", "Putty", "Pyrite", "Steel", "White"] }, "Cascata": { "group": "G2", "colors": ["Ardesia", "Avorio", "Baltico", "Corvo", "Grigio", "Mercurio", "Neve", "Nuvola", "Pepe"] }, "Focus": { "group": "G1", "colors": ["Alabaster", "Almond", "Ash", "Bay", "Beechwood", "Carbon", "Chalk", "Cloud", "Coal", "Cotton", "Dove", "Drift", "Duck Egg", "Ebony", "Espresso", "Eucalypt", "Feather", "Fig", "Jarrah", "Latte", "Linen", "Magnetic", "Mist", "Oyster", "Polar", "Powder", "Putty", "Sandstone", "Shell", "Smoke", "Stone", "Tempest", "White"] }, "Jersey Blockout": { "group": "G3", "colors": ["Ashen", "Basalt", "Cinder", "Ember", "Lace", "Mink", "Opal", "Render", "Sable", "Willow"] }, "Jersey Light Filtering": { "group": "G3", "colors": ["Ashen", "Basalt", "Cinder", "Ember", "Lace", "Mink", "Opal", "Render", "Sable", "Willow"] }, "Kleenscreen": { "group": "G2", "colors": ["Alloy", "Barley", "Black", "Black Pearl", "Charcoal", "Graphite", "Ivory", "Pewter", "Pumice", "Pure White", "Shale"] }, "Kleenscreen Blockout": { "group": "G2", "colors": ["Alloy", "Barley", "Black", "Black Pearl", "Charcoal", "Ice", "Pewter", "Pumice"] }, "Metroshade Blockout": { "group": "G3", "colors": ["Black", "Dove/White", "Ecru", "Ice Grey", "Moonstone", "Nougat", "Pebble", "Quill", "Seal", "Slate", "Storm", "Whitewash"] }, "Metroshade Light Filtering": { "group": "G3", "colors": ["Dove/White", "Ecru", "Ice Grey", "Moonstone", "Nougat", "Quill"] }, "One Screen": { "group": "G2", "colors": ["Black", "Charcoal", "Dune", "Grey", "Gunmetal", "Ice", "Linen/Bronze", "Mercury", "Sand", "Silver/Black", "Wallaby", "White"] }, "Sanctuary Blockout": { "group": "G2", "colors": ["Baltic", "Ceramic", "Fossil", "Lava", "Limestone", "Marble", "Mineral", "Plaster", "Slate", "Suede", "Truffle"] }, "Sanctuary Light Filtering": { "group": "G2", "colors": ["Baltic", "Ceramic", "Fossil", "Lava", "Limestone", "Marble", "Mineral", "Plaster", "Slate", "Suede", "Truffle"] } },
+    "Uniline": { "Dawn": { "group": "G1", "colors": ["Alabaster", "Arum", "Ash Blue", "Beige", "Bison", "BK RB08", "Buttercream", "Cameo", "Champagne", "Cloud", "Coastline", "Cocoa", "Cosmos", "Dusty Rose", "Haze", "Lagoon", "Latte", "Natural", "Parchment", "Pebble", "RawHide", "Sepia", "Shale", "Tan", "Thunder Cloud", "White"] }, "Sunset": { "group": "G1", "colors": ["Antique", "Ash Grey", "Bark", "Beaver", "Bone", "Cashew", "Ecru", "Flax", "Lace", "Lava", "Mushroom", "Natural", "Onyx", "parchment", "Pepper", "Sahara", "Seal", "Silver", "Snow", "Stone", "Taupe", "Vanila", "Warm Grey"] }, "Tapestry Blockout": { "group": "G2", "colors": ["Buff", "Cloud", "Concrete", "Dove", "Gunmetal", "Portland", "Seagull", "Tuxedo", "White Wash"] }, "Tapestry Light Filtering": { "group": "G2", "colors": ["Buff", "Cloud", "Concrete", "Dove", "Gunmetal", "Portland", "Seagull", "Tuxedo", "White Wash"] } },
+    "Vertex": { "Iguzu": { "group": "G2", "colors": ["1901", "1902", "1903", "1904", "1905", "1906"] }, "Vale Blockout": { "group": "G2", "colors": ["Apricote", "Arctic", "Cobalt", "Dove", "Graphite", "Greige", "Hazel", "Misty", "Pale Gray", "Vanilla", "White"] }, "Vale Light Filtering": { "group": "G2", "colors": ["Apricote", "Arctic", "Cobalt", "Dove", "Graphite", "Greige", "Hazel", "Misty", "Pale Gray", "Vanilla", "White"] }, "Vegan Block Out": { "group": "G2", "colors": ["Clover", "Jasmine", "Tansy", "Tulip", "Willow"] }, "Vegas Blockout": { "group": "G2", "colors": ["Boulder", "Bunflow", "Caring Tan", "Cotton", "Darkwood", "Sand Dan"] }, "Vegas Light Filtering": { "group": "G2", "colors": ["Boulder", "Bunflow", "Caring Tan", "Cotton", "Darkwood", "Sand Dan"] }, "Velvet Block Out": { "group": "G2", "colors": ["Blush", "Chalk", "Mist", "Shell", "Whisper"] }, "Venus Block Out": { "group": "G2", "colors": ["Dove", "Ebony", "Granite", "Linen", "Pearl", "Snow", "Stone"] }, "Venus Light Filtering": { "group": "G2", "colors": ["Linen", "Pearl", "Snow"] }, "Verdure Block Out": { "group": "G2", "colors": ["Charcoal", "Cystal", "Ecru", "Flint", "Fog", "Midnight", "Mist", "Onyx", "Pebble", "Rainforest", "Silver", "Tan"] }, "Verdure Light Filter": { "group": "G2", "colors": ["Charcoal", "Crystal", "Ecru", "Flint", "Fog", "Mist", "Onyx", "Pebble", "Rainforest", "Silver", "Tan"] }, "Vermont Block Out": { "group": "G2", "colors": ["Alabaster", "Anchor", "Denim", "Fog", "Fossil", "Onyx", "Pewter", "White"] }, "Verne Blockout": { "group": "G2", "colors": ["Abalone", "Achor", "River", "Smoke", "Steel", "White"] }, "Verne Light Filtering": { "group": "G2", "colors": ["Abalone", "Achor", "River", "Smoke", "Steel", "White"] }, "Verona Block Out": { "group": "G2", "colors": ["Beige", "Black", "Gold", "Grey", "Off White", "White"] }, "Verona Plus Block Out": { "group": "G2", "colors": ["Beige", "Black", "Gold", "Grey", "Off White", "White"] }, "Versatile Block Out": { "group": "G1", "colors": ["Alloy", "Alloy RB08", "Bark", "Bark RB08", "Chrome", "Chrome RB08", "Cloud", "Cloud RB08", "Coal", "Coal RB08", "Coffon", "Coffon RB08", "Dusk", "Dusk RB08", "Ebony", "Ebony RB08", "Gardenia", "Gardenia RB08", "Gravel", "Gravel RB08", "Ice", "Ice RB08", "Lava", "Lava RB08", "Leather", "Leather RB08", "Luna", "Luna RB08", "Mocha", "Mocha RB08", "Natural", "Natural RB08", "Oyster", "Oyster RB08", "Peach", "Peach RB08", "Pine", "Pine RB08", "Seal", "Seal RB08", "Stone", "Stone RB08", "Taupe", "Taupe RB08", "Thunder", "Thunder RB08", "Wheat", "Wheat RB08"] }, "Victoria Block Out": { "group": "G2", "colors": ["Chrome", "Crema", "Eucalyptus", "Grey", "Leather", "Mont Blanc", "Natural", "Pure Black", "Putty", "Snow White", "Steel"] }, "Vintage Block Out": { "group": "G2", "colors": ["Almond", "Blush", "Chalk", "Cloud", "Espresso", "Jarrah", "Oyster"] }, "Vintage Light Filtering": { "group": "G2", "colors": ["Almond", "Blush", "Chalk", "Cloud", "Espresso", "Jarrah", "Oyster"] }, "Vision": { "group": "G2", "colors": ["Beige", "Beige RB08", "Black", "Black RB08", "Charcoal", "Copper", "Dark Pearl", "Grey", "Grey RB08", "Ice", "Ice RB08", "Light Grey", "Sand", "White", "White RB08"] }, "Vista Block Out": { "group": "G2", "colors": ["Ash", "Bone", "Daisy", "Ivory", "Lace", "Silver", "Slate", "Smoke", "Storm"] }, "Vista Light Filter": { "group": "G2", "colors": ["Ash", "Bone", "Daisy", "Ivory", "Lace", "Silver", "Slate", "Smoke", "Storm"] }, "Vital Block Out": { "group": "G2", "colors": ["Atlantic Salt", "Fog White", "Jet Black", "Ocean Foam", "Sandstone", "Slate Grey"] }, "Vital Light Filter": { "group": "G2", "colors": ["Atlantic Salt", "Fog White", "Jet Black", "Ocean Foam", "Sandstone", "Slate Grey"] }, "Voltas Blockout": { "group": "G2", "colors": ["Beige", "Cream", "Mink", "Silver Grey", "Stone", "White"] }, "Voltas Light Filtering": { "group": "G2", "colors": ["Beige", "Cream", "Mink", "Silver Grey", "Stone", "White"] } }
+};
 
-/**
- * Pricing Matrix Seed Script
- * Seeds the ACTUAL pricing data that matches frontend/src/utils/pricing.ts
- *
- * Fabric Groups & Discounts:
- * - Group 1 (G1): 20% discount — Gracetech Platinum, Textstyle Focus, Uniline Dawn/Sunset, Vertex Versatile
- * - Group 2 (G2): 25% discount — Textstyle Cascata/Kleenscreen/Sanctuary/One Screen, Uniline Tapestry, most Vertex
- * - Group 3 (G3): 30% discount — Textstyle Balmoral/Jersey/Metroshade
- * - Group 4 (G4): 0% discount — Luxury tier
- * - Group 5 (G5): 0% discount — Designer tier
- *
- * Dimensions:
- * - Widths: 600, 800, 1000, 1200, 1400, 1600, 1800, 2000, 2200, 2400, 2600, 2800, 3000 (mm)
- * - Drops:  1200, 1400, 1600, 1800, 2000, 2200, 2400, 2600, 2800, 3000 (mm)
- */
-
-// Actual pricing data — must match frontend/src/utils/pricing.ts exactly
-const PRICING_DATA: Record<number, Record<number, Record<number, number>>> = {
+export const PRICING_DATA: Record<number, Record<number, Record<number, number>>> = {
     1: {
         600: { 1200: 56.16, 1400: 58.24, 1600: 60.32, 1800: 62.4, 2000: 65.52, 2200: 68.64, 2400: 70.72, 2600: 72.8, 2800: 74.88, 3000: 78 },
         800: { 1200: 60.32, 1400: 62.4, 1600: 65.52, 1800: 68.64, 2000: 70.72, 2200: 72.8, 2400: 75.92, 2600: 79.04, 2800: 81.12, 3000: 83.2 },
@@ -97,70 +85,59 @@ const PRICING_DATA: Record<number, Record<number, Record<number, number>>> = {
     }
 };
 
-async function main() {
-    console.log('Seeding Pricing Matrix with ACTUAL pricing data...');
+export function getPrice(width: number, drop: number, group: number): number | null {
+    if (!PRICING_DATA[group]) return null;
 
-    let count = 0;
+    // Get available widths and drops
+    const widths = Object.keys(PRICING_DATA[group]).map(Number).sort((a, b) => a - b);
+    const drops = Object.keys(PRICING_DATA[group][widths[0]]).map(Number).sort((a, b) => a - b);
 
-    for (const [groupStr, widths] of Object.entries(PRICING_DATA)) {
-        const fabricGroup = parseInt(groupStr);
-        console.log(`\nProcessing Fabric Group ${fabricGroup}...`);
+    // Find closest width by rounding to nearest (round up if exactly in middle)
+    let closestWidth = widths[0];
+    let minWidthDiff = Math.abs(width - widths[0]);
 
-        for (const [widthStr, drops] of Object.entries(widths)) {
-            const width = parseInt(widthStr);
-
-            for (const [dropStr, price] of Object.entries(drops)) {
-                const drop = parseInt(dropStr);
-
-                await prisma.pricingMatrix.upsert({
-                    where: {
-                        fabricGroup_width_drop: { fabricGroup, width, drop }
-                    },
-                    update: {
-                        price,
-                        updatedBy: 'seed-actual-pricing'
-                    },
-                    create: {
-                        fabricGroup,
-                        width,
-                        drop,
-                        price,
-                        updatedBy: 'seed-actual-pricing'
-                    }
-                });
-
-                count++;
-            }
+    for (let w of widths) {
+        const diff = Math.abs(width - w);
+        if (diff < minWidthDiff || (diff === minWidthDiff && w > closestWidth)) {
+            minWidthDiff = diff;
+            closestWidth = w;
         }
-
-        console.log(`  Group ${fabricGroup} complete`);
     }
 
-    console.log(`\nPricing matrix seeded: ${count} entries`);
+    // Find closest drop by rounding to nearest (round up if exactly in middle)
+    let closestDrop = drops[0];
+    let minDropDiff = Math.abs(drop - drops[0]);
 
-    // Verification samples
-    const samples = [
-        { g: 1, w: 1600, d: 2200, expected: 100.80 },
-        { g: 2, w: 1000, d: 1800, expected: 79.04 },
-        { g: 3, w: 2000, d: 3000, expected: 113.40 },
-    ];
-
-    console.log('\nVerification:');
-    for (const s of samples) {
-        const row = await prisma.pricingMatrix.findUnique({
-            where: { fabricGroup_width_drop: { fabricGroup: s.g, width: s.w, drop: s.d } }
-        });
-        const actual = row ? parseFloat(row.price.toString()) : 0;
-        const match = actual === s.expected ? 'PASS' : `FAIL (got ${actual})`;
-        console.log(`  G${s.g} ${s.w}x${s.d}: expected $${s.expected}, ${match}`);
+    for (let d of drops) {
+        const diff = Math.abs(drop - d);
+        if (diff < minDropDiff || (diff === minDropDiff && d > closestDrop)) {
+            minDropDiff = diff;
+            closestDrop = d;
+        }
     }
+
+    return PRICING_DATA[group][closestWidth][closestDrop];
 }
 
-main()
-    .catch((e) => {
-        console.error('Error seeding pricing matrix:', e);
-        process.exit(1);
-    })
-    .finally(async () => {
-        await prisma.$disconnect();
-    });
+export function calculateBlindPrice(
+    width: number,
+    drop: number,
+    discountPercent: number = 0, // renamed to clarify inputs
+    fabricGroup: number
+): { price: number; originalPrice: number } | null {
+    if (!width || !drop || !fabricGroup) return null;
+
+    const basePrice = getPrice(width, drop, fabricGroup);
+
+    if (basePrice === null) return null;
+
+    let finalPrice = basePrice;
+    if (discountPercent > 0) {
+        finalPrice = basePrice * (1 - discountPercent / 100);
+    }
+
+    return {
+        price: Number(finalPrice.toFixed(2)),
+        originalPrice: basePrice
+    };
+}

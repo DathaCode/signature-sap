@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(docker compose:*)",
+      "Bash(docker volume ls:*)",
+      "Bash(timeout 10 bash:*)",
+      "Bash(docker exec:*)",
+      "Bash(docker restart:*)"
+    ]
+  }
+}

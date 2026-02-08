@@ -1,6 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import Layout from './components/Layout'
-import OrderUpload from './pages/OrderUpload'
 import WorksheetPreview from './pages/WorksheetPreview'
 import InventoryDashboard from './pages/InventoryDashboard'
 import LoginPage from './pages/auth/Login'

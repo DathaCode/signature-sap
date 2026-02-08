@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { PrismaClient, OrderStatus } from '@prisma/client';
 import { AuthRequest } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
-import logger from '../config/logger';
+import { logger } from '../config/logger';
 import { z } from 'zod';
 import pricingService from '../services/pricing.service';
 

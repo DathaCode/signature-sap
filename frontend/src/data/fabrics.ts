@@ -1,60 +1,29 @@
-import FABRICS_DATA from './fabrics.json';
+import { FABRIC_DATA } from '../utils/pricing';
 
-// Type definitions
-export interface FabricColors {
-    group: string; // G1, G2, G3, G4, G5
-    colors: string[];
-}
+// Helper type to match the structure in pricing.ts
+type FabricDataStructure = Record<string, Record<string, { group: string; colors: string[] }>>;
+// Cast to the type to allow safe access
+const data = FABRIC_DATA as unknown as FabricDataStructure;
 
-export interface FabricTypeColors {
-    [fabricType: string]: FabricColors;
-}
+export const getMaterials = (): string[] => Object.keys(data);
 
-export interface FabricsData {
-    [material: string]: FabricTypeColors;
-}
+export const getFabricTypes = (material: string): string[] => {
+    return data[material] ? Object.keys(data[material]) : [];
+};
 
-// Type-safe fabric data
-export const FABRICS = FABRICS_DATA as FabricsData;
+export const getFabricColors = (material: string, type: string): string[] => {
+    return (data[material] && data[material][type])
+        ? data[material][type].colors
+        : [];
+};
 
-/**
- * Get all material brands
- */
-export function getMaterials(): string[] {
-    return Object.keys(FABRICS);
-}
-
-/**
- * Get all fabric types for a given material
- */
-export function getFabricTypes(material: string): string[] {
-    if (!FABRICS[material]) {
-        return [];
-    }
-    return Object.keys(FABRICS[material]);
-}
-
-/**
- * Get all colors for a given material and fabric type
- */
-export function getFabricColors(material: string, fabricType: string): string[] {
-    if (!FABRICS[material] || !FABRICS[material][fabricType]) {
-        return [];
-    }
-    return FABRICS[material][fabricType].colors;
-}
-
-/**
- * Get fabric group (G1-G5) for a given material and fabric type
- * Returns numeric group (1-5) or null if not found
- */
-export function getFabricGroup(material: string, fabricType: string): number | null {
-    if (!FABRICS[material] || !FABRICS[material][fabricType]) {
+export const getFabricGroup = (material: string, type: string): number | null => {
+    if (!data[material] || !data[material][type]) {
         return null;
     }
 
-    const groupString = FABRICS[material][fabricType].group; // e.g., "G1"
-    const groupNumber = parseInt(groupString.substring(1)); // Remove "G" and parse number
+    const groupString = data[material][type].group;
+    const groupMapping: { [key: string]: number } = { 'G1': 1, 'G2': 2, 'G3': 3, 'G4': 4, 'G5': 5 };
 
-    return groupNumber >= 1 && groupNumber <= 5 ? groupNumber : null;
-}
+    return groupMapping[groupString] || null;
+};

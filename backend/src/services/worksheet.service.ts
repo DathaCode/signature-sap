@@ -50,9 +50,9 @@ export class WorksheetService {
                 chainOrMotor: (item.chainOrMotor || '-').replace(/_/g, ' '),
                 rollType: item.roll || '-',
                 fabricType: item.fabricType || '-',
-                fabricColor: item.fabricColor || '-',
+                fabricColor: item.fabricColour || '-',
                 bottomRailType: item.bottomRailType || '-',
-                bottomRailColor: item.bottomRailColor || '-',
+                bottomRailColor: item.bottomRailColour || '-',
                 highlightFlag: item.isDuplicate,
             })),
         };
@@ -92,7 +92,7 @@ export class WorksheetService {
                 location: item.location,
                 widthMm: item.calculatedWidth || item.width,
                 bottomRailType: item.bottomRailType || '-',
-                bottomRailColor: item.bottomRailColor || '-',
+                bottomRailColor: item.bottomRailColour || '-',
                 highlightFlag: item.isDuplicate,
             })),
         };

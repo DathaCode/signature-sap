@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
-import { Package, Upload, ChevronRight } from 'lucide-react'
+import { Package, ChevronRight } from 'lucide-react'
 
 interface LayoutProps {
     children: React.ReactNode
@@ -34,6 +34,7 @@ export default function Layout({ children }: LayoutProps) {
 
                             <Link
                                 to="/inventory"
+
                                 className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${isActive('/inventory')
                                     ? 'bg-brand-gold text-white'
                                     : 'text-white hover:bg-brand-navy-light'

@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { getFabricGroup } from '../data/fabrics';
 import { AppError } from '../middleware/errorHandler';
-import logger from '../config/logger';
+import { logger } from '../config/logger';
 
 const prisma = new PrismaClient();
 

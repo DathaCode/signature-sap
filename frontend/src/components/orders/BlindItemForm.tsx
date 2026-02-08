@@ -9,8 +9,7 @@ import { Badge } from '../ui/Badge';
 import { getMaterials, getFabricTypes, getFabricColors } from '../../data/fabrics';
 import { Trash2 } from 'lucide-react';
 import { useDebounce } from '../../hooks/useDebounce';
-import { pricingApi } from '../../services/api';
-import toast from 'react-hot-toast';
+
 
 interface BlindItemFormProps {
     index: number;
@@ -45,23 +44,46 @@ export function BlindItemForm({ index, onRemove, canRemove }: BlindItemFormProps
 
     // Calculate Price
     useEffect(() => {
-        const calculate = async () => {
+        const calculate = () => {
             if (material && fabricType && debouncedWidth > 0 && debouncedDrop > 0) {
-                try {
-                    const result = await pricingApi.calculatePrice({
-                        material,
-                        fabricType,
-                        width: Number(debouncedWidth),
-                        drop: Number(debouncedDrop)
-                    });
+                // Get fabric group first
+                import('../../data/fabrics').then(({ getFabricGroup }) => {
+                    const group = getFabricGroup(material, fabricType);
 
-                    setValue(`items.${index}.price`, result.price);
-                    setValue(`items.${index}.fabricGroup`, result.fabricGroup);
-                    setValue(`items.${index}.discountPercent`, result.discountPercent);
-                } catch (error) {
-                    console.error('Pricing error:', error);
-                    toast.error('Could not calculate price');
-                }
+                    if (group) {
+                        import('../../utils/pricing').then(({ calculateBlindPrice }) => {
+                            const result = calculateBlindPrice(
+                                Number(debouncedWidth),
+                                Number(debouncedDrop),
+                                0, // Default discount (can be updated based on logic if needed)
+                                group
+                            );
+
+                            if (result) {
+                                setValue(`items.${index}.price`, result.price);
+                                setValue(`items.${index}.fabricGroup`, group);
+                                // Set default discount based on group if needed, matching the HTML logic
+                                // The HTML has: G1=20%, G2=25%, G3=30%
+                                const defaultDiscounts: Record<number, number> = { 1: 20, 2: 25, 3: 30 };
+                                const itemsDiscount = defaultDiscounts[group] || 0;
+                                setValue(`items.${index}.discountPercent`, itemsDiscount);
+
+                                // Recalculate with discount
+                                const discountedResult = calculateBlindPrice(
+                                    Number(debouncedWidth),
+                                    Number(debouncedDrop),
+                                    itemsDiscount,
+                                    group
+                                );
+                                if (discountedResult) {
+                                    setValue(`items.${index}.price`, discountedResult.price);
+                                }
+                            } else {
+                                setValue(`items.${index}.price`, 0);
+                            }
+                        });
+                    }
+                });
             }
         };
 

@@ -37,31 +37,8 @@ api.interceptors.response.use(
     }
 )
 
+// Order Management requests
 export const orderApi = {
-    /**
-     * Upload Excel order file
-     */
-    uploadOrder: async (file: File, customerName: string): Promise<UploadResponse> => {
-        const formData = new FormData()
-        formData.append('file', file)
-        formData.append('customerName', customerName)
-
-        const response = await api.post<UploadResponse>('/orders/upload', formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data',
-            },
-        })
-        return response.data
-    },
-
-    /**
-     * Confirm order and deduct inventory
-     */
-    confirmOrder: async (orderId: string): Promise<{ status: string; message: string }> => {
-        const response = await api.post(`/orders/${orderId}/confirm`)
-        return response.data
-    },
-
     /**
      * Get worksheets for an order
      */
@@ -85,6 +62,7 @@ export const orderApi = {
         return response.data
     },
 }
+
 
 export const inventoryApi = {
     /**
