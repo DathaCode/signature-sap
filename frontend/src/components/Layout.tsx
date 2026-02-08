@@ -31,22 +31,12 @@ export default function Layout({ children }: LayoutProps) {
 
                         {/* Navigation */}
                         <nav className="flex items-center space-x-1">
-                            <Link
-                                to="/orders/upload"
-                                className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${isActive('/orders')
-                                        ? 'bg-brand-gold text-white'
-                                        : 'text-white hover:bg-brand-navy-light'
-                                    }`}
-                            >
-                                <Upload className="h-5 w-5" />
-                                <span className="hidden sm:inline">Orders</span>
-                            </Link>
 
                             <Link
                                 to="/inventory"
                                 className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${isActive('/inventory')
-                                        ? 'bg-brand-gold text-white'
-                                        : 'text-white hover:bg-brand-navy-light'
+                                    ? 'bg-brand-gold text-white'
+                                    : 'text-white hover:bg-brand-navy-light'
                                     }`}
                             >
                                 <Package className="h-5 w-5" />

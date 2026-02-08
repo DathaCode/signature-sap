@@ -54,26 +54,109 @@ enum WorksheetType {
   BOTH
 }
 
+enum UserRole {
+  CUSTOMER
+  ADMIN
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PRODUCTION
+  COMPLETED
+  CANCELLED
+}
+
+enum ProductType {
+  BLINDS
+  CURTAINS
+  SHUTTERS
+}
+
+enum FileSource {
+  WEB_FORM
+  EXCEL_UPLOAD
+}
+
 // ============================================================================
 // MODELS
 // ============================================================================
 
+model User {
+  id         String      @id @default(uuid()) @db.Uuid
+  name       String      @db.VarChar(255)
+  email      String      @unique @db.VarChar(255)
+  password   String      @db.VarChar(255) // bcrypt hashed
+  phone      String      @db.VarChar(50)
+  company    String?     @db.VarChar(255)
+  address    String      @db.Text
+  role       UserRole    @default(CUSTOMER)
+  isActive   Boolean     @default(true) @map("is_active")
+  createdAt  DateTime    @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt  DateTime    @updatedAt @map("updated_at") @db.Timestamp(6)
+  
+  // Relations
+  orders     Order[]     @relation("UserOrders")
+  quotes     Quote[]     @relation("UserQuotes")
+  
+  @@map("users")
+  @@index([email])
+  @@index([role])
+}
+
 model Order {
   id                  String            @id @default(uuid()) @db.Uuid
-  customerName        String            @map("customer_name") @db.VarChar(255)
+  orderNumber         String            @unique @map("order_number") @db.VarChar(50) // SS-YYMMDD-XXXX
+  
+  // User relationship (optional for backward compatibility with Excel uploads)
+  userId              String?           @map("user_id") @db.Uuid
+  user                User?             @relation("UserOrders", fields: [userId], references: [id], onDelete: SetNull)
+  
+  // Order details
+  productType         ProductType       @default(BLINDS) @map("product_type")
   orderDate           DateTime          @default(now()) @map("order_date") @db.Timestamp(6)
-  uploadedFileName    String            @map("uploaded_file_name") @db.VarChar(500)
-  status              String            @default("pending") @db.VarChar(50) // pending, confirmed, cancelled
+  dateRequired        DateTime?         @map("date_required") @db.Timestamp(6)
+  
+  // Customer info (denormalized for backward compatibility and reporting)
+  customerName        String            @map("customer_name") @db.VarChar(255)
+  customerEmail       String?           @map("customer_email") @db.VarChar(255)
+  customerPhone       String?           @map("customer_phone") @db.VarChar(50)
+  customerCompany     String?           @map("customer_company") @db.VarChar(255)
+  
+  // Status workflow
+  status              OrderStatus       @default(PENDING)
+  
+  // Pricing
+  subtotal            Decimal           @default(0) @db.Decimal(10, 2)
+  discount            Decimal           @default(0) @db.Decimal(5, 2)
+  total               Decimal           @default(0) @db.Decimal(10, 2)
+  
+  // Notes
+  notes               String?           @db.Text
+  adminNotes          String?           @map("admin_notes") @db.Text
+  
+  // Approval tracking
+  confirmedAt         DateTime?         @map("confirmed_at") @db.Timestamp(6)
+  confirmedBy         String?           @map("confirmed_by") @db.VarChar(255)
+  
+  // Backward compatibility with Excel upload
+  uploadedFileName    String?           @map("uploaded_file_name") @db.VarChar(500)
+  fileSource          FileSource        @default(WEB_FORM) @map("file_source")
+  
   createdAt           DateTime          @default(now()) @map("created_at") @db.Timestamp(6)
   updatedAt           DateTime          @updatedAt @map("updated_at") @db.Timestamp(6)
   
   // Relations
+  items               OrderItem[]
   worksheetItems      WorksheetItem[]
   inventoryTransactions InventoryTransaction[]
 
   @@map("orders")
+  @@index([userId])
   @@index([orderDate])
   @@index([status])
+  @@index([orderNumber])
+  @@index([productType])
 }
 
 model WorksheetItem {
@@ -155,4 +238,84 @@ model InventoryTransaction {
   @@index([orderId])
   @@index([transactionType])
   @@index([createdAt])
+}
+
+model OrderItem {
+  id                Int           @id @default(autoincrement())
+  orderId           String        @map("order_id") @db.Uuid
+  order             Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  
+  itemNumber        Int           @map("item_number") // Position in order
+  itemType          String        @default("blind") @map("item_type") @db.VarChar(50)
+  
+  // Common fields for all item types
+  location          String        @db.VarChar(255)
+  width             Int           // mm
+  drop              Int           // mm
+  
+  // Blind-specific fields (16 total from HTML prototype)
+  fixing            String?       @db.VarChar(100)
+  bracketType       String?       @map("bracket_type") @db.VarChar(100)
+  bracketColour     String?       @map("bracket_colour") @db.VarChar(100)
+  controlSide       String?       @map("control_side") @db.VarChar(20) // "Left" | "Right"
+  chainOrMotor      String?       @map("chain_or_motor") @db.VarChar(255)
+  roll              String?       @db.VarChar(20) // "Front" | "Back"
+  material          String?       @db.VarChar(100) // Brand: Gracetech, Textstyle, Uniline, Vertex, Alpha
+  fabricType        String?       @map("fabric_type") @db.VarChar(255)
+  fabricColour      String?       @map("fabric_colour") @db.VarChar(100)
+  bottomRailType    String?       @map("bottom_rail_type") @db.VarChar(100)
+  bottomRailColour  String?       @map("bottom_rail_colour") @db.VarChar(100)
+  
+  // Calculated fields
+  calculatedWidth   Int?          @map("calculated_width") // width - 28
+  calculatedDrop    Int?          @map("calculated_drop")  // drop + 150
+  isDuplicate       Boolean       @default(false) @map("is_duplicate")
+  
+  // Pricing
+  fabricGroup       Int?          @map("fabric_group") // 1-5
+  discountPercent   Decimal       @default(0) @map("discount_percent") @db.Decimal(5, 2)
+  price             Decimal       @default(0) @db.Decimal(10, 2)
+  
+  createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamp(6)
+  
+  @@map("order_items")
+  @@index([orderId])
+  @@index([material, fabricType])
+}
+
+model PricingMatrix {
+  id          Int      @id @default(autoincrement())
+  fabricGroup Int      @map("fabric_group") // 1-5
+  width       Int      // mm (600-3000)
+  drop        Int      // mm (1200-3000)
+  price       Decimal  @db.Decimal(10, 2)
+  
+  updatedBy   String?  @map("updated_by") @db.VarChar(255)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamp(6)
+  
+  @@unique([fabricGroup, width, drop])
+  @@map("pricing_matrix")
+  @@index([fabricGroup])
+}
+
+model Quote {
+  id               String      @id @default(uuid()) @db.Uuid
+  quoteNumber      String      @unique @map("quote_number") @db.VarChar(50) // QT-YYMMDD-XXXX
+  userId           String      @map("user_id") @db.Uuid
+  user             User        @relation("UserQuotes", fields: [userId], references: [id], onDelete: Cascade)
+  
+  productType      ProductType @map("product_type")
+  items            Json        // Store items as JSON
+  subtotal         Decimal     @db.Decimal(10, 2)
+  total            Decimal     @db.Decimal(10, 2)
+  notes            String?     @db.Text
+  
+  convertedToOrder String?     @map("converted_to_order") @db.Uuid // Order ID if converted
+  
+  createdAt        DateTime    @default(now()) @map("created_at") @db.Timestamp(6)
+  expiresAt        DateTime    @map("expires_at") @db.Timestamp(6) // +30 days
+  
+  @@map("quotes")
+  @@index([userId])
+  @@index([quoteNumber])
 }

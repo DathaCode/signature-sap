@@ -1,0 +1,804 @@
+{
+    "Alpha": {
+        "Avoca Block Out": {
+            "group": "G2",
+            "colors": [
+                "Alabaster",
+                "Black",
+                "Chocolate",
+                "Cream",
+                "Dark Grey",
+                "Ebony",
+                "Ivory",
+                "Lace",
+                "Lght Grey",
+                "Linen",
+                "Mist",
+                "Off White",
+                "Pebble",
+                "Powder",
+                "Shale",
+                "Stone",
+                "White"
+            ]
+        },
+        "Bondi Block Out": {
+            "group": "G2",
+            "colors": [
+                "Cappuccino",
+                "Champagne",
+                "Dove",
+                "Grey",
+                "Leather",
+                "Midnight",
+                "White"
+            ]
+        },
+        "Bondi Light Filtering": {
+            "group": "G2",
+            "colors": [
+                "Cappuccino",
+                "Champagne",
+                "Dove",
+                "Grey",
+                "Leather",
+                "Midnight",
+                "White"
+            ]
+        },
+        "Cottesloe Block Out": {
+            "group": "G2",
+            "colors": [
+                "Biscuit Pearl",
+                "Black Pearl",
+                "Cream Pearl",
+                "Metallic",
+                "Silver Cloud",
+                "Silver Pearl",
+                "White Pearl"
+            ]
+        },
+        "Cottesloe Light Filtering": {
+            "group": "G2",
+            "colors": [
+                "Biscuit Pearl",
+                "Black Pearl",
+                "Cream Pearl",
+                "Metallic",
+                "Silver Cloud",
+                "Silver Pearl",
+                "White Pearl"
+            ]
+        },
+        "Dalkeith Block Out": {
+            "group": "G2",
+            "colors": [
+                "Beach Pearl",
+                "Cream Pearl",
+                "Dark Pearl",
+                "Misty Pearl",
+                "Silver Pearl",
+                "White"
+            ]
+        },
+        "Dalkeith Light Filtering": {
+            "group": "G2",
+            "colors": [
+                "Beach Pearl",
+                "Cream Pearl",
+                "Dark Pearl",
+                "Misty Pearl",
+                "Silver Pearl",
+                "White"
+            ]
+        },
+        "Glenelg Block Out": {
+            "group": "G2",
+            "colors": [
+                "Biscuit",
+                "Cappuccino",
+                "Cream",
+                "Fog",
+                "Seed Pearl",
+                "White"
+            ]
+        },
+        "Glenelg Light Filtering": {
+            "group": "G2",
+            "colors": [
+                "Biscuit",
+                "Cappuccino",
+                "Cream",
+                "Fog",
+                "Seed Pearl",
+                "White"
+            ]
+        },
+        "Toorak Block Out": {
+            "group": "G2",
+            "colors": [
+                "Blaze",
+                "Grey Stone",
+                "Nougat",
+                "Off White",
+                "Seed Pearl",
+                "Silver",
+                "Storm",
+                "White"
+            ]
+        },
+        "Toorak Light Filtering": {
+            "group": "G2",
+            "colors": [
+                "Blaze",
+                "Grey Stone",
+                "Nougat",
+                "Off White",
+                "Seed Pearl",
+                "Silver",
+                "Storm",
+                "White"
+            ]
+        },
+        "Vaucluse Block Out": {
+            "group": "G2",
+            "colors": [
+                "Biscuit",
+                "Off White",
+                "Pewter",
+                "Shale",
+                "Silver Grey",
+                "White"
+            ]
+        },
+        "Vaucluse Light Filtering": {
+            "group": "G2",
+            "colors": [
+                "Biscuit",
+                "Off White",
+                "Pewter",
+                "Shale",
+                "Silver Grey",
+                "White"
+            ]
+        }
+    },
+    "Gracetech": {
+        "Platinum P05": {
+            "group": "G1",
+            "colors": [
+                "2001 White",
+                "2002 White Beige",
+                "2003 White Grey",
+                "2004 Beige",
+                "2005 Beige Grey",
+                "2006 Grey",
+                "2007 Black Grey",
+                "2009 Black",
+                "2050 White Pearl",
+                "2066 Super White",
+                "2067 Charcoal Grey",
+                "2079 Charcoal",
+                "2080 caramel",
+                "2081 Casper",
+                "2082 Fudge",
+                "2083 Hammer",
+                "2084 Cloud Grey",
+                "2098A Black Copper"
+            ]
+        },
+        "Platinum P10": {
+            "group": "G1",
+            "colors": [
+                "2001 White",
+                "2002 White Beige",
+                "2003 White Grey",
+                "2004 Beige",
+                "2005 Beige Grey",
+                "2006 Grey",
+                "2007 Black Grey",
+                "2009 Black",
+                "2050 White Pearl",
+                "2066 Super White",
+                "2067 Charcoal Grey",
+                "2079 Charcoal",
+                "2080 caramel",
+                "2081 Casper",
+                "2082 Fudge",
+                "2083 Hammer",
+                "2084 Cloud Grey",
+                "2098A Black Copper"
+            ]
+        }
+    },
+    "Textstyle": {
+        "Balmoral Blockout": {
+            "group": "G3",
+            "colors": [
+                "Armour",
+                "Birch",
+                "Bourneville",
+                "Chrome",
+                "Concrete",
+                "Dove",
+                "Jet",
+                "Pearl",
+                "Platinum",
+                "Putty",
+                "Pyrite",
+                "Steel",
+                "White"
+            ]
+        },
+        "Balmoral Light Filtering": {
+            "group": "G3",
+            "colors": [
+                "Armour",
+                "Birch",
+                "Bourneville",
+                "Chrome",
+                "Concrete",
+                "Dove",
+                "Jet",
+                "Pearl",
+                "Platinum",
+                "Putty",
+                "Pyrite",
+                "Steel",
+                "White"
+            ]
+        },
+        "Cascata": {
+            "group": "G2",
+            "colors": [
+                "Ardesia",
+                "Avorio",
+                "Baltico",
+                "Corvo",
+                "Grigio",
+                "Mercurio",
+                "Neve",
+                "Nuvola",
+                "Pepe"
+            ]
+        },
+        "Focus": {
+            "group": "G1",
+            "colors": [
+                "Alabaster",
+                "Almond",
+                "Ash",
+                "Bay",
+                "Beechwood",
+                "Carbon",
+                "Chalk",
+                "Cloud",
+                "Coal",
+                "Cotton",
+                "Dove",
+                "Drift",
+                "Duck Egg",
+                "Ebony",
+                "Espresso",
+                "Eucalypt",
+                "Feather",
+                "Fig",
+                "Jarrah",
+                "Latte",
+                "Linen",
+                "Magnetic",
+                "Mist",
+                "Oyster",
+                "Polar",
+                "Powder",
+                "Putty",
+                "Sandstone",
+                "Shell",
+                "Smoke",
+                "Stone",
+                "Tempest",
+                "White"
+            ]
+        },
+        "Jersey Blockout": {
+            "group": "G3",
+            "colors": [
+                "Ashen",
+                "Basalt",
+                "Cinder",
+                "Ember",
+                "Lace",
+                "Mink",
+                "Opal",
+                "Render",
+                "Sable",
+                "Willow"
+            ]
+        },
+        "Jersey Light Filtering": {
+            "group": "G3",
+            "colors": [
+                "Ashen",
+                "Basalt",
+                "Cinder",
+                "Ember",
+                "Lace",
+                "Mink",
+                "Opal",
+                "Render",
+                "Sable",
+                "Willow"
+            ]
+        },
+        "Kleenscreen": {
+            "group": "G2",
+            "colors": [
+                "Alloy",
+                "Barley",
+                "Black",
+                "Black Pearl",
+                "Charcoal",
+                "Graphite",
+                "Ivory",
+                "Pewter",
+                "Pumice",
+                "Pure White",
+                "Shale"
+            ]
+        },
+        "Kleenscreen Blockout": {
+            "group": "G2",
+            "colors": [
+                "Alloy",
+                "Barley",
+                "Black",
+                "Black Pearl",
+                "Charcoal",
+                "Ice",
+                "Pewter",
+                "Pumice"
+            ]
+        },
+        "Metroshade Blockout": {
+            "group": "G3",
+            "colors": [
+                "Black",
+                "Dove/White",
+                "Ecru",
+                "Ice Grey",
+                "Moonstone",
+                "Nougat",
+                "Pebble",
+                "Quill",
+                "Seal",
+                "Slate",
+                "Storm",
+                "Whitewash"
+            ]
+        },
+        "Metroshade Light Filtering": {
+            "group": "G3",
+            "colors": [
+                "Dove/White",
+                "Ecru",
+                "Ice Grey",
+                "Moonstone",
+                "Nougat",
+                "Quill"
+            ]
+        },
+        "One Screen": {
+            "group": "G2",
+            "colors": [
+                "Black",
+                "Charcoal",
+                "Dune",
+                "Grey",
+                "Gunmetal",
+                "Ice",
+                "Linen/Bronze",
+                "Mercury",
+                "Sand",
+                "Silver/Black",
+                "Wallaby",
+                "White"
+            ]
+        },
+        "Sanctuary Blockout": {
+            "group": "G2",
+            "colors": [
+                "Baltic",
+                "Ceramic",
+                "Fossil",
+                "Lava",
+                "Limestone",
+                "Marble",
+                "Mineral",
+                "Plaster",
+                "Slate",
+                "Suede",
+                "Truffle"
+            ]
+        },
+        "Sanctuary Light Filtering": {
+            "group": "G2",
+            "colors": [
+                "Baltic",
+                "Ceramic",
+                "Fossil",
+                "Lava",
+                "Limestone",
+                "Marble",
+                "Mineral",
+                "Plaster",
+                "Slate",
+                "Suede",
+                "Truffle"
+            ]
+        }
+    },
+    "Uniline": {
+        "Dawn": {
+            "group": "G1",
+            "colors": [
+                "Alabaster",
+                "Arum",
+                "Ash Blue",
+                "Beige",
+                "Bison",
+                "BK RB08",
+                "Black",
+                "Caviar",
+                "Cotton",
+                "Crane",
+                "Custom Cream",
+                "Dark Grey",
+                "Daybreak",
+                "Dune",
+                "Earthen",
+                "Ecru",
+                "GR RB08",
+                "Grey",
+                "Ivory",
+                "Light Bison",
+                "Limestone RB08",
+                "Linen",
+                "Macchiato",
+                "Mariah",
+                "Mid Grey",
+                "Misty",
+                "Natural",
+                "New Slate",
+                "Nutmeg",
+                "Oyster",
+                "Pebble",
+                "Pewter",
+                "Putty",
+                "Royal Blue",
+                "Sesame",
+                "Shale",
+                "Slate",
+                "Soft Grey",
+                "Taupe",
+                "Warm White",
+                "WH RB08",
+                "White"
+            ]
+        },
+        "Evolution": {
+            "group": "G3",
+            "colors": [
+                "Amber",
+                "Bisque",
+                "Blanched",
+                "Canvas",
+                "Cocoa",
+                "Dark Grey",
+                "Egg Shell",
+                "Fallow",
+                "Hessian",
+                "Light Grey",
+                "Pepper",
+                "RawHide",
+                "Sepia",
+                "Shale",
+                "Tan",
+                "Thunder Cloud",
+                "White"
+            ]
+        },
+        "Sunset": {
+            "group": "G1",
+            "colors": [
+                "Antique",
+                "Ash Grey",
+                "Bark",
+                "Beaver",
+                "Bone",
+                "Cashew",
+                "Ecru",
+                "Flax",
+                "Lace",
+                "Lava",
+                "Mushroom",
+                "Natural",
+                "Onyx",
+                "parchment",
+                "Pepper",
+                "Sahara",
+                "Seal",
+                "Silver",
+                "Snow",
+                "Stone",
+                "Taupe",
+                "Vanila",
+                "Warm Grey"
+            ]
+        },
+        "Tapestry Blockout": {
+            "group": "G2",
+            "colors": [
+                "Buff",
+                "Cloud",
+                "Concrete",
+                "Dove",
+                "Gunmetal",
+                "Portland",
+                "Seagull",
+                "Tuxedo",
+                "White Wash"
+            ]
+        },
+        "Tapestry Light Filtering": {
+            "group": "G2",
+            "colors": [
+                "Buff",
+                "Cloud",
+                "Concrete",
+                "Dove",
+                "Gunmetal",
+                "Portland",
+                "Seagull",
+                "Tuxedo",
+                "White Wash"
+            ]
+        }
+    },
+    "Vertex": {
+        "Iguzu": {
+            "group": "G2",
+            "colors": [
+                "1901",
+                "1902",
+                "1903",
+                "1904",
+                "1905",
+                "1906"
+            ]
+        },
+        "Vale Blockout": {
+            "group": "G2",
+            "colors": [
+                "Apricote",
+                "Arctic",
+                "Cobalt",
+                "Dove",
+                "Graphite",
+                "Greige",
+                "Hazel",
+                "Misty",
+                "Pale Gray",
+                "Vanilla",
+                "White"
+            ]
+        },
+        "Vale Light Filtering": {
+            "group": "G2",
+            "colors": [
+                "Apricote",
+                "Arctic",
+                "Cobalt",
+                "Dove",
+                "Graphite",
+                "Greige",
+                "Hazel",
+                "Misty",
+                "Pale Gray",
+                "Vanilla",
+                "White"
+            ]
+        },
+        "Vegan Block Out": {
+            "group": "G2",
+            "colors": [
+                "Clover",
+                "Jasmine",
+                "Tansy",
+                "Tulip",
+                "Willow"
+            ]
+        },
+        "Vegas Blockout": {
+            "group": "G2",
+            "colors": [
+                "Boulder",
+                "Bunflow",
+                "Caring Tan",
+                "Cotton",
+                "Darkwood",
+                "Sand Dan"
+            ]
+        },
+        "Vegas Light Filtering": {
+            "group": "G2",
+            "colors": [
+                "Boulder",
+                "Bunflow",
+                "Caring Tan",
+                "Cotton",
+                "Darkwood",
+                "Sand Dan"
+            ]
+        },
+        "Velvet Block Out": {
+            "group": "G2",
+            "colors": [
+                "Blush",
+                "Chalk",
+                "Mist",
+                "Shell",
+                "Whisper"
+            ]
+        },
+        "Venus Block Out": {
+            "group": "G2",
+            "colors": [
+                "Dove",
+                "Ebony",
+                "Granite",
+                "Linen",
+                "Pearl",
+                "Snow",
+                "Stone"
+            ]
+        },
+        "Venus Light Filtering": {
+            "group": "G2",
+            "colors": [
+                "Linen",
+                "Pearl",
+                "Snow"
+            ]
+        },
+        "Verdure Block Out": {
+            "group": "G2",
+            "colors": [
+                "Charcoal",
+                "Cystal",
+                "Ecru",
+                "Flint",
+                "Fog",
+                "Midnight",
+                "Mist",
+                "Onyx",
+                "Pebble",
+                "Rainforest",
+                "Silver",
+                "Tan"
+            ]
+        },
+        "Verdure Light Filter": {
+            "group": "G2",
+            "colors": [
+                "Charcoal",
+                "Crystal",
+                "Ecru",
+                "Flint",
+                "Fog",
+                "Mist",
+                "Onyx",
+                "Pebble",
+                "Rainforest",
+                "Silver",
+                "Tan"
+            ]
+        },
+        "Vermont Block Out": {
+            "group": "G2",
+            "colors": [
+                "Alabaster",
+                "Anchor",
+                "Denim",
+                "Fog",
+                "Fossil",
+                "Onyx",
+                "Pewter",
+                "White"
+            ]
+        },
+        "Verne Blockout": {
+            "group": "G2",
+            "colors": [
+                "Abalone",
+                "Achor",
+                "River",
+                "Smoke",
+                "Steel",
+                "White"
+            ]
+        },
+        "Verne Light Filtering": {
+            "group": "G2",
+            "colors": [
+                "Abalone",
+                "Achor",
+                "River",
+                "Smoke",
+                "Steel",
+                "White"
+            ]
+        },
+        "Verona Block Out": {
+            "group": "G2",
+            "colors": [
+                "Beige",
+                "Black",
+                "Gold",
+                "Grey",
+                "Off White",
+                "White"
+            ]
+        },
+        "Verona Plus Block Out": {
+            "group": "G2",
+            "colors": [
+                "Beige",
+                "Black",
+                "Gold",
+                "Grey",
+                "Off White",
+                "White"
+            ]
+        },
+        "Versatile Block Out": {
+            "group": "G1",
+            "colors": [
+                "Alloy",
+                "Alloy RB08",
+                "Bark",
+                "Bark RB08",
+                "Chrome",
+                "Chrome RB08",
+                "Cloud",
+                "Cloud RB08",
+                "Coal",
+                "Coal RB08",
+                "Coffon",
+                "Coffon RB08",
+                "Dusk",
+                "Dusk RB08",
+                "Ebony",
+                "Ebony RB08",
+                "Gardenia",
+                "Gardenia RB08",
+                "Gravel",
+                "Gravel RB08",
+                "Ice",
+                "Ice RB08",
+                "Lava",
+                "Lava RB08",
+                "Leather",
+                "Leather RB08",
+                "Luna",
+                "Luna RB08",
+                "Mocha",
+                "Mocha RB08",
+                "Natural",
+                "Natural RB08",
+                "Oyster",
+                "Oyster RB08",
+                "Peach"
+            ]
+        }
+    }
+}

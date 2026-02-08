@@ -5,8 +5,16 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { logger } from './config/logger';
 import { errorHandler } from './middleware/errorHandler';
+
+// Existing routes
 import orderRoutes from './routes/orderRoutes';
 import inventoryRoutes from './routes/inventoryRoutes';
+
+// New routes for Order Management System
+import authRoutes from './routes/authRoutes';
+import webOrderRoutes from './routes/webOrderRoutes';
+import pricingRoutes from './routes/pricingRoutes';
+import userRoutes from './routes/userRoutes';
 
 // Load environment variables
 dotenv.config();
@@ -55,9 +63,15 @@ app.get('/api/health', (req, res) => {
     });
 });
 
-// API Routes
+// Existing API Routes (Excel upload + Inventory)
 app.use('/api/orders', orderRoutes);
 app.use('/api/inventory', inventoryRoutes);
+
+// New API Routes (Order Management System)
+app.use('/api/auth', authRoutes);
+app.use('/api/web-orders', webOrderRoutes);
+app.use('/api/pricing', pricingRoutes);
+app.use('/api/users', userRoutes);
 
 // ============================================================================
 // ERROR HANDLING

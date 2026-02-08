@@ -5,7 +5,7 @@ import { ExcelRow, ControlSideSchema, ChainOrMotorSchema } from '../types/schema
 
 export class ExcelParserService {
     /**
-     * Parse Excel file starting from Row 13
+     * Parse Excel file starting from Row 14 (Row 13 contains headers)
      * Columns: A=Number, B=Location, C=Width, D=Drop, E=Group (skip),
      *          F=Fixing (skip), G=Control Side, H=Control Colour,
      *          I=Chain or Motor, J=Roll, K=Fabric, L=Colour,
@@ -32,16 +32,16 @@ export class ExcelParserService {
                 throw new AppError(400, 'Excel file is empty or corrupted');
             }
 
-            // Convert to JSON starting from row 13
+            // Convert to JSON starting from row 14 (row 13 is headers)
             const jsonData = XLSX.utils.sheet_to_json(worksheet, {
-                range: 12, // 0-indexed, so row 13 = index 12
+                range: 13, // 0-indexed, so row 14 = index 13
                 header: 'A', // Use column letters as keys
                 defval: '', // Default value for empty cells
                 blankrows: false, // Skip blank rows
             });
 
             if (!jsonData || jsonData.length === 0) {
-                throw new AppError(400, 'No data found starting from Row 13');
+                throw new AppError(400, 'No data found starting from Row 14');
             }
 
             logger.info(`Found ${jsonData.length} rows in Excel file`);
@@ -51,10 +51,17 @@ export class ExcelParserService {
 
             for (let i = 0; i < jsonData.length; i++) {
                 const row: any = jsonData[i];
-                const rowNumber = i + 13; // Actual Excel row number
+                const rowNumber = i + 14; // Actual Excel row number (data starts at row 14)
 
                 try {
-                    // Skip completely empty rows
+                    // Stop parsing when Location (column B) is empty - indicates end of order data
+                    const locationValue = row['B'];
+                    if (locationValue === undefined || locationValue === null || locationValue === '') {
+                        logger.info(`Reached end of order data at row ${rowNumber} (empty Location)`);
+                        break; // Stop parsing - no more blinds in this order
+                    }
+
+                    // Skip completely empty rows (shouldn't happen after location check, but kept as safety)
                     if (this.isEmptyRow(row)) {
                         logger.debug(`Skipping empty row ${rowNumber}`);
                         continue;

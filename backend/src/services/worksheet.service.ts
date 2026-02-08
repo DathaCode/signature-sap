@@ -11,8 +11,8 @@ export class WorksheetService {
         const order = await prisma.order.findUnique({
             where: { id: orderId },
             include: {
-                worksheetItems: {
-                    orderBy: { blindNumber: 'asc' },
+                items: {
+                    orderBy: { itemNumber: 'asc' },
                 },
             },
         });
@@ -40,20 +40,20 @@ export class WorksheetService {
                 'Bottom Rail Type',
                 'Bottom Rail Colour',
             ],
-            items: order.worksheetItems.map(item => ({
-                blindNumber: item.blindNumber,
+            items: order.items.map(item => ({
+                blindNumber: item.itemNumber.toString(),
                 location: item.location,
-                widthMm: item.widthMm,
-                dropMm: item.dropMm,
-                controlSide: item.controlSide,
-                controlColor: item.controlColor,
-                chainOrMotor: item.chainOrMotor.replace(/_/g, ' '),
-                rollType: item.rollType,
-                fabricType: item.fabricType,
-                fabricColor: item.fabricColor,
-                bottomRailType: item.bottomRailType,
-                bottomRailColor: item.bottomRailColor,
-                highlightFlag: item.highlightFlag,
+                widthMm: item.calculatedWidth || item.width, // Fallback if calc is missing
+                dropMm: item.calculatedDrop || item.drop,
+                controlSide: item.controlSide || '-',
+                controlColor: '-', // Not currently captured in OrderItem? Adding placeholder
+                chainOrMotor: (item.chainOrMotor || '-').replace(/_/g, ' '),
+                rollType: item.roll || '-',
+                fabricType: item.fabricType || '-',
+                fabricColor: item.fabricColor || '-',
+                bottomRailType: item.bottomRailType || '-',
+                bottomRailColor: item.bottomRailColor || '-',
+                highlightFlag: item.isDuplicate,
             })),
         };
     }
@@ -65,8 +65,8 @@ export class WorksheetService {
         const order = await prisma.order.findUnique({
             where: { id: orderId },
             include: {
-                worksheetItems: {
-                    orderBy: { blindNumber: 'asc' },
+                items: {
+                    orderBy: { itemNumber: 'asc' },
                 },
             },
         });
@@ -87,13 +87,13 @@ export class WorksheetService {
                 'Bottom Rail Type',
                 'Bottom Rail Colour',
             ],
-            items: order.worksheetItems.map(item => ({
-                blindNumber: item.blindNumber,
+            items: order.items.map(item => ({
+                blindNumber: item.itemNumber.toString(),
                 location: item.location,
-                widthMm: item.widthMm,
-                bottomRailType: item.bottomRailType,
-                bottomRailColor: item.bottomRailColor,
-                highlightFlag: item.highlightFlag,
+                widthMm: item.calculatedWidth || item.width,
+                bottomRailType: item.bottomRailType || '-',
+                bottomRailColor: item.bottomRailColor || '-',
+                highlightFlag: item.isDuplicate,
             })),
         };
     }

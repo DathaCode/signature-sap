@@ -10,6 +10,33 @@ const api = axios.create({
     },
 })
 
+// Request interceptor to attach token
+api.interceptors.request.use(
+    (config) => {
+        const token = localStorage.getItem('token')
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`
+        }
+        return config
+    },
+    (error) => {
+        return Promise.reject(error)
+    }
+)
+
+// Response interceptor to handle 401 (optional: add refresh logic here)
+api.interceptors.response.use(
+    (response) => response,
+    async (error) => {
+        if (error.response?.status === 401) {
+            // Clear token if expired/invalid
+            localStorage.removeItem('token')
+            // window.location.href = '/login' // Optional: Force redirect
+        }
+        return Promise.reject(error)
+    }
+)
+
 export const orderApi = {
     /**
      * Upload Excel order file
@@ -125,6 +152,141 @@ export const inventoryApi = {
             headers: { 'Content-Type': 'multipart/form-data' },
         })
         return response.data.data
+    }
+}
+
+export const authApi = {
+    login: async (credentials: import('../types/auth').LoginCredentials): Promise<import('../types/auth').AuthResponse> => {
+        const response = await api.post('/auth/login', credentials)
+        return response.data
+    },
+
+    register: async (credentials: import('../types/auth').RegisterCredentials): Promise<import('../types/auth').AuthResponse> => {
+        const response = await api.post('/auth/register', credentials)
+        return response.data
+    },
+
+    logout: async (): Promise<void> => {
+        await api.post('/auth/logout')
+    },
+
+    getCurrentUser: async (): Promise<{ user: import('../types/auth').User }> => {
+        const response = await api.get('/auth/me')
+        return response.data.data
+    }
+}
+
+export const pricingApi = {
+    calculatePrice: async (data: {
+        material: string;
+        fabricType: string;
+        width: number;
+        drop: number
+    }): Promise<{ price: number; fabricGroup: number; discountPercent: number }> => {
+        const response = await api.post('/pricing/calculate', data)
+        return response.data.data
+    }
+}
+
+export const webOrderApi = {
+    /**
+     * Create a new web order
+     */
+    createOrder: async (data: import('../types/order').CreateOrderRequest): Promise<import('../types/order').Order> => {
+        const response = await api.post('/web-orders/create', data)
+        return response.data.data
+    },
+
+    /**
+     * Get orders for the current user
+     */
+    getMyOrders: async (params?: { status?: string; page?: number; limit?: number }): Promise<{ orders: import('../types/order').Order[]; total: number }> => {
+        const response = await api.get('/web-orders/my-orders', { params })
+        return response.data.data
+    },
+
+    /**
+     * Get a single order by ID
+     */
+    getOrder: async (id: string): Promise<import('../types/order').Order> => {
+        const response = await api.get(`/web-orders/${id}`)
+        return response.data.data
+    },
+
+    /**
+     * Cancel an order
+     */
+    cancelOrder: async (id: string): Promise<void> => {
+        await api.delete(`/web-orders/${id}`)
+    }
+}
+
+export const adminOrderApi = {
+    /**
+     * Get all orders (admin)
+     */
+    getAllOrders: async (params?: { status?: string; productType?: string; userId?: string }): Promise<{ orders: import('../types/order').Order[]; count: number }> => {
+        const response = await api.get('/web-orders/admin/all', { params })
+        return response.data.data
+    },
+
+    /**
+     * Approve order
+     */
+    approveOrder: async (id: string, adminNotes?: string): Promise<import('../types/order').Order> => {
+        const response = await api.post(`/web-orders/${id}/approve`, { adminNotes })
+        return response.data.data
+    },
+
+    /**
+     * Send to production
+     */
+    sendToProduction: async (id: string): Promise<import('../types/order').Order> => {
+        const response = await api.post(`/web-orders/${id}/send-to-production`)
+        return response.data.data
+    },
+
+    /**
+     * Update order status
+     */
+    updateStatus: async (id: string, status: string): Promise<import('../types/order').Order> => {
+        const response = await api.patch(`/web-orders/${id}/status`, { status })
+        return response.data.data
+    }
+}
+
+export const adminUserApi = {
+    /**
+     * Get all users
+     */
+    getAllUsers: async (params?: { role?: string; search?: string }): Promise<{ users: import('../types/auth').User[]; count: number }> => {
+        const response = await api.get('/admin/users', { params })
+        return response.data.data
+    },
+
+    /**
+     * Update user (e.g. deactivate)
+     */
+    updateUser: async (id: string, data: Partial<import('../types/auth').User>): Promise<import('../types/auth').User> => {
+        const response = await api.patch(`/admin/users/${id}`, data)
+        return response.data.data
+    }
+}
+
+export const adminPricingApi = {
+    /**
+     * Get pricing matrix
+     */
+    getPricing: async (fabricGroup: number): Promise<any[]> => {
+        const response = await api.get(`/pricing/matrix/${fabricGroup}`)
+        return response.data.data
+    },
+
+    /**
+     * Update pricing cell
+     */
+    updatePrice: async (fabricGroup: number, width: number, drop: number, price: number): Promise<void> => {
+        await api.post('/pricing/update', { fabricGroup, width, drop, price })
     }
 }
 
