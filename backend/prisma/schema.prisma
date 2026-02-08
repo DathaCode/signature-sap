@@ -150,6 +150,7 @@ model Order {
   items               OrderItem[]
   worksheetItems      WorksheetItem[]
   inventoryTransactions InventoryTransaction[]
+  worksheetData       WorksheetData?
 
   @@map("orders")
   @@index([userId])
@@ -267,17 +268,25 @@ model OrderItem {
   bottomRailColour  String?       @map("bottom_rail_colour") @db.VarChar(100)
   
   // Calculated fields
-  calculatedWidth   Int?          @map("calculated_width") // width - 28
+  calculatedWidth   Int?          @map("calculated_width") // width - 28 (tube cut)
   calculatedDrop    Int?          @map("calculated_drop")  // drop + 150
+  fabricCutWidth    Int?          @map("fabric_cut_width") // width - 35 (fabric cut)
   isDuplicate       Boolean       @default(false) @map("is_duplicate")
-  
+
+  // Optimization results (stored after Send to Production)
+  sheetNumber       Int?          @map("sheet_number")
+  sheetPositionX    Int?          @map("sheet_position_x")
+  sheetPositionY    Int?          @map("sheet_position_y")
+  panelRotated      Boolean       @default(false) @map("panel_rotated")
+  optimizedAt       DateTime?     @map("optimized_at") @db.Timestamp(6)
+
   // Pricing
   fabricGroup       Int?          @map("fabric_group") // 1-5
   discountPercent   Decimal       @default(0) @map("discount_percent") @db.Decimal(5, 2)
   price             Decimal       @default(0) @db.Decimal(10, 2)
-  
+
   createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamp(6)
-  
+
   @@map("order_items")
   @@index([orderId])
   @@index([material, fabricType])
@@ -296,6 +305,26 @@ model PricingMatrix {
   @@unique([fabricGroup, width, drop])
   @@map("pricing_matrix")
   @@index([fabricGroup])
+}
+
+model WorksheetData {
+  id              String    @id @default(uuid()) @db.Uuid
+  orderId         String    @unique @map("order_id") @db.Uuid
+  order           Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  fabricCutData   Json      @map("fabric_cut_data")
+  tubeCutData     Json      @map("tube_cut_data")
+
+  totalFabricMm   Int       @map("total_fabric_mm")
+  totalTubePieces Int       @map("total_tube_pieces")
+
+  acceptedAt      DateTime? @map("accepted_at") @db.Timestamp(6)
+  acceptedBy      String?   @map("accepted_by") @db.VarChar(255)
+
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamp(6)
+
+  @@map("worksheet_data")
 }
 
 model Quote {

@@ -217,11 +217,45 @@ export const adminOrderApi = {
     },
 
     /**
-     * Send to production
+     * Send to production (runs optimization)
      */
-    sendToProduction: async (id: string): Promise<import('../types/order').Order> => {
+    sendToProduction: async (id: string): Promise<import('../types/order').WorksheetPreviewResponse> => {
         const response = await api.post(`/web-orders/${id}/send-to-production`)
         return response.data.data
+    },
+
+    /**
+     * Get worksheet preview
+     */
+    getWorksheetPreview: async (id: string): Promise<import('../types/order').WorksheetPreviewResponse> => {
+        const response = await api.get(`/web-orders/${id}/worksheets/preview`)
+        return response.data.data
+    },
+
+    /**
+     * Accept worksheets and deduct inventory
+     */
+    acceptWorksheets: async (id: string): Promise<any> => {
+        const response = await api.post(`/web-orders/${id}/worksheets/accept`)
+        return response.data.data
+    },
+
+    /**
+     * Recalculate optimization
+     */
+    recalculate: async (id: string): Promise<import('../types/order').WorksheetPreviewResponse> => {
+        const response = await api.post(`/web-orders/${id}/recalculate`)
+        return response.data.data
+    },
+
+    /**
+     * Download worksheet file
+     */
+    downloadWorksheet: async (id: string, type: 'fabric-cut-csv' | 'fabric-cut-pdf' | 'tube-cut-csv' | 'tube-cut-pdf'): Promise<Blob> => {
+        const response = await api.get(`/web-orders/${id}/worksheets/download/${type}`, {
+            responseType: 'blob',
+        })
+        return response.data
     },
 
     /**

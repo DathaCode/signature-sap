@@ -375,6 +375,112 @@ export class InventoryService {
     }
 
     /**
+     * Check inventory availability for a list of requirements
+     */
+    static async checkAvailability(requirements: {
+        category: InventoryCategory;
+        itemName: string;
+        colorVariant?: string;
+        quantityNeeded: number;
+    }[]) {
+        const items: {
+            category: InventoryCategory;
+            itemName: string;
+            colorVariant?: string;
+            required: number;
+            available: number;
+            sufficient: boolean;
+            inventoryItemId?: string;
+        }[] = [];
+
+        let allAvailable = true;
+
+        for (const req of requirements) {
+            const item = await prisma.inventoryItem.findFirst({
+                where: {
+                    category: req.category,
+                    itemName: req.itemName,
+                    colorVariant: req.colorVariant || null,
+                },
+            });
+
+            const available = item ? item.quantity.toNumber() : 0;
+            const sufficient = available >= req.quantityNeeded;
+            if (!sufficient) allAvailable = false;
+
+            items.push({
+                category: req.category,
+                itemName: req.itemName,
+                colorVariant: req.colorVariant,
+                required: req.quantityNeeded,
+                available,
+                sufficient,
+                inventoryItemId: item?.id,
+            });
+        }
+
+        return { available: allAvailable, items };
+    }
+
+    /**
+     * Deduct inventory for an order (runs in a single transaction)
+     */
+    static async deductForOrder(orderId: string, deductions: {
+        category: InventoryCategory;
+        itemName: string;
+        colorVariant?: string;
+        quantity: number;
+        notes: string;
+    }[]) {
+        const results: { itemName: string; deducted: number; newBalance: number }[] = [];
+
+        await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+            for (const ded of deductions) {
+                const item = await tx.inventoryItem.findFirst({
+                    where: {
+                        category: ded.category,
+                        itemName: ded.itemName,
+                        colorVariant: ded.colorVariant || null,
+                    },
+                });
+
+                if (!item) {
+                    logger.warn(`Inventory item not found for deduction: ${ded.itemName} (${ded.colorVariant})`);
+                    continue;
+                }
+
+                const currentQty = item.quantity.toNumber();
+                const newBalance = Math.max(0, currentQty - ded.quantity);
+
+                await tx.inventoryItem.update({
+                    where: { id: item.id },
+                    data: { quantity: newBalance },
+                });
+
+                await tx.inventoryTransaction.create({
+                    data: {
+                        inventoryItemId: item.id,
+                        orderId,
+                        transactionType: 'DEDUCTION',
+                        quantityChange: -ded.quantity,
+                        newBalance,
+                        notes: ded.notes,
+                    },
+                });
+
+                results.push({
+                    itemName: ded.itemName,
+                    deducted: ded.quantity,
+                    newBalance,
+                });
+            }
+        });
+
+        logger.info(`Inventory deducted for order ${orderId}: ${results.length} items`);
+        return results;
+    }
+
+    /**
      * Bulk import inventory items from CSV
      */
     static async bulkImportFromCSV(fileBuffer: Buffer) {

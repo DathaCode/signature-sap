@@ -1,18 +1,25 @@
 import { useEffect, useState } from 'react';
 import { adminOrderApi } from '../../services/api';
-import { Order } from '../../types/order';
+import { Order, WorksheetPreviewResponse } from '../../types/order';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
-import { Loader2, Check, Factory, Filter, Eye } from 'lucide-react';
+import { Loader2, Check, Factory, Filter, Eye, FileText } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { toast } from 'react-hot-toast';
+import WorksheetPreview from '../../components/admin/WorksheetPreview';
 
 export default function OrderManagement() {
     const [orders, setOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(true);
     const [statusFilter, setStatusFilter] = useState<string>('ALL');
+    const [worksheetPreview, setWorksheetPreview] = useState<{
+        orderId: string;
+        orderNumber: string;
+        data: WorksheetPreviewResponse;
+    } | null>(null);
+    const [sendingToProduction, setSendingToProduction] = useState<string | null>(null);
 
     const fetchOrders = async () => {
         setLoading(true);
@@ -46,15 +53,29 @@ export default function OrderManagement() {
         }
     };
 
-    const handleSendToProduction = async (id: string) => {
-        if (!confirm('Send to production?')) return;
+    const handleSendToProduction = async (id: string, orderNumber: string) => {
+        if (!confirm('Send to production? This will run fabric cut optimization.')) return;
+        setSendingToProduction(id);
         try {
-            await adminOrderApi.sendToProduction(id);
-            toast.success('Sent to production');
+            const result = await adminOrderApi.sendToProduction(id);
+            toast.success('Optimization complete');
+            setWorksheetPreview({ orderId: id, orderNumber, data: result });
             fetchOrders();
         } catch (error) {
             console.error(error);
-            toast.error('Failed to update status');
+            toast.error('Failed to send to production');
+        } finally {
+            setSendingToProduction(null);
+        }
+    };
+
+    const handleViewWorksheets = async (id: string, orderNumber: string) => {
+        try {
+            const result = await adminOrderApi.getWorksheetPreview(id);
+            setWorksheetPreview({ orderId: id, orderNumber, data: result });
+        } catch (error) {
+            console.error(error);
+            toast.error('No worksheet data available');
         }
     };
 
@@ -150,9 +171,28 @@ export default function OrderManagement() {
                                                     )}
 
                                                     {order.status === 'CONFIRMED' && (
-                                                        <Button size="sm" onClick={() => handleSendToProduction(order.id)}>
-                                                            <Factory className="mr-2 h-4 w-4" />
-                                                            Production
+                                                        <Button
+                                                            size="sm"
+                                                            onClick={() => handleSendToProduction(order.id, order.orderNumber)}
+                                                            disabled={sendingToProduction === order.id}
+                                                        >
+                                                            {sendingToProduction === order.id ? (
+                                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                            ) : (
+                                                                <Factory className="mr-2 h-4 w-4" />
+                                                            )}
+                                                            {sendingToProduction === order.id ? 'Optimizing...' : 'Production'}
+                                                        </Button>
+                                                    )}
+
+                                                    {order.status === 'PRODUCTION' && (
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            onClick={() => handleViewWorksheets(order.id, order.orderNumber)}
+                                                        >
+                                                            <FileText className="mr-2 h-4 w-4" />
+                                                            Worksheets
                                                         </Button>
                                                     )}
                                                 </div>
@@ -172,6 +212,20 @@ export default function OrderManagement() {
                     )}
                 </CardContent>
             </Card>
+
+            {/* Worksheet Preview Modal */}
+            {worksheetPreview && (
+                <WorksheetPreview
+                    orderId={worksheetPreview.orderId}
+                    orderNumber={worksheetPreview.orderNumber}
+                    data={worksheetPreview.data}
+                    onClose={() => setWorksheetPreview(null)}
+                    onAccepted={() => {
+                        setWorksheetPreview(null);
+                        fetchOrders();
+                    }}
+                />
+            )}
         </div>
     );
 }

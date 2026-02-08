@@ -1,10 +1,14 @@
 import { Request, Response, NextFunction } from 'express';
-import { PrismaClient, OrderStatus } from '@prisma/client';
+import { PrismaClient, OrderStatus, InventoryCategory } from '@prisma/client';
 import { AuthRequest } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
 import { logger } from '../config/logger';
 import { z } from 'zod';
 import pricingService from '../services/pricing.service';
+import { CutlistOptimizer, PanelInput } from '../services/cutlistOptimizer.service';
+import { TubeCutOptimizer, TubeBlindInput } from '../services/tubeCutOptimizer.service';
+import { InventoryService } from '../services/inventory.service';
+import { WorksheetExportService } from '../services/worksheetExport.service';
 
 const prisma = new PrismaClient();
 
@@ -119,6 +123,7 @@ export const createOrder = async (
                 ...item,
                 calculatedWidth: item.width - 28,
                 calculatedDrop: item.drop + 150,
+                fabricCutWidth: item.width - 35,
                 fabricGroup,
                 discountPercent,
                 price,
@@ -401,7 +406,7 @@ export const approveOrder = async (
 
 /**
  * Send order to production (admin - CONFIRMED → PRODUCTION)
- * This will integrate with existing worksheet generation
+ * Runs cutlist optimization and tube cut calculation
  */
 export const sendToProduction = async (
     req: Request,
@@ -413,9 +418,7 @@ export const sendToProduction = async (
 
         const order = await prisma.order.findUnique({
             where: { id: req.params.id },
-            include: {
-                items: true,
-            },
+            include: { items: { orderBy: { itemNumber: 'asc' } } },
         });
 
         if (!order) {
@@ -426,14 +429,12 @@ export const sendToProduction = async (
             throw new AppError(400, 'Only confirmed orders can be sent to production');
         }
 
-        // TODO: Integrate with existing worksheet generation logic
-        // This will be done in Phase 4 when we connect web orders to the existing worksheet system
+        const worksheetResult = await runOptimization(order);
 
-        const updated = await prisma.order.update({
+        // Update order status
+        await prisma.order.update({
             where: { id: req.params.id },
-            data: {
-                status: OrderStatus.PRODUCTION,
-            },
+            data: { status: OrderStatus.PRODUCTION },
         });
 
         logger.info(`Order sent to production: ${order.orderNumber} by ${authReq.user?.email}`);
@@ -441,8 +442,429 @@ export const sendToProduction = async (
         res.json({
             success: true,
             message: 'Order sent to production successfully',
-            data: { order: updated },
+            data: {
+                worksheetData: worksheetResult.worksheetData,
+                inventoryCheck: worksheetResult.inventoryCheck,
+            },
         });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Run optimization for an order (shared by sendToProduction and recalculate)
+ */
+async function runOptimization(order: any) {
+    const items = order.items;
+
+    // 1. Group items by fabric (material + fabricType + fabricColour)
+    const fabricGroups = new Map<string, any[]>();
+    for (const item of items) {
+        const key = `${item.material || 'Unknown'} - ${item.fabricType || 'Unknown'} - ${item.fabricColour || 'Unknown'}`;
+        if (!fabricGroups.has(key)) fabricGroups.set(key, []);
+        fabricGroups.get(key)!.push(item);
+    }
+
+    // 2. Run cutlist optimization per fabric group
+    const fabricCutData: Record<string, any> = {};
+    let totalFabricMm = 0;
+
+    for (const [fabricKey, groupItems] of fabricGroups) {
+        // Look up available roll length from inventory
+        const { itemName: invItemName, colorVariant: invColorVariant } = parseFabricKey(fabricKey);
+        const inventoryItem = await prisma.inventoryItem.findFirst({
+            where: {
+                category: 'FABRIC',
+                itemName: invItemName,
+                colorVariant: invColorVariant,
+            },
+        });
+        const rollLength = inventoryItem ? inventoryItem.quantity.toNumber() : 10000;
+
+        const optimizer = new CutlistOptimizer({
+            stockWidth: 3000,
+            stockLength: Math.min(rollLength, 10000), // Cap at 10m per sheet
+        });
+
+        const panels: PanelInput[] = groupItems.map((item: any) => ({
+            width: item.width - 28,    // calculatedWidth for packing
+            length: item.drop + 150,   // calculatedDrop for packing
+            qty: 1,
+            label: `${item.location} - ${item.width}x${item.drop}`,
+            originalWidth: item.width,
+            originalDrop: item.drop,
+            orderItemId: item.id,
+        }));
+
+        const optimization = optimizer.optimize(panels);
+        totalFabricMm += optimization.statistics.totalFabricNeeded;
+
+        fabricCutData[fabricKey] = {
+            optimization,
+            items: groupItems,
+        };
+
+        // Update OrderItem records with sheet positions
+        for (const sheet of optimization.sheets) {
+            for (const panel of sheet.panels) {
+                if (panel.orderItemId) {
+                    await prisma.orderItem.update({
+                        where: { id: panel.orderItemId },
+                        data: {
+                            sheetNumber: sheet.id,
+                            sheetPositionX: panel.x,
+                            sheetPositionY: panel.y,
+                            panelRotated: panel.rotated,
+                            optimizedAt: new Date(),
+                        },
+                    });
+                }
+            }
+        }
+    }
+
+    // 3. Run tube cut optimization
+    const tubeBlinds: TubeBlindInput[] = items
+        .filter((item: any) => item.bottomRailType && item.bottomRailColour)
+        .map((item: any) => ({
+            location: item.location,
+            originalWidth: item.width,
+            bottomRailType: item.bottomRailType,
+            bottomRailColour: item.bottomRailColour,
+            orderItemId: item.id,
+        }));
+
+    const tubeCutOptimizer = new TubeCutOptimizer();
+    const tubeCutData = tubeCutOptimizer.optimize(tubeBlinds);
+
+    // 4. Store worksheet data (upsert for recalculation support)
+    const worksheetData = await prisma.worksheetData.upsert({
+        where: { orderId: order.id },
+        create: {
+            orderId: order.id,
+            fabricCutData: serializeFabricCutData(fabricCutData),
+            tubeCutData: tubeCutData as any,
+            totalFabricMm,
+            totalTubePieces: tubeCutData.totalPiecesNeeded,
+        },
+        update: {
+            fabricCutData: serializeFabricCutData(fabricCutData),
+            tubeCutData: tubeCutData as any,
+            totalFabricMm,
+            totalTubePieces: tubeCutData.totalPiecesNeeded,
+            acceptedAt: null,
+            acceptedBy: null,
+        },
+    });
+
+    // 5. Check inventory availability
+    const inventoryRequirements = buildInventoryRequirements(fabricCutData, tubeCutData);
+
+    const inventoryCheck = await InventoryService.checkAvailability(inventoryRequirements);
+
+    return { worksheetData, inventoryCheck, fabricCutData, tubeCutData };
+}
+
+/**
+ * Serialize fabricCutData for JSON storage (remove circular refs from items)
+ */
+function serializeFabricCutData(fabricCutData: Record<string, any>): any {
+    const serialized: Record<string, any> = {};
+    for (const [key, data] of Object.entries(fabricCutData)) {
+        serialized[key] = {
+            optimization: data.optimization,
+            items: data.items.map((item: any) => ({
+                id: item.id,
+                location: item.location,
+                width: item.width,
+                drop: item.drop,
+                controlSide: item.controlSide,
+                bracketColour: item.bracketColour,
+                chainOrMotor: item.chainOrMotor,
+                roll: item.roll,
+                material: item.material,
+                fabricType: item.fabricType,
+                fabricColour: item.fabricColour,
+                bottomRailType: item.bottomRailType,
+                bottomRailColour: item.bottomRailColour,
+            })),
+        };
+    }
+    return serialized;
+}
+
+/**
+ * Parse a fabric key ("Material - FabricType - Colour") into inventory itemName + colorVariant
+ * Inventory stores: itemName = "Material - FabricType", colorVariant = "Colour"
+ */
+function parseFabricKey(fabricKey: string): { itemName: string; colorVariant: string } {
+    const parts = fabricKey.split(' - ');
+    const colorVariant = parts.pop() || '';
+    const itemName = parts.join(' - ');
+    return { itemName, colorVariant };
+}
+
+/**
+ * Build inventory requirements from optimization data
+ */
+function buildInventoryRequirements(fabricCutData: Record<string, any>, tubeCutData: any) {
+    const requirements: { category: InventoryCategory; itemName: string; colorVariant?: string; quantityNeeded: number }[] = [];
+
+    for (const [fabricKey, groupData] of Object.entries(fabricCutData)) {
+        const { itemName, colorVariant } = parseFabricKey(fabricKey);
+        requirements.push({
+            category: 'FABRIC',
+            itemName,
+            colorVariant,
+            quantityNeeded: groupData.optimization.statistics.totalFabricNeeded,
+        });
+    }
+
+    for (const group of tubeCutData.groups) {
+        requirements.push({
+            category: 'BOTTOM_BAR',
+            itemName: group.bottomRailType,
+            colorVariant: group.bottomRailColour,
+            quantityNeeded: group.piecesToDeduct,
+        });
+    }
+
+    return requirements;
+}
+
+/**
+ * Get worksheet preview data
+ */
+export const getWorksheetPreview = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> => {
+    try {
+        const worksheetData = await prisma.worksheetData.findUnique({
+            where: { orderId: req.params.id },
+        });
+
+        if (!worksheetData) {
+            throw new AppError(404, 'No worksheet data found. Send order to production first.');
+        }
+
+        // Also check inventory availability
+        const fabricCutData = worksheetData.fabricCutData as Record<string, any>;
+        const tubeCutData = worksheetData.tubeCutData as any;
+
+        const inventoryRequirements = buildInventoryRequirements(fabricCutData, tubeCutData);
+        const inventoryCheck = await InventoryService.checkAvailability(inventoryRequirements);
+
+        res.json({
+            success: true,
+            data: {
+                worksheetData,
+                inventoryCheck,
+            },
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Accept worksheets and deduct inventory
+ */
+export const acceptWorksheets = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> => {
+    try {
+        const authReq = req as AuthRequest;
+
+        const worksheetData = await prisma.worksheetData.findUnique({
+            where: { orderId: req.params.id },
+        });
+
+        if (!worksheetData) {
+            throw new AppError(404, 'No worksheet data found');
+        }
+
+        if (worksheetData.acceptedAt) {
+            throw new AppError(400, 'Worksheets already accepted');
+        }
+
+        const order = await prisma.order.findUnique({
+            where: { id: req.params.id },
+        });
+
+        if (!order) {
+            throw new AppError(404, 'Order not found');
+        }
+
+        // Build deduction list
+        const deductions: { category: InventoryCategory; itemName: string; colorVariant?: string; quantity: number; notes: string }[] = [];
+
+        const fabricCutData = worksheetData.fabricCutData as Record<string, any>;
+        const tubeCutData = worksheetData.tubeCutData as any;
+
+        for (const [fabricKey, groupData] of Object.entries(fabricCutData)) {
+            const { itemName, colorVariant } = parseFabricKey(fabricKey);
+            deductions.push({
+                category: 'FABRIC',
+                itemName,
+                colorVariant,
+                quantity: groupData.optimization.statistics.totalFabricNeeded,
+                notes: `Order ${order.orderNumber} - ${groupData.optimization.statistics.usedStockSheets} sheets, ${groupData.optimization.statistics.efficiency}% efficiency`,
+            });
+        }
+
+        for (const group of tubeCutData.groups) {
+            deductions.push({
+                category: 'BOTTOM_BAR',
+                itemName: group.bottomRailType,
+                colorVariant: group.bottomRailColour,
+                quantity: group.piecesToDeduct,
+                notes: `Order ${order.orderNumber} - ${group.totalWidth}mm total, ${group.piecesToDeduct} pieces`,
+            });
+        }
+
+        // Deduct inventory
+        const deductionResults = await InventoryService.deductForOrder(order.id, deductions);
+
+        // Mark worksheets as accepted
+        await prisma.worksheetData.update({
+            where: { orderId: req.params.id },
+            data: {
+                acceptedAt: new Date(),
+                acceptedBy: authReq.user?.email || 'unknown',
+            },
+        });
+
+        logger.info(`Worksheets accepted for order ${order.orderNumber} by ${authReq.user?.email}`);
+
+        res.json({
+            success: true,
+            message: 'Worksheets accepted and inventory deducted',
+            data: { deductions: deductionResults },
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Recalculate optimization for an order
+ */
+export const recalculateWorksheets = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> => {
+    try {
+        const order = await prisma.order.findUnique({
+            where: { id: req.params.id },
+            include: { items: { orderBy: { itemNumber: 'asc' } } },
+        });
+
+        if (!order) {
+            throw new AppError(404, 'Order not found');
+        }
+
+        if (order.status !== OrderStatus.PRODUCTION) {
+            throw new AppError(400, 'Only orders in production can be recalculated');
+        }
+
+        // Check if already accepted
+        const existing = await prisma.worksheetData.findUnique({
+            where: { orderId: order.id },
+        });
+
+        if (existing?.acceptedAt) {
+            throw new AppError(400, 'Cannot recalculate accepted worksheets');
+        }
+
+        const result = await runOptimization(order);
+
+        res.json({
+            success: true,
+            message: 'Optimization recalculated',
+            data: {
+                worksheetData: result.worksheetData,
+                inventoryCheck: result.inventoryCheck,
+            },
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Download worksheet as CSV or PDF
+ */
+export const downloadWorksheet = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> => {
+    try {
+        const { type } = req.params; // fabric-cut-csv, fabric-cut-pdf, tube-cut-csv, tube-cut-pdf
+
+        const order = await prisma.order.findUnique({
+            where: { id: req.params.id },
+        });
+
+        if (!order) {
+            throw new AppError(404, 'Order not found');
+        }
+
+        const worksheetData = await prisma.worksheetData.findUnique({
+            where: { orderId: req.params.id },
+        });
+
+        if (!worksheetData) {
+            throw new AppError(404, 'No worksheet data found');
+        }
+
+        const orderInfo = {
+            orderNumber: order.orderNumber,
+            customerName: order.customerName,
+            orderDate: order.orderDate,
+        };
+
+        const fabricCutData = worksheetData.fabricCutData as Record<string, any>;
+        const tubeCutData = worksheetData.tubeCutData as any;
+
+        switch (type) {
+            case 'fabric-cut-csv': {
+                const csv = WorksheetExportService.generateFabricCutCSV(orderInfo, fabricCutData);
+                res.setHeader('Content-Type', 'text/csv');
+                res.setHeader('Content-Disposition', `attachment; filename="${order.orderNumber}-fabric-cut.csv"`);
+                res.send(csv);
+                break;
+            }
+            case 'fabric-cut-pdf': {
+                const doc = WorksheetExportService.generateFabricCutPDF(orderInfo, fabricCutData);
+                res.setHeader('Content-Type', 'application/pdf');
+                res.setHeader('Content-Disposition', `attachment; filename="${order.orderNumber}-fabric-cut.pdf"`);
+                doc.pipe(res);
+                break;
+            }
+            case 'tube-cut-csv': {
+                const csv = WorksheetExportService.generateTubeCutCSV(orderInfo, tubeCutData);
+                res.setHeader('Content-Type', 'text/csv');
+                res.setHeader('Content-Disposition', `attachment; filename="${order.orderNumber}-tube-cut.csv"`);
+                res.send(csv);
+                break;
+            }
+            case 'tube-cut-pdf': {
+                const doc = WorksheetExportService.generateTubeCutPDF(orderInfo, tubeCutData);
+                res.setHeader('Content-Type', 'application/pdf');
+                res.setHeader('Content-Disposition', `attachment; filename="${order.orderNumber}-tube-cut.pdf"`);
+                doc.pipe(res);
+                break;
+            }
+            default:
+                throw new AppError(400, 'Invalid download type. Use: fabric-cut-csv, fabric-cut-pdf, tube-cut-csv, tube-cut-pdf');
+        }
     } catch (error) {
         next(error);
     }
