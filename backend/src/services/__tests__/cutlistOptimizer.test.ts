@@ -83,15 +83,15 @@ describe('CutlistOptimizer', () => {
         expect(result.sheets.length).toBeLessThanOrEqual(10);
     });
 
-    test('should warn when panel too large for stock', () => {
-        // Panel wider than stock
+    test('should warn when panel too large for stock in both orientations', () => {
+        // Panel wider AND longer than stock — cannot be placed even rotated
         const panels: PanelInput[] = [
-            { width: 3500, length: 2000, qty: 1, label: 'Too wide' },
+            { width: 3500, length: 3500, qty: 1, label: 'Too large both ways' },
         ];
 
         const result = optimizer.optimize(panels);
 
-        // Panel should not be placed
+        // Panel should not be placed (exceeds 3000mm in both dimensions)
         expect(result.statistics.totalCuts).toBe(0);
     });
 
