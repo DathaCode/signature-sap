@@ -1,17 +1,19 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
-import Layout from './components/Layout'
-import WorksheetPreview from './pages/WorksheetPreview'
-import InventoryDashboard from './pages/InventoryDashboard'
-import LoginPage from './pages/auth/Login'
-import RegisterPage from './pages/auth/Register'
-import CustomerDashboard from './pages/customer/Dashboard'
-import NewOrderPage from './pages/orders/NewOrder'
-import MyOrders from './pages/customer/MyOrders'
-import OrderDetails from './pages/orders/OrderDetails'
-import OrderManagement from './pages/admin/OrderManagement'
-import UserManagement from './pages/admin/UserManagement'
-import PricingManagement from './pages/admin/PricingManagement'
-import { ProtectedRoute } from './components/layout/ProtectedRoute'
+import { Routes, Route, Navigate } from 'react-router-dom';
+import Layout from './components/Layout';
+import WorksheetPreview from './pages/WorksheetPreview';
+import InventoryDashboard from './pages/InventoryDashboard';
+import LoginPage from './pages/auth/Login';
+import RegisterPage from './pages/auth/Register';
+import CustomerDashboard from './pages/customer/Dashboard';
+import NewOrderPage from './pages/orders/NewOrder';
+import MyOrders from './pages/customer/MyOrders';
+import OrderDetails from './pages/orders/OrderDetails';
+import OrderManagement from './pages/admin/OrderManagement';
+import UserManagement from './pages/admin/UserManagement';
+import PricingManagement from './pages/admin/PricingManagement';
+import MyQuotesPage from './pages/quotes/MyQuotes';
+import QuoteDetails from './pages/quotes/QuoteDetails';
+import { ProtectedRoute } from './components/layout/ProtectedRoute';
 
 function App() {
     return (
@@ -48,7 +50,9 @@ function App() {
                         <Layout>
                             <Routes>
                                 <Route path="dashboard" element={<CustomerDashboard />} />
-                                <Route path="orders/new" element={<NewOrderPage />} />
+                                <Route path="new-order" element={<NewOrderPage />} />
+                                <Route path="quotes" element={<MyQuotesPage />} />
+                                <Route path="quotes/:quoteId" element={<QuoteDetails />} />
                                 <Route path="orders" element={<MyOrders />} />
                                 <Route path="orders/:orderId" element={<OrderDetails />} />
                                 <Route path="*" element={<Navigate to="/dashboard" replace />} />

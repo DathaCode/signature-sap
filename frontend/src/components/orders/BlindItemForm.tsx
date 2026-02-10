@@ -21,7 +21,7 @@ import {
     isWinderMotor,
     isTBSExtendedInvalid
 } from '../../data/hardware';
-import { Trash2, AlertCircle, Calculator } from 'lucide-react';
+import { Trash2, AlertCircle, Calculator, Copy, PlusCircle } from 'lucide-react';
 import { useDebounce } from '../../hooks/useDebounce';
 import { pricingApi } from '../../services/api';
 import toast from 'react-hot-toast';
@@ -30,10 +30,12 @@ import toast from 'react-hot-toast';
 interface BlindItemFormProps {
     index: number;
     onRemove: () => void;
+    onCopy: () => void;
+    onContinue: () => void;
     canRemove: boolean;
 }
 
-export function BlindItemForm({ index, onRemove, canRemove }: BlindItemFormProps) {
+export function BlindItemForm({ index, onRemove, onCopy, onContinue, canRemove }: BlindItemFormProps) {
     const { register, setValue, control, setError, clearErrors, getValues } = useFormContext();
 
     // Watch all fields
@@ -367,6 +369,30 @@ export function BlindItemForm({ index, onRemove, canRemove }: BlindItemFormProps
                             </div>
                         </div>
                     )}
+
+                    {/* Copy & Continue Buttons */}
+                    <div className="flex gap-2 mt-3">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={onCopy}
+                            className="text-blue-600 border-blue-300 hover:bg-blue-50"
+                        >
+                            <Copy className="h-4 w-4 mr-1" />
+                            Update & Copy
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={onContinue}
+                            className="text-green-600 border-green-300 hover:bg-green-50"
+                        >
+                            <PlusCircle className="h-4 w-4 mr-1" />
+                            Update & Continue Adding
+                        </Button>
+                    </div>
                 </div>
 
             </CardContent>
