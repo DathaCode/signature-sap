@@ -3,9 +3,52 @@ import { AppError } from '../middleware/errorHandler';
 
 const prisma = new PrismaClient();
 
+/**
+ * Motor-specific width deduction mapping
+ * Fabric cut width = Blind width - Motor deduction
+ */
+const MOTOR_DEDUCTIONS: Record<string, number> = {
+    // Winders (28mm deduction)
+    'TBS winder-32mm': 28,
+    'Acmeda winder-29mm': 28,
+
+    // Automate motors (29mm deduction)
+    'Automate 1.1NM Li-Ion Quiet Motor': 29,
+    'Automate 0.7NM Li-Ion Quiet Motor': 29,
+    'Automate 2NM Li-Ion Quiet Motor': 29,
+    'Automate 3NM Li-Ion Motor': 29,
+    'Automate E6 6NM Motor': 29,
+
+    // Alpha Battery motors (30mm deduction)
+    'Alpha 1NM Battery Motor': 30,
+    'Alpha 2NM Battery Motor': 30,
+    'Alpha 3NM Battery Motor': 30,
+
+    // Alpha AC motors (35mm deduction)
+    'Alpha AC 5NM Motor': 35,
+};
+
+/**
+ * Default deduction for tube cuts (always 28mm regardless of motor)
+ */
+const TUBE_CUT_DEDUCTION = 28;
+
 export class WorksheetService {
     /**
-     * Get fabric cut worksheet data (all 12 columns)
+     * Get width deduction based on motor type
+     * For fabric cuts - motor-specific deduction
+     * For tube cuts - always 28mm
+     */
+    private static getWidthDeduction(motorType: string, isTubeCut: boolean = false): number {
+        if (isTubeCut) {
+            return TUBE_CUT_DEDUCTION;
+        }
+
+        // Return motor-specific deduction or default to 28mm if motor not found
+        return MOTOR_DEDUCTIONS[motorType] || 28;
+    }
+    /**
+     * Get fabric cut worksheet data (all 13 columns including Fabric Cut Width)
      */
     static async getFabricCutWorksheet(orderId: string) {
         const order = await prisma.order.findUnique({
@@ -39,27 +82,37 @@ export class WorksheetService {
                 'Colour',
                 'Bottom Rail Type',
                 'Bottom Rail Colour',
+                'Fabric Cut Width (mm)', // NEW: 13th column
             ],
-            items: order.items.map(item => ({
-                blindNumber: item.itemNumber.toString(),
-                location: item.location,
-                widthMm: item.calculatedWidth || item.width, // Fallback if calc is missing
-                dropMm: item.calculatedDrop || item.drop,
-                controlSide: item.controlSide || '-',
-                controlColor: '-', // Not currently captured in OrderItem? Adding placeholder
-                chainOrMotor: (item.chainOrMotor || '-').replace(/_/g, ' '),
-                rollType: item.roll || '-',
-                fabricType: item.fabricType || '-',
-                fabricColor: item.fabricColour || '-',
-                bottomRailType: item.bottomRailType || '-',
-                bottomRailColor: item.bottomRailColour || '-',
-                highlightFlag: item.isDuplicate,
-            })),
+            items: order.items.map(item => {
+                const blindWidth = item.calculatedWidth || item.width;
+                const motorType = item.chainOrMotor || '';
+                const motorDeduction = this.getWidthDeduction(motorType, false);
+                const fabricCutWidth = blindWidth - motorDeduction;
+
+                return {
+                    blindNumber: item.itemNumber.toString(),
+                    location: item.location,
+                    widthMm: blindWidth,
+                    dropMm: item.calculatedDrop || item.drop,
+                    controlSide: item.controlSide || '-',
+                    controlColor: '-', // Not currently captured in OrderItem? Adding placeholder
+                    chainOrMotor: (item.chainOrMotor || '-').replace(/_/g, ' '),
+                    rollType: item.roll || '-',
+                    fabricType: item.fabricType || '-',
+                    fabricColor: item.fabricColour || '-',
+                    bottomRailType: item.bottomRailType || '-',
+                    bottomRailColor: item.bottomRailColour || '-',
+                    fabricCutWidthMm: fabricCutWidth, // NEW: Calculated with motor-specific deduction
+                    highlightFlag: item.isDuplicate,
+                };
+            }),
         };
     }
 
     /**
-     * Get tube cut worksheet data (columns 1,2,3,11,12 only)
+     * Get tube cut worksheet data (5 columns: Blind Number, Location, Width, Bottom Rail Type, Bottom Rail Colour)
+     * Tube cut width = Blind width - 28mm (always, regardless of motor type)
      */
     static async getTubeCutWorksheet(orderId: string) {
         const order = await prisma.order.findUnique({
@@ -83,18 +136,24 @@ export class WorksheetService {
             columns: [
                 'Blind Number',
                 'Location',
-                'Width (mm)',
+                'Width (mm)', // This is tube cut width (blind width - 28mm)
                 'Bottom Rail Type',
                 'Bottom Rail Colour',
             ],
-            items: order.items.map(item => ({
-                blindNumber: item.itemNumber.toString(),
-                location: item.location,
-                widthMm: item.calculatedWidth || item.width,
-                bottomRailType: item.bottomRailType || '-',
-                bottomRailColor: item.bottomRailColour || '-',
-                highlightFlag: item.isDuplicate,
-            })),
+            items: order.items.map(item => {
+                const blindWidth = item.calculatedWidth || item.width;
+                const motorType = item.chainOrMotor || '';
+                const tubeCutWidth = blindWidth - this.getWidthDeduction(motorType, true); // Always 28mm for tube
+
+                return {
+                    blindNumber: item.itemNumber.toString(),
+                    location: item.location,
+                    widthMm: tubeCutWidth, // Tube cut width with 28mm deduction
+                    bottomRailType: item.bottomRailType || '-',
+                    bottomRailColor: item.bottomRailColour || '-',
+                    highlightFlag: item.isDuplicate,
+                };
+            }),
         };
     }
 
