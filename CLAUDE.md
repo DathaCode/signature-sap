@@ -130,10 +130,23 @@ src/
    - `deductForOrder()` - Atomic inventory deductions with transaction logging
 
 5. **Worksheet Export** (`services/worksheetExport.service.ts`)
-   - CSV generation (papaparse)
-   - PDF generation (pdfkit) with visualization
-   - **Fabric worksheet:** 14 columns including sheet positions
+   - CSV generation with motor-specific width deductions
+   - PDF generation (pdfkit) with cutting layout visualization
+   - **Fabric worksheet:** 13 columns including "Fabric Cut Width (mm)"
    - **Tube worksheet:** 5 columns with group calculations
+   - **PDF includes:** Page 1 = Visual cutting layout diagram, Page 2+ = Detailed table
+
+6. **Comprehensive Pricing Service** (`services/comprehensivePricing.service.ts`)
+   - Calculates complete blind price with 7 component types:
+     * Fabric price (from matrix with group discount)
+     * Motor/Chain price (from inventory)
+     * Bracket price (brand + type specific)
+     * Chain price (length based on drop height)
+     * Clips price (2 clips required)
+     * Idler/Clutch price (conditional on bracket type)
+     * Stop bolt/Safety lock (if winder/chain motor)
+   - Motor-specific logic for chain selection and bracket compatibility
+   - Returns detailed price breakdown for transparency
 
 ### Frontend Architecture
 
@@ -187,10 +200,15 @@ InventoryItem (1) ──> (N) InventoryTransaction
 
 ### Critical Field Conventions
 
-**Width Calculations (3 different values!):**
+**Width Calculations (Motor-Specific Deductions):**
 - `OrderItem.width` - Original customer dimension
 - `OrderItem.calculatedWidth` - Width - 28mm (for tube cutting, stored in DB)
-- `OrderItem.fabricCutWidth` - Width - 35mm (for fabric cutting, computed on-demand)
+- `OrderItem.fabricCutWidth` - Width - Motor Deduction (computed based on motor type):
+  * Winders (TBS, Acmeda): Width - 28mm
+  * Automate motors: Width - 29mm
+  * Alpha Battery motors: Width - 30mm
+  * Alpha AC motors: Width - 35mm
+  * Default (unknown): Width - 28mm
 
 **Fabric Inventory Keys:**
 - `category = "FABRIC"`
@@ -292,17 +310,32 @@ GET /api/web-orders/:id/worksheets/download/tube-cut-pdf
 
 ### Warehouse Calculations
 
-**Applied BEFORE optimization:**
+**Motor-Specific Width Deductions:**
 ```typescript
-// For fabric cutting optimization
-calculatedWidth = width - 28  // Stored in OrderItem.calculatedWidth
-calculatedDrop = drop + 150   // Stored in OrderItem.calculatedDrop
+// Motor deduction mapping (worksheet.service.ts, worksheetExport.service.ts)
+const MOTOR_DEDUCTIONS = {
+  'TBS winder-32mm': 28,
+  'Acmeda winder-29mm': 28,
+  'Automate 1.1NM Li-Ion Quiet Motor': 29,
+  'Automate 0.7NM Li-Ion Quiet Motor': 29,
+  'Automate 2NM Li-Ion Quiet Motor': 29,
+  'Automate 3NM Li-Ion Motor': 29,
+  'Automate E6 6NM Motor': 29,
+  'Alpha 1NM Battery Motor': 30,
+  'Alpha 2NM Battery Motor': 30,
+  'Alpha 3NM Battery Motor': 30,
+  'Alpha AC 5NM Motor': 35,
+};
 
 // For fabric cutting worksheet display
-fabricCutWidth = width - 35   // Computed, not stored
+fabricCutWidth = width - getMotorDeduction(motorType)  // Motor-specific
 
-// For tube cutting (uses original dimensions)
-tubeCutWidth = width - 28     // Same as calculatedWidth
+// For tube cutting (always 28mm regardless of motor)
+tubeCutWidth = width - 28
+
+// For fabric cutting optimization (legacy, still uses 28mm)
+calculatedWidth = width - 28  // Stored in OrderItem.calculatedWidth
+calculatedDrop = drop + 150   // Stored in OrderItem.calculatedDrop
 ```
 
 ### Cutlist Optimization Process
@@ -366,14 +399,15 @@ fabricColor, bottomRailColor    // ❌ WRONG
 
 ### 3. Width Deduction Context
 ```typescript
-// Fabric cutting optimization - use calculatedWidth
+// Fabric cutting worksheet display - use motor-specific deduction
+const motorType = orderItem.chainOrMotor;
+const fabricCutWidth = orderItem.width - getMotorDeduction(motorType);
+
+// Tube cutting - always 28mm regardless of motor
+const tubeCutWidth = orderItem.width - 28;
+
+// Fabric cutting optimization (legacy) - use calculatedWidth
 const width = orderItem.calculatedWidth; // width - 28
-
-// Fabric cutting worksheet display - use fabricCutWidth
-const displayWidth = orderItem.width - 35;
-
-// Tube cutting - use calculatedWidth
-const tubeWidth = orderItem.calculatedWidth; // width - 28
 ```
 
 ### 4. Docker Volume Mounts
@@ -490,25 +524,24 @@ npx prisma migrate status
 
 ---
 
-## Known Issues
+## Known Issues & Future Work
 
 **G3 Pricing Anomaly:**
 - `PRICING_DATA[3][2000][3000] = 113.4` seems unusually low
 - Surrounding values are 150-180 AUD
 - Verify with business before correcting
 
-**Motor Width Deduction (Phase 2):**
-- Spec document (UPGRADE.md) describes motor-specific deductions:
-  - Chains (TBS, Acmeda): 28mm
-  - Automate motors: 29mm
-  - Alpha Battery motors: 30mm
-  - Alpha AC motor: 35mm
-- **Current implementation:** All use 28mm (not yet implemented)
+**Missing Pricing Breakdown Fields (Part 7.1):**
+- OrderItem model needs additional fields for transparency:
+  - `fabricPrice`, `motorPrice`, `bracketPrice`
+  - `chainPrice`, `clipsPrice`, `componentPrice`
+- Currently only storing total `price` field
+- **Status:** Schema update needed + migration
 
-**Quote System:**
-- Schema includes `Quote` model
+**Quote System (Part 2.3 from UPGRADE.md):**
+- Schema includes `Quote` model (already exists)
 - Frontend has quote vs order workflow in UPGRADE.md spec
-- **Status:** Not yet implemented in controllers/routes
+- **Status:** Controllers/routes not yet implemented
 
 ---
 
@@ -516,7 +549,56 @@ npx prisma migrate status
 
 - **`user_process_flow_UPDATED.md`** - Complete Phase 2 specification (cutlist + tube optimization)
 - **`UPGRADE.md`** - Comprehensive upgrade requirements (motor deductions, 80+ inventory items, enhanced UI)
+- **`PROGRESS.md`** - Current development status and completion tracking
 - **Memory files** - `.claude/projects/.../memory/MEMORY.md` - Project-specific fixes and patterns
+
+---
+
+## Recent Updates (2026-02-10)
+
+### ✅ Part 5: Comprehensive Pricing (Completed)
+**4 commits:** c6b8e7d, 9aef6d1, 22de2b7, 60bc929
+
+**Implemented:**
+- `comprehensivePricing.service.ts` - Complete blind pricing with 7 component types
+- Frontend API integration (`pricingApi.calculateBlindPrice()`)
+- "Check Price" button in BlindItemForm with price breakdown display
+- Updated seed script with all 11 motors and correct bracket colors
+- Helper functions: `getChainLength()`, `isWinder()`, `validateBracketSelection()`
+
+**Features:**
+- Fabric price from matrix with group discounts (G1=20%, G2=25%, G3=30%)
+- Motor/Chain price from inventory
+- Bracket price (brand + type specific, validates TBS + Extended incompatibility)
+- Chain price (length selection based on drop: 500/750/1000/1200/1500mm)
+- Clips price (2 clips required)
+- Idler & Clutch price (conditional on Dual brackets)
+- Stop bolt & Safety lock (if winder/chain motor)
+
+### ✅ Part 6: Enhanced Worksheet Generation (Completed)
+**1 commit:** cbfd097
+
+**Implemented:**
+- Motor-specific width deductions in `worksheet.service.ts`
+- PDF cutting layout visualization in `worksheetExport.service.ts`
+- 13-column Fabric Cut Worksheet (added "Fabric Cut Width (mm)")
+- Helper functions with MOTOR_DEDUCTIONS mapping
+
+**Features:**
+- **Motor-specific deductions:**
+  * Winders: 28mm
+  * Automate: 29mm
+  * Alpha Battery: 30mm
+  * Alpha AC: 35mm
+  * Tube cuts: always 28mm
+- **PDF Page 1:** Visual cutting layout diagram
+  * Scaled stock sheets (3000mm × 10000mm)
+  * Color-coded panels by fabric group
+  * Panel dimensions and location labels
+  * Rotation indicators
+  * Sheet statistics (panels, efficiency, waste)
+- **PDF Page 2+:** Detailed 13-column worksheet table
+- Fixed hardcoded width/drop values with motor-specific calculations
 
 ---
 
