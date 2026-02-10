@@ -17,22 +17,23 @@ async function main() {
   console.log('📦 Seeding Motors...');
 
   const motors = [
-    // Winders
-    { name: 'Acmeda winder-29mm', quantity: 20, price: 45.00 },
+    // Winders (28mm width deduction)
     { name: 'TBS winder-32mm', quantity: 15, price: 48.00 },
+    { name: 'Acmeda winder-29mm', quantity: 20, price: 45.00 },
 
-    // Automate motors
+    // Automate motors (29mm width deduction)
     { name: 'Automate 1.1NM Li-Ion Quiet Motor', quantity: 20, price: 120.00 },
     { name: 'Automate 0.7NM Li-Ion Quiet Motor', quantity: 15, price: 110.00 },
-    { name: 'Automate 2NM Li-Ion Motor', quantity: 18, price: 135.00 },
+    { name: 'Automate 2NM Li-Ion Quiet Motor', quantity: 18, price: 135.00 },
     { name: 'Automate 3NM Li-Ion Motor', quantity: 12, price: 150.00 },
+    { name: 'Automate E6 6NM Motor', quantity: 10, price: 180.00 },
 
-    // Alpha Battery motors
+    // Alpha Battery motors (30mm width deduction)
     { name: 'Alpha 1NM Battery Motor', quantity: 15, price: 100.00 },
     { name: 'Alpha 2NM Battery Motor', quantity: 12, price: 115.00 },
+    { name: 'Alpha 3NM Battery Motor', quantity: 10, price: 130.00 },
 
-    // Alpha AC motors
-    { name: 'Alpha AC 3NM Motor', quantity: 10, price: 140.00 },
+    // Alpha AC motors (35mm width deduction)
     { name: 'Alpha AC 5NM Motor', quantity: 8, price: 165.00 },
   ];
 
@@ -69,7 +70,7 @@ async function main() {
 
   const bracketBrands = ['Acmeda', 'TBS'];
   const bracketTypes = ['Single Bracket set', 'Extended Bracket set', 'Duel Bracket set Left', 'Duel Bracket set Right'];
-  const bracketColours = ['White', 'Black', 'Bone', 'Dune'];
+  const bracketColours = ['White', 'Black', 'Sandstone', 'Barley', 'Silver Grey'];
 
   for (const brand of bracketBrands) {
     for (const type of bracketTypes) {
