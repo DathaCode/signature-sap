@@ -155,6 +155,9 @@ export const authApi = {
 }
 
 export const pricingApi = {
+    /**
+     * Calculate fabric price only (from matrix)
+     */
     calculatePrice: async (data: {
         material: string;
         fabricType: string;
@@ -163,6 +166,64 @@ export const pricingApi = {
     }): Promise<{ price: number; fabricGroup: number; discountPercent: number }> => {
         const response = await api.post('/pricing/calculate', data)
         return response.data.data
+    },
+
+    /**
+     * Calculate comprehensive blind price with all components
+     */
+    calculateBlindPrice: async (data: {
+        width: number;
+        drop: number;
+        material: string;
+        fabricType: string;
+        fabricColour: string;
+        chainOrMotor: string;
+        chainType?: string;
+        bracketType: string;
+        bracketColour: string;
+        bottomRailType: string;
+        bottomRailColour: string;
+        controlSide?: string;
+    }): Promise<{
+        fabricPrice: number;
+        motorChainPrice: number;
+        bracketPrice: number;
+        chainPrice: number;
+        clipsPrice: number;
+        idlerClutchPrice: number;
+        stopBoltSafetyLockPrice: number;
+        totalPrice: number;
+        fabricGroup: number;
+        discountPercent: number;
+        componentsUsed: string[];
+    }> => {
+        const response = await api.post('/pricing/calculate-blind', data)
+        return response.data.data
+    },
+
+    /**
+     * Get all component prices (admin)
+     */
+    getAllComponentPrices: async (category?: string): Promise<{
+        components: Array<{
+            id: string;
+            category: string;
+            name: string;
+            variant: string | null;
+            price: number;
+            unit: string;
+        }>;
+        total: number;
+    }> => {
+        const response = await api.get('/pricing/components/all', { params: { category } })
+        return response.data.data
+    },
+
+    /**
+     * Update component price (admin)
+     */
+    updateComponentPrice: async (id: string, price: number): Promise<void> => {
+        await api.patch(`/pricing/component/${id}`, { price })
     }
 }
 

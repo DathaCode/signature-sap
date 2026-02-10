@@ -141,3 +141,61 @@ export function calculateBlindPrice(
         originalPrice: basePrice
     };
 }
+
+/**
+ * Determine chain length based on drop height
+ * Matches backend logic in comprehensivePricing.service.ts
+ */
+export function getChainLength(drop: number): number {
+    if (drop <= 850) return 500;
+    if (drop <= 1100) return 750;
+    if (drop <= 1600) return 1000;
+    if (drop <= 2200) return 1200;
+    return 1500; // drop > 2200mm (up to 4000mm)
+}
+
+/**
+ * Check if motor is a winder (requires chain)
+ */
+export function isWinder(chainOrMotor: string): boolean {
+    return chainOrMotor.includes('winder');
+}
+
+/**
+ * Get bracket name based on motor type and selections
+ * Matches backend logic
+ */
+export function getBracketName(chainOrMotor: string, bracketType: string, bracketColour: string): string {
+    // Determine brand based on motor type
+    let brand = 'Acmeda'; // Default for motors
+
+    if (chainOrMotor === 'TBS winder-32mm') {
+        brand = 'TBS';
+    }
+
+    // Build bracket name
+    let bracketName = `${brand} `;
+
+    if (bracketType === 'Single') {
+        bracketName += `Single Bracket set - ${bracketColour}`;
+    } else if (bracketType === 'Single Extension') {
+        bracketName += `Extended Bracket set - ${bracketColour}`;
+    } else if (bracketType === 'Dual Left') {
+        bracketName += `Duel Bracket set Left - ${bracketColour}`;
+    } else if (bracketType === 'Dual Right') {
+        bracketName += `Duel Bracket set Right - ${bracketColour}`;
+    }
+
+    return bracketName;
+}
+
+/**
+ * Validate TBS + Extended bracket combination
+ * Returns error message if invalid, null if valid
+ */
+export function validateBracketSelection(chainOrMotor: string, bracketType: string): string | null {
+    if (chainOrMotor === 'TBS winder-32mm' && bracketType === 'Single Extension') {
+        return 'Extended bracket set is not available with TBS winder-32mm. Please select a different bracket type.';
+    }
+    return null;
+}
