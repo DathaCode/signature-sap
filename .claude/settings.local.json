@@ -9,7 +9,11 @@
       "Bash(npm install:*)",
       "Bash(npm ls:*)",
       "Bash(curl:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(docker-compose logs:*)",
+      "Bash(npx tsc:*)",
+      "Bash(node -e:*)"
     ]
   }
 }
