@@ -290,6 +290,14 @@ model OrderItem {
   discountPercent   Decimal       @default(0) @map("discount_percent") @db.Decimal(5, 2)
   price             Decimal       @default(0) @db.Decimal(10, 2)
 
+  // Pricing breakdown (from comprehensive pricing)
+  fabricPrice       Decimal?      @map("fabric_price") @db.Decimal(10, 2)
+  motorPrice        Decimal?      @map("motor_price") @db.Decimal(10, 2)
+  bracketPrice      Decimal?      @map("bracket_price") @db.Decimal(10, 2)
+  chainPrice        Decimal?      @map("chain_price") @db.Decimal(10, 2)
+  clipsPrice        Decimal?      @map("clips_price") @db.Decimal(10, 2)
+  componentPrice    Decimal?      @map("component_price") @db.Decimal(10, 2) // Idler, clutch, stop bolt, safety lock
+
   createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamp(6)
 
   @@map("order_items")

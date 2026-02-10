@@ -24,10 +24,19 @@ export interface BlindItem {
     // Calculated
     calculatedWidth?: number;
     calculatedDrop?: number;
+    fabricCutWidth?: number;
     price?: number;
     fabricGroup?: number;
     discountPercent?: number;
     notes?: string;
+
+    // Pricing breakdown
+    fabricPrice?: number;
+    motorPrice?: number;
+    bracketPrice?: number;
+    chainPrice?: number;
+    clipsPrice?: number;
+    componentPrice?: number;
 }
 
 export interface CreateOrderRequest {

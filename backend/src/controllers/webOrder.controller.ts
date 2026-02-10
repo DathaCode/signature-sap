@@ -5,10 +5,31 @@ import { AppError } from '../middleware/errorHandler';
 import { logger } from '../config/logger';
 import { z } from 'zod';
 import pricingService from '../services/pricing.service';
+import comprehensivePricingService from '../services/comprehensivePricing.service';
 import { CutlistOptimizer, PanelInput } from '../services/cutlistOptimizer.service';
 import { TubeCutOptimizer, TubeBlindInput } from '../services/tubeCutOptimizer.service';
 import { InventoryService } from '../services/inventory.service';
 import { WorksheetExportService } from '../services/worksheetExport.service';
+
+// Motor-specific width deductions for fabric cutting
+const MOTOR_DEDUCTIONS: Record<string, number> = {
+    'TBS winder-32mm': 28,
+    'Acmeda winder-29mm': 28,
+    'Automate 1.1NM Li-Ion Quiet Motor': 29,
+    'Automate 0.7NM Li-Ion Quiet Motor': 29,
+    'Automate 2NM Li-Ion Quiet Motor': 29,
+    'Automate 3NM Li-Ion Motor': 29,
+    'Automate E6 6NM Motor': 29,
+    'Alpha 1NM Battery Motor': 30,
+    'Alpha 2NM Battery Motor': 30,
+    'Alpha 3NM Battery Motor': 30,
+    'Alpha AC 5NM Motor': 35,
+};
+
+function getMotorDeduction(motorType: string | undefined): number {
+    if (!motorType) return 28;
+    return MOTOR_DEDUCTIONS[motorType] || 28;
+}
 
 const prisma = new PrismaClient();
 
@@ -104,30 +125,87 @@ export const createOrder = async (
             let price = 0;
             let fabricGroup: number | null = null;
             let discountPercent = 0;
+            let fabricPrice: number | null = null;
+            let motorPrice: number | null = null;
+            let bracketPrice: number | null = null;
+            let chainPrice: number | null = null;
+            let clipsPrice: number | null = null;
+            let componentPrice: number | null = null;
 
-            // Calculate price if material and fabric type provided
-            if (item.material && item.fabricType) {
+            // Calculate comprehensive price if all required fields provided
+            if (item.material && item.fabricType && item.fabricColour &&
+                item.chainOrMotor && item.bracketType && item.bracketColour &&
+                item.bottomRailType && item.bottomRailColour) {
+                try {
+                    const breakdown = await comprehensivePricingService.calculateBlindPrice({
+                        width: item.width,
+                        drop: item.drop,
+                        material: item.material,
+                        fabricType: item.fabricType,
+                        fabricColour: item.fabricColour,
+                        chainOrMotor: item.chainOrMotor,
+                        chainType: item.chainType,
+                        bracketType: item.bracketType,
+                        bracketColour: item.bracketColour,
+                        bottomRailType: item.bottomRailType,
+                        bottomRailColour: item.bottomRailColour,
+                        controlSide: item.controlSide,
+                    });
+
+                    price = breakdown.totalPrice;
+                    fabricGroup = breakdown.fabricGroup;
+                    discountPercent = breakdown.discountPercent;
+                    fabricPrice = breakdown.fabricPrice;
+                    motorPrice = breakdown.motorChainPrice;
+                    bracketPrice = breakdown.bracketPrice;
+                    chainPrice = breakdown.chainPrice;
+                    clipsPrice = breakdown.clipsPrice;
+                    componentPrice = parseFloat((
+                        breakdown.idlerClutchPrice + breakdown.stopBoltSafetyLockPrice
+                    ).toFixed(2));
+                } catch (pricingError) {
+                    // Fallback to basic pricing if comprehensive fails
+                    logger.warn(`Comprehensive pricing failed for item ${i + 1}, falling back to basic pricing: ${pricingError}`);
+                    const priceResult = await pricingService.calculatePrice({
+                        material: item.material,
+                        fabricType: item.fabricType,
+                        width: item.width,
+                        drop: item.drop,
+                    });
+                    price = priceResult.finalPrice;
+                    fabricGroup = priceResult.fabricGroup;
+                    discountPercent = priceResult.discountPercent;
+                }
+            } else if (item.material && item.fabricType) {
+                // Basic pricing when not all component fields are filled
                 const priceResult = await pricingService.calculatePrice({
                     material: item.material,
                     fabricType: item.fabricType,
                     width: item.width,
                     drop: item.drop,
                 });
-
                 price = priceResult.finalPrice;
                 fabricGroup = priceResult.fabricGroup;
                 discountPercent = priceResult.discountPercent;
             }
+
+            const motorDeduction = getMotorDeduction(item.chainOrMotor);
 
             processedItems.push({
                 itemNumber: i + 1,
                 ...item,
                 calculatedWidth: item.width - 28,
                 calculatedDrop: item.drop + 150,
-                fabricCutWidth: item.width - 35,
+                fabricCutWidth: item.width - motorDeduction,
                 fabricGroup,
                 discountPercent,
                 price,
+                fabricPrice,
+                motorPrice,
+                bracketPrice,
+                chainPrice,
+                clipsPrice,
+                componentPrice,
             });
 
             subtotal += price;

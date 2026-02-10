@@ -6,7 +6,7 @@
 
 ---
 
-## 📊 Overall Progress: 75% Complete
+## 📊 Overall Progress: 80% Complete
 
 ### Implementation Status Overview
 
@@ -17,7 +17,7 @@
 ✅ Part 4: Inventory Items & Deduction Logic      [100%] ████████████████████
 ✅ Part 5: Comprehensive Pricing Calculation      [100%] ████████████████████
 ✅ Part 6: Enhanced Worksheet Generation          [100%] ████████████████████
-🔄 Part 7: Database Schema Updates                [ 80%] ████████████████░░░░
+✅ Part 7: Database Schema Updates                [100%] ████████████████████
 ⚪ Part 8: Testing Requirements                   [  0%] ░░░░░░░░░░░░░░░░░░░░
 ⚪ Part 9: Deliverables Checklist                 [  0%] ░░░░░░░░░░░░░░░░░░░░
 ```
@@ -214,17 +214,15 @@
 
 ## 🔄 Partially Complete
 
-### Part 7: Database Schema Updates [80%]
-**Status:** Partially Complete
+### Part 7: Database Schema Updates [100%]
+**Status:** Completed 2026-02-10
 
 **Completed:**
 - ✅ `fixing` field added to OrderItem
 - ✅ `chainType` field added to OrderItem
 - ✅ Quote model exists in schema
 - ✅ Basic pricing fields (`price`, `discountPercent`, `fabricGroup`)
-
-**Remaining:**
-- ⚪ Add pricing breakdown fields to OrderItem:
+- ✅ Pricing breakdown fields added to OrderItem:
   ```prisma
   fabricPrice      Decimal?  @db.Decimal(10, 2)
   motorPrice       Decimal?  @db.Decimal(10, 2)
@@ -233,14 +231,14 @@
   clipsPrice       Decimal?  @db.Decimal(10, 2)
   componentPrice   Decimal?  @db.Decimal(10, 2)
   ```
-- ⚪ Run migration: `npx prisma migrate dev --name add_pricing_breakdown_fields`
-- ⚪ Update webOrder.controller to store breakdown when creating orders
+- ✅ Migration applied: `20260210105852_add_pricing_breakdown_fields`
+- ✅ webOrder.controller uses ComprehensivePricingService to store breakdown
+- ✅ Fixed fabricCutWidth: now uses motor-specific deductions (was hardcoded 35mm)
+- ✅ Frontend BlindItem type updated with breakdown fields
+- ✅ OrderDetails page shows expandable price breakdown per item
 
-**Why It's Needed:**
-- Transparency: Show customers exactly what they're paying for
-- Audit trail: Track pricing changes over time
-- Reporting: Analyze component costs and margins
-- Future: Enable per-component discounts or adjustments
+**Bug Fixed:**
+- `fabricCutWidth` was hardcoded as `width - 35` in createOrder. Now uses motor-specific deductions (28/29/30/35mm) matching the worksheet service logic.
 
 ---
 
@@ -340,24 +338,7 @@
 
 ## 🎯 Next Steps
 
-### Immediate (Part 7.1)
-1. **Add pricing breakdown fields to OrderItem schema**
-   ```bash
-   cd backend
-   # Edit prisma/schema.prisma - add 6 new Decimal fields
-   npx prisma migrate dev --name add_pricing_breakdown_fields
-   npx prisma generate
-   ```
-
-2. **Update webOrder.controller.ts**
-   - Store breakdown when calculating price
-   - Include breakdown in order creation response
-
-3. **Update frontend OrderDetails page**
-   - Display price breakdown to customers
-   - Show itemized component costs
-
-### Short-term (Part 8)
+### Immediate (Part 8)
 1. **Set up testing infrastructure**
    ```bash
    cd backend
@@ -401,7 +382,7 @@
 - None
 
 ### High Priority
-- **Missing pricing breakdown fields** (Part 7.1) - Needed for transparency and reporting
+- None (pricing breakdown fields added in Part 7)
 
 ### Medium Priority
 - **G3 pricing anomaly** - `PRICING_DATA[3][2000][3000] = 113.4` seems low (verify with business)
@@ -429,4 +410,4 @@
 ---
 
 **Report Generated:** 2026-02-10
-**Next Review:** After Part 7 completion
+**Next Review:** After Part 8 completion
