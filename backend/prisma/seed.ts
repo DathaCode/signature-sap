@@ -3,106 +3,37 @@ import { PrismaClient, InventoryCategory, UnitType } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🌱 Starting database seed...\n');
+  console.log('🌱 Starting database seed (80+ items)...\\n');
 
-  // Clear existing data (optional - remove in production)
+  // Clear existing data
   console.log('🗑️  Clearing existing inventory...');
   await prisma.inventoryTransaction.deleteMany();
   await prisma.inventoryItem.deleteMany();
-  console.log('✅ Existing inventory cleared\n');
+  console.log('✅ Existing inventory cleared\\n');
 
   // ============================================================================
-  // SEED FABRICS
+  // MOTORS
   // ============================================================================
-  console.log('📦 Seeding Fabrics...');
-  
-  const fabrics = [
-    { name: 'Vista Silver', quantity: 10000 },
-    { name: 'Versatile Grey', quantity: 10000 },
-    { name: 'Sanctuary Plaster', quantity: 10000 },
-    { name: 'Versatile Ice', quantity: 10000 },
-    { name: 'Nature Pearl', quantity: 8000 },
-    { name: 'Essence Ivory', quantity: 8000 },
-    { name: 'Mineral Smoke', quantity: 7500 },
-    { name: 'Urban Charcoal', quantity: 7500 },
-  ];
+  console.log('📦 Seeding Motors...');
 
-  for (const fabric of fabrics) {
-    const item = await prisma.inventoryItem.create({
-      data: {
-        category: InventoryCategory.FABRIC,
-        itemName: fabric.name,
-        colorVariant: null, // Fabrics don't have separate color variants
-        quantity: fabric.quantity,
-        unitType: UnitType.MM,
-        minStockAlert: 2000,
-      },
-    });
-
-    // Create initial transaction record
-    await prisma.inventoryTransaction.create({
-      data: {
-        inventoryItemId: item.id,
-        transactionType: 'ADDITION',
-        quantityChange: fabric.quantity,
-        newBalance: fabric.quantity,
-        notes: 'Initial stock - Database seed',
-      },
-    });
-
-    console.log(`  ✓ ${fabric.name}: ${fabric.quantity}mm`);
-  }
-
-  // ============================================================================
-  // SEED BOTTOM BARS
-  // ============================================================================
-  console.log('\n📦 Seeding Bottom Bars...');
-  
-  const bottomBars = [
-    { color: 'Anodised', quantity: 50 },
-    { color: 'Black', quantity: 50 },
-    { color: 'White', quantity: 50 },
-    { color: 'Bone', quantity: 40 },
-    { color: 'Dune', quantity: 40 },
-    { color: 'Silver', quantity: 35 },
-    { color: 'Bronze', quantity: 30 },
-  ];
-
-  for (const bar of bottomBars) {
-    const item = await prisma.inventoryItem.create({
-      data: {
-        category: InventoryCategory.BOTTOM_BAR,
-        itemName: 'Bottom Bar',
-        colorVariant: bar.color,
-        quantity: bar.quantity,
-        unitType: UnitType.UNITS,
-        minStockAlert: 10,
-      },
-    });
-
-    await prisma.inventoryTransaction.create({
-      data: {
-        inventoryItemId: item.id,
-        transactionType: 'ADDITION',
-        quantityChange: bar.quantity,
-        newBalance: bar.quantity,
-        notes: 'Initial stock - Database seed',
-      },
-    });
-
-    console.log(`  ✓ Bottom Bar (${bar.color}): ${bar.quantity} units`);
-  }
-
-  // ============================================================================
-  // SEED MOTORS
-  // ============================================================================
-  console.log('\n📦 Seeding Motors...');
-  
   const motors = [
-    { name: 'Automate 1.1NM Li-Ion Quiet', quantity: 20 },
-    { name: 'Automate 0.7NM Li-Ion Quiet', quantity: 15 },
-    { name: 'Automate 2NM Li-Ion', quantity: 18 },
-    { name: 'Automate 3NM Li-Ion', quantity: 12 },
+    // Winders
+    { name: 'Acmeda winder-29mm', quantity: 20, price: 45.00 },
+    { name: 'TBS winder-32mm', quantity: 15, price: 48.00 },
+
+    // Automate motors
+    { name: 'Automate 1.1NM Li-Ion Quiet Motor', quantity: 20, price: 120.00 },
+    { name: 'Automate 0.7NM Li-Ion Quiet Motor', quantity: 15, price: 110.00 },
+    { name: 'Automate 2NM Li-Ion Motor', quantity: 18, price: 135.00 },
+    { name: 'Automate 3NM Li-Ion Motor', quantity: 12, price: 150.00 },
+
+    // Alpha Battery motors
+    { name: 'Alpha 1NM Battery Motor', quantity: 15, price: 100.00 },
+    { name: 'Alpha 2NM Battery Motor', quantity: 12, price: 115.00 },
+
+    // Alpha AC motors
+    { name: 'Alpha AC 3NM Motor', quantity: 10, price: 140.00 },
+    { name: 'Alpha AC 5NM Motor', quantity: 8, price: 165.00 },
   ];
 
   for (const motor of motors) {
@@ -114,6 +45,7 @@ async function main() {
         quantity: motor.quantity,
         unitType: UnitType.UNITS,
         minStockAlert: 5,
+        price: motor.price,
       },
     });
 
@@ -127,30 +59,160 @@ async function main() {
       },
     });
 
-    console.log(`  ✓ ${motor.name}: ${motor.quantity} units`);
+    console.log(`  ✓ ${motor.name}: ${motor.quantity} units ($${motor.price})`);
   }
 
   // ============================================================================
-  // SEED CHAINS
+  // BRACKETS
   // ============================================================================
-  console.log('\n📦 Seeding Chains...');
-  
-  const chains = [
-    { name: 'Stainless Steel Chain', quantity: 100 },
-    { name: 'Plastic Chain', quantity: 100 },
-    { name: 'Automate 1.1NM Li-Ion Quiet Chain', quantity: 50 },
-    { name: 'Alpha 1NM Battery Chain', quantity: 40 },
+  console.log('\\n📦 Seeding Brackets...');
+
+  const bracketBrands = ['Acmeda', 'TBS'];
+  const bracketTypes = ['Single Bracket set', 'Extended Bracket set', 'Duel Bracket set Left', 'Duel Bracket set Right'];
+  const bracketColours = ['White', 'Black', 'Bone', 'Dune'];
+
+  for (const brand of bracketBrands) {
+    for (const type of bracketTypes) {
+      // Skip Extended bracket for TBS (not compatible)
+      if (brand === 'TBS' && type === 'Extended Bracket set') continue;
+
+      for (const colour of bracketColours) {
+        const name = `${brand} ${type} - ${colour}`;
+        const quantity = 30;
+        const price = type.includes('Extended') ? 22.00 : type.includes('Duel') ? 28.00 : 18.00;
+
+        const item = await prisma.inventoryItem.create({
+          data: {
+            category: InventoryCategory.BRACKET,
+            itemName: name,
+            colorVariant: null,
+            quantity,
+            unitType: UnitType.UNITS,
+            minStockAlert: 10,
+            price,
+          },
+        });
+
+        await prisma.inventoryTransaction.create({
+          data: {
+            inventoryItemId: item.id,
+            transactionType: 'ADDITION',
+            quantityChange: quantity,
+            newBalance: quantity,
+            notes: 'Initial stock - Database seed',
+          },
+        });
+
+        console.log(`  ✓ ${name}: ${quantity} units ($${price})`);
+      }
+    }
+  }
+
+  // ============================================================================
+  // CHAINS
+  // ============================================================================
+  console.log('\\n📦 Seeding Chains...');
+
+  const chainTypes = ['Stainless Steel', 'Plastic Pure White'];
+  const chainLengths = [500, 750, 1000, 1200, 1500]; // mm
+
+  for (const chainType of chainTypes) {
+    for (const length of chainLengths) {
+      const name = `${chainType} Chain - ${length}mm`;
+      const quantity = 50;
+      const price = length <= 750 ? 8.00 : length <= 1200 ? 10.00 : 12.00;
+
+      const item = await prisma.inventoryItem.create({
+        data: {
+          category: InventoryCategory.CHAIN,
+          itemName: name,
+          colorVariant: null,
+          quantity,
+          unitType: UnitType.UNITS,
+          minStockAlert: 15,
+          price,
+        },
+      });
+
+      await prisma.inventoryTransaction.create({
+        data: {
+          inventoryItemId: item.id,
+          transactionType: 'ADDITION',
+          quantityChange: quantity,
+          newBalance: quantity,
+          notes: 'Initial stock - Database seed',
+        },
+      });
+
+      console.log(`  ✓ ${name}: ${quantity} units ($${price})`);
+    }
+  }
+
+  // ============================================================================
+  // CLIPS
+  // ============================================================================
+  console.log('\\n📦 Seeding Bottom Bar Clips...');
+
+  const clipPositions = ['Left', 'Right'];
+  const bottomRailTypes = ['D30', 'Oval'];
+  const clipColours = ['Anodised', 'Black', 'Bone', 'Dune'];
+
+  for (const position of clipPositions) {
+    for (const railType of bottomRailTypes) {
+      for (const colour of clipColours) {
+        const name = `Bottom bar Clips ${position} - ${railType} - ${colour}`;
+        const quantity = 100;
+        const price = 3.50;
+
+        const item = await prisma.inventoryItem.create({
+          data: {
+            category: InventoryCategory.CLIP,
+            itemName: name,
+            colorVariant: null,
+            quantity,
+            unitType: UnitType.UNITS,
+            minStockAlert: 20,
+            price,
+          },
+        });
+
+        await prisma.inventoryTransaction.create({
+          data: {
+            inventoryItemId: item.id,
+            transactionType: 'ADDITION',
+            quantityChange: quantity,
+            newBalance: quantity,
+            notes: 'Initial stock - Database seed',
+          },
+        });
+
+        console.log(`  ✓ ${name}: ${quantity} units ($${price})`);
+      }
+    }
+  }
+
+  // ============================================================================
+  // ACCESSORIES
+  // ============================================================================
+  console.log('\\n📦 Seeding Accessories...');
+
+  const accessories = [
+    { name: 'Acmeda Idler', quantity: 100, price: 8.00 },
+    { name: 'Acmeda Clutch', quantity: 100, price: 8.00 },
+    { name: 'Stop bolt', quantity: 200, price: 1.50 },
+    { name: 'Safety lock', quantity: 200, price: 2.00 },
   ];
 
-  for (const chain of chains) {
+  for (const accessory of accessories) {
     const item = await prisma.inventoryItem.create({
       data: {
-        category: InventoryCategory.CHAIN,
-        itemName: chain.name,
+        category: InventoryCategory.ACCESSORY,
+        itemName: accessory.name,
         colorVariant: null,
-        quantity: chain.quantity,
+        quantity: accessory.quantity,
         unitType: UnitType.UNITS,
-        minStockAlert: 20,
+        minStockAlert: 30,
+        price: accessory.price,
       },
     });
 
@@ -158,26 +220,76 @@ async function main() {
       data: {
         inventoryItemId: item.id,
         transactionType: 'ADDITION',
-        quantityChange: chain.quantity,
-        newBalance: chain.quantity,
+        quantityChange: accessory.quantity,
+        newBalance: accessory.quantity,
         notes: 'Initial stock - Database seed',
       },
     });
 
-    console.log(`  ✓ ${chain.name}: ${chain.quantity} units`);
+    console.log(`  ✓ ${accessory.name}: ${accessory.quantity} units ($${accessory.price})`);
+  }
+
+  // ============================================================================
+  // BOTTOM BARS (TUBES)
+  // ============================================================================
+  console.log('\\n📦 Seeding Bottom Bars (Tubes)...');
+
+  const tubeTypes = ['D30', 'Oval'];
+  const tubeColours = ['Anodised', 'Black', 'Bone', 'Dune'];
+
+  for (const tubeType of tubeTypes) {
+    for (const colour of tubeColours) {
+      const name = `${tubeType} - ${colour}`;
+      const quantity = 50;
+      const price = 12.00;
+
+      const item = await prisma.inventoryItem.create({
+        data: {
+          category: InventoryCategory.BOTTOM_BAR,
+          itemName: name,
+          colorVariant: null,
+          quantity,
+          unitType: UnitType.UNITS,
+          minStockAlert: 10,
+          price,
+        },
+      });
+
+      await prisma.inventoryTransaction.create({
+        data: {
+          inventoryItemId: item.id,
+          transactionType: 'ADDITION',
+          quantityChange: quantity,
+          newBalance: quantity,
+          notes: 'Initial stock - Database seed',
+        },
+      });
+
+      console.log(`  ✓ ${name}: ${quantity} units ($${price})`);
+    }
   }
 
   // ============================================================================
   // SUMMARY
   // ============================================================================
-  console.log('\n✨ Seed completed successfully!\n');
-  
+  console.log('\\n✨ Seed completed successfully!\\n');
+
   const totalItems = await prisma.inventoryItem.count();
   const totalTransactions = await prisma.inventoryTransaction.count();
-  
+
+  // Count by category
+  const categoryCount = await prisma.inventoryItem.groupBy({
+    by: ['category'],
+    _count: true,
+  });
+
   console.log('📊 Summary:');
-  console.log(`   Inventory Items: ${totalItems}`);
-  console.log(`   Transactions: ${totalTransactions}`);
+  console.log(`   Total Items: ${totalItems}`);
+  console.log(`   Total Transactions: ${totalTransactions}`);
+  console.log('\\n   By Category:');
+  categoryCount.forEach(cat => {
+    console.log(`     ${cat.category}: ${cat._count} items`);
+  });
   console.log('');
 }
 

@@ -5,7 +5,11 @@
       "Bash(docker volume ls:*)",
       "Bash(timeout 10 bash:*)",
       "Bash(docker exec:*)",
-      "Bash(docker restart:*)"
+      "Bash(docker restart:*)",
+      "Bash(npm install:*)",
+      "Bash(npm ls:*)",
+      "Bash(curl:*)",
+      "Bash(git add:*)"
     ]
   }
 }

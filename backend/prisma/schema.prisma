@@ -35,6 +35,9 @@ enum InventoryCategory {
   BOTTOM_BAR
   MOTOR
   CHAIN
+  BRACKET    // Acmeda/TBS brackets
+  CLIP       // Bottom bar clips
+  ACCESSORY  // Idlers, clutches, stop bolts, safety locks
 }
 
 enum TransactionType {
@@ -206,6 +209,7 @@ model InventoryItem {
   quantity            Decimal           @db.Decimal(12, 2)
   unitType            UnitType          @map("unit_type")
   minStockAlert       Decimal?          @map("min_stock_alert") @db.Decimal(12, 2)
+  price               Decimal           @default(0) @db.Decimal(10, 2) // Component price for pricing calculation
   
   createdAt           DateTime          @default(now()) @map("created_at") @db.Timestamp(6)
   updatedAt           DateTime          @updatedAt @map("updated_at") @db.Timestamp(6)
@@ -260,6 +264,7 @@ model OrderItem {
   bracketColour     String?       @map("bracket_colour") @db.VarChar(100)
   controlSide       String?       @map("control_side") @db.VarChar(20) // "Left" | "Right"
   chainOrMotor      String?       @map("chain_or_motor") @db.VarChar(255)
+  chainType         String?       @map("chain_type") @db.VarChar(100) // "Stainless Steel" | "Plastic Pure White" (conditional)
   roll              String?       @db.VarChar(20) // "Front" | "Back"
   material          String?       @db.VarChar(100) // Brand: Gracetech, Textstyle, Uniline, Vertex, Alpha
   fabricType        String?       @map("fabric_type") @db.VarChar(255)

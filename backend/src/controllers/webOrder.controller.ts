@@ -22,6 +22,7 @@ const OrderItemSchema = z.object({
     bracketColour: z.string().optional(),
     controlSide: z.enum(['Left', 'Right']).optional(),
     chainOrMotor: z.string().optional(),
+    chainType: z.string().optional(), // "Stainless Steel" | "Plastic Pure White"
     roll: z.enum(['Front', 'Back']).optional(),
     material: z.string().optional(),
     fabricType: z.string().optional(),
