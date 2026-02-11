@@ -1,0 +1,25 @@
+# Ignore Docker-specific files
+docker-compose.yml
+docker-compose.prod.yml
+Dockerfile
+**/Dockerfile
+.dockerignore
+
+# Ignore development environment files
+**/.env
+**/.env.local
+**/.env.development
+
+# Ignore build artifacts (will be rebuilt on Railway)
+**/node_modules
+**/dist
+**/build
+
+# Ignore local development files
+**/.vscode
+**/.idea
+**/coverage
+**/__tests__
+
+# Keep example env files
+!**/.env.example
