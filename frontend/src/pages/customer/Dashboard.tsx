@@ -2,25 +2,36 @@ import { useAuth } from "../../context/AuthContext";
 import { Button } from "../../components/ui/Button";
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { webOrderApi } from "../../services/api";
+import { webOrderApi, quoteApi } from "../../services/api";
 import { Loader2 } from "lucide-react";
 
 export default function CustomerDashboard() {
     const { user, logout } = useAuth();
-    const [stats, setStats] = useState({ pending: 0, activeQuotes: 0 });
+    const [stats, setStats] = useState({ pending: 0, activeQuotes: 0, totalOrders: 0, completedOrders: 0 });
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchStats = async () => {
             try {
-                // Fetch recent orders to count pending
-                const { orders } = await webOrderApi.getMyOrders(); // Defaults to page 1
+                // Fetch orders
+                const { orders } = await webOrderApi.getMyOrders();
                 const pendingCount = orders.filter(o => o.status === 'PENDING').length;
+                const completedCount = orders.filter(o => o.status === 'COMPLETED').length;
 
-                // Placeholder for quotes (not implemented yet)
+                // Fetch quotes and count only non-converted ones
+                let activeQuotesCount = 0;
+                try {
+                    const { quotes } = await quoteApi.getMyQuotes();
+                    activeQuotesCount = quotes.filter(q => !q.convertedToOrder).length;
+                } catch (e) {
+                    console.error("Failed to fetch quotes for stats", e);
+                }
+
                 setStats({
                     pending: pendingCount,
-                    activeQuotes: 0
+                    activeQuotes: activeQuotesCount,
+                    totalOrders: orders.length,
+                    completedOrders: completedCount,
                 });
             } catch (error) {
                 console.error("Failed to fetch dashboard stats", error);

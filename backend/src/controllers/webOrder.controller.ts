@@ -34,22 +34,34 @@ function getMotorDeduction(motorType: string | undefined): number {
 const prisma = new PrismaClient();
 
 // Validation schemas
+// Use coerce for width/drop to handle string→number from JSON
+// Use string() instead of enum() for controlSide/roll to handle empty strings
 const OrderItemSchema = z.object({
     location: z.string().min(1, 'Location is required'),
-    width: z.number().int().positive('Width must be a positive number'),
-    drop: z.number().int().positive('Drop must be a positive number'),
+    width: z.coerce.number().int().positive('Width must be a positive number'),
+    drop: z.coerce.number().int().positive('Drop must be a positive number'),
     fixing: z.string().optional(),
     bracketType: z.string().optional(),
     bracketColour: z.string().optional(),
-    controlSide: z.enum(['Left', 'Right']).optional(),
+    controlSide: z.string().optional(),
     chainOrMotor: z.string().optional(),
-    chainType: z.string().optional(), // "Stainless Steel" | "Plastic Pure White"
-    roll: z.enum(['Front', 'Back']).optional(),
+    chainType: z.string().optional().nullable(),
+    roll: z.string().optional(),
     material: z.string().optional(),
     fabricType: z.string().optional(),
     fabricColour: z.string().optional(),
     bottomRailType: z.string().optional(),
     bottomRailColour: z.string().optional(),
+    // Frontend may send pricing fields - accept but ignore (recalculated server-side)
+    price: z.number().optional(),
+    fabricGroup: z.number().optional(),
+    discountPercent: z.number().optional(),
+    fabricPrice: z.number().optional(),
+    motorPrice: z.number().optional(),
+    bracketPrice: z.number().optional(),
+    chainPrice: z.number().optional(),
+    clipsPrice: z.number().optional(),
+    componentPrice: z.number().optional(),
 });
 
 const CreateOrderSchema = z.object({
@@ -246,8 +258,10 @@ export const createOrder = async (
         });
     } catch (error) {
         if (error instanceof z.ZodError) {
-            next(new AppError(400, error.errors[0].message));
+            logger.error(`Order validation failed: ${JSON.stringify(error.errors)}`);
+            next(new AppError(400, error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join('; ')));
         } else {
+            logger.error(`Order creation failed: ${(error as Error).message}`, { stack: (error as Error).stack });
             next(error);
         }
     }

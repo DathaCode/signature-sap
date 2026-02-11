@@ -22,21 +22,21 @@ import {
     isTBSExtendedInvalid
 } from '../../data/hardware';
 import { Trash2, AlertCircle, Calculator, Copy, PlusCircle } from 'lucide-react';
-import { useDebounce } from '../../hooks/useDebounce';
 import { pricingApi } from '../../services/api';
 import toast from 'react-hot-toast';
 
 
 interface BlindItemFormProps {
     index: number;
-    onRemove: () => void;
-    onCopy: () => void;
-    onContinue: () => void;
-    canRemove: boolean;
+    onRemove?: () => void;
+    onCopy?: () => void;
+    onContinue?: () => void;
+    canRemove?: boolean;
+    blindNumber?: number;
 }
 
-export function BlindItemForm({ index, onRemove, onCopy, onContinue, canRemove }: BlindItemFormProps) {
-    const { register, setValue, control, setError, clearErrors, getValues } = useFormContext();
+export function BlindItemForm({ index, onRemove, onCopy, onContinue, canRemove = false, blindNumber }: BlindItemFormProps) {
+    const { register, setValue, control, setError, clearErrors } = useFormContext();
 
     // Watch all fields
     const material = useWatch({ control, name: `items.${index}.material` });
@@ -58,10 +58,6 @@ export function BlindItemForm({ index, onRemove, onCopy, onContinue, canRemove }
     const [validationError, setValidationError] = useState<string | null>(null);
     const [calculatingPrice, setCalculatingPrice] = useState(false);
     const [priceBreakdown, setPriceBreakdown] = useState<any>(null);
-
-    // Debounce pricing inputs
-    const debouncedWidth = useDebounce(width, 500);
-    const debouncedDrop = useDebounce(drop, 500);
 
     // Show chain type dropdown only for winders
     const showChainType = chainOrMotor && isWinderMotor(chainOrMotor);
@@ -159,7 +155,7 @@ export function BlindItemForm({ index, onRemove, onCopy, onContinue, canRemove }
         <Card className={`mb-6 border-l-4 ${validationError ? 'border-l-red-600' : 'border-l-blue-600'}`}>
             <CardHeader className="flex flex-row items-center justify-between py-4">
                 <div className="flex items-center gap-4">
-                    <CardTitle className="text-lg">Blind #{index + 1}</CardTitle>
+                    <CardTitle className="text-lg">Blind #{blindNumber ?? index + 1}</CardTitle>
                     {price > 0 && (
                         <Badge variant="success" className="text-sm px-3 py-1">
                             ${price.toFixed(2)}
@@ -167,7 +163,7 @@ export function BlindItemForm({ index, onRemove, onCopy, onContinue, canRemove }
                         </Badge>
                     )}
                 </div>
-                {canRemove && (
+                {canRemove && onRemove && (
                     <Button variant="ghost" size="sm" onClick={onRemove} className="text-red-500 hover:text-red-700">
                         <Trash2 className="h-4 w-4 mr-2" />
                         Remove
@@ -370,29 +366,35 @@ export function BlindItemForm({ index, onRemove, onCopy, onContinue, canRemove }
                         </div>
                     )}
 
-                    {/* Copy & Continue Buttons */}
-                    <div className="flex gap-2 mt-3">
-                        <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={onCopy}
-                            className="text-blue-600 border-blue-300 hover:bg-blue-50"
-                        >
-                            <Copy className="h-4 w-4 mr-1" />
-                            Update & Copy
-                        </Button>
-                        <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={onContinue}
-                            className="text-green-600 border-green-300 hover:bg-green-50"
-                        >
-                            <PlusCircle className="h-4 w-4 mr-1" />
-                            Update & Continue Adding
-                        </Button>
-                    </div>
+                    {/* Copy & Continue Buttons (only when callbacks provided) */}
+                    {(onCopy || onContinue) && (
+                        <div className="flex gap-2 mt-3">
+                            {onCopy && (
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={onCopy}
+                                    className="text-blue-600 border-blue-300 hover:bg-blue-50"
+                                >
+                                    <Copy className="h-4 w-4 mr-1" />
+                                    Update & Copy
+                                </Button>
+                            )}
+                            {onContinue && (
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={onContinue}
+                                    className="text-green-600 border-green-300 hover:bg-green-50"
+                                >
+                                    <PlusCircle className="h-4 w-4 mr-1" />
+                                    Update & Continue Adding
+                                </Button>
+                            )}
+                        </div>
+                    )}
                 </div>
 
             </CardContent>

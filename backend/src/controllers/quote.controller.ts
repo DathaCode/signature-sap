@@ -4,6 +4,26 @@ import { AuthRequest } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
 import { z } from 'zod';
 
+// Motor-specific width deductions for fabric cutting
+const MOTOR_DEDUCTIONS: Record<string, number> = {
+    'TBS winder-32mm': 28,
+    'Acmeda winder-29mm': 28,
+    'Automate 1.1NM Li-Ion Quiet Motor': 29,
+    'Automate 0.7NM Li-Ion Quiet Motor': 29,
+    'Automate 2NM Li-Ion Quiet Motor': 29,
+    'Automate 3NM Li-Ion Motor': 29,
+    'Automate E6 6NM Motor': 29,
+    'Alpha 1NM Battery Motor': 30,
+    'Alpha 2NM Battery Motor': 30,
+    'Alpha 3NM Battery Motor': 30,
+    'Alpha AC 5NM Motor': 35,
+};
+
+function getMotorDeduction(motorType: string | undefined): number {
+    if (!motorType) return 28;
+    return MOTOR_DEDUCTIONS[motorType] || 28;
+}
+
 const prisma = new PrismaClient();
 
 // Validation schemas (reuse from webOrder.controller.ts)
@@ -270,40 +290,66 @@ export const convertQuoteToOrder = async (
 
         const orderNumber = `${datePrefix}-${String(sequence).padStart(4, '0')}`;
 
+        // Get full user details for order
+        const fullUser = await prisma.user.findUnique({ where: { id: user.id } });
+
         // Create order from quote
         const items = quote.items as any[];
+        const subtotal = parseFloat(quote.subtotal.toString());
+        const total = parseFloat(quote.total.toString());
+
         const order = await prisma.order.create({
             data: {
                 orderNumber,
                 userId: user.id,
-                customerName: user.name || user.email,
+                customerName: fullUser?.name || user.name || user.email,
+                customerEmail: fullUser?.email || user.email,
+                customerPhone: fullUser?.phone || '',
+                customerCompany: fullUser?.company || null,
                 productType: quote.productType,
                 status: 'PENDING',
+                subtotal,
+                total,
                 orderDate: new Date(),
                 fileSource: 'WEB_FORM',
+                notes: quote.notes ? `Converted from quote ${quote.quoteNumber}: ${quote.notes}` : `Converted from quote ${quote.quoteNumber}`,
                 items: {
-                    create: items.map((item, index) => ({
-                        itemNumber: index + 1,
-                        itemType: 'blind',
-                        location: item.location,
-                        width: item.width,
-                        drop: item.drop,
-                        fixing: item.fixing,
-                        bracketType: item.bracketType,
-                        bracketColour: item.bracketColour,
-                        controlSide: item.controlSide,
-                        chainOrMotor: item.chainOrMotor,
-                        chainType: item.chainType,
-                        roll: item.roll,
-                        material: item.material,
-                        fabricType: item.fabricType,
-                        fabricColour: item.fabricColour,
-                        bottomRailType: item.bottomRailType,
-                        bottomRailColour: item.bottomRailColour,
-                        fabricGroup: item.fabricGroup,
-                        discountPercent: item.discountPercent || 0,
-                        price: item.price || 0,
-                    })),
+                    create: items.map((item: any, index: number) => {
+                        const w = parseInt(item.width) || 0;
+                        const d = parseInt(item.drop) || 0;
+                        const motorDeduction = getMotorDeduction(item.chainOrMotor);
+                        return {
+                            itemNumber: index + 1,
+                            itemType: 'blind',
+                            location: item.location || '',
+                            width: w,
+                            drop: d,
+                            fixing: item.fixing || null,
+                            bracketType: item.bracketType || null,
+                            bracketColour: item.bracketColour || null,
+                            controlSide: item.controlSide || 'Left',
+                            chainOrMotor: item.chainOrMotor || null,
+                            chainType: item.chainType || null,
+                            roll: item.roll || 'Front',
+                            material: item.material || null,
+                            fabricType: item.fabricType || null,
+                            fabricColour: item.fabricColour || null,
+                            bottomRailType: item.bottomRailType || null,
+                            bottomRailColour: item.bottomRailColour || null,
+                            calculatedWidth: w > 0 ? w - 28 : null,
+                            calculatedDrop: d > 0 ? d + 150 : null,
+                            fabricCutWidth: w > 0 ? w - motorDeduction : null,
+                            fabricGroup: item.fabricGroup || null,
+                            discountPercent: item.discountPercent || 0,
+                            price: item.price || 0,
+                            fabricPrice: item.fabricPrice || null,
+                            motorPrice: item.motorPrice || null,
+                            bracketPrice: item.bracketPrice || null,
+                            chainPrice: item.chainPrice || null,
+                            clipsPrice: item.clipsPrice || null,
+                            componentPrice: item.componentPrice || null,
+                        };
+                    }),
                 },
             },
             include: {

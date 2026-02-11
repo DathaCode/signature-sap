@@ -20,6 +20,7 @@ export interface BlindItem {
     fabricColour?: string;
     bottomRailType?: string;
     bottomRailColour?: string;
+    chainType?: string;
 
     // Calculated
     calculatedWidth?: number;

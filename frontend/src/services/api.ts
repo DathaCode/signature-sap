@@ -346,6 +346,47 @@ export const adminUserApi = {
     }
 }
 
+export const quoteApi = {
+    /**
+     * Create a new quote
+     */
+    createQuote: async (data: { productType: string; items: import('../types/order').BlindItem[]; notes?: string }): Promise<any> => {
+        const response = await api.post('/quotes/create', data)
+        return response.data
+    },
+
+    /**
+     * Get all quotes for the current user
+     */
+    getMyQuotes: async (): Promise<{ quotes: any[] }> => {
+        const response = await api.get('/quotes/my-quotes')
+        return response.data
+    },
+
+    /**
+     * Get a single quote by ID
+     */
+    getQuote: async (id: string): Promise<any> => {
+        const response = await api.get(`/quotes/${id}`)
+        return response.data
+    },
+
+    /**
+     * Convert a quote to an order
+     */
+    convertToOrder: async (id: string): Promise<any> => {
+        const response = await api.post(`/quotes/${id}/convert-to-order`)
+        return response.data
+    },
+
+    /**
+     * Delete a quote
+     */
+    deleteQuote: async (id: string): Promise<void> => {
+        await api.delete(`/quotes/${id}`)
+    },
+}
+
 export const adminPricingApi = {
     /**
      * Get pricing matrix
