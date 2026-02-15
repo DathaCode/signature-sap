@@ -1,0 +1,64 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to EC2
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to EC2
+        run: |
+          ssh -i ~/.ssh/id_ed25519 ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} << 'EOF'
+            set -e
+            cd /opt/signatureshades/signature-sap || cd /home/ubuntu/signature-sap
+
+            # Pull latest code
+            git pull origin main
+
+            # Stop containers
+            docker compose -f docker-compose.prod.yml --env-file .env.production down
+
+            # Build new images
+            docker compose -f docker-compose.prod.yml --env-file .env.production build --no-cache
+
+            # Start containers
+            docker compose -f docker-compose.prod.yml --env-file .env.production up -d
+
+            # Run migrations
+            docker exec signatureshades-api-prod npx prisma migrate deploy
+
+            # Clean up old images
+            docker image prune -f
+
+            echo "Deployment completed successfully!"
+          EOF
+
+      - name: Health check
+        run: |
+          sleep 10
+          curl -f https://orders.signatureshades.com.au/api/health || exit 1
+
+      - name: Notify deployment
+        if: always()
+        run: |
+          if [ ${{ job.status }} == 'success' ]; then
+            echo "✅ Deployment to production succeeded"
+          else
+            echo "❌ Deployment to production failed"
+          fi

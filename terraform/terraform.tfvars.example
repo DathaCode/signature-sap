@@ -1,0 +1,17 @@
+# Terraform Variables Configuration
+# Copy this file to terraform.tfvars and fill in your values
+# NEVER commit terraform.tfvars to Git!
+
+aws_region          = "ap-southeast-2"
+project_name        = "signatureshades"
+environment         = "production"
+domain_name         = "signatureshades.com.au"
+subdomain           = "orders"
+ssh_public_key_path = "C:\\Users\\vdula\\.ssh\\signatureshades-ec2.pub" # Windows path
+
+# SECURITY: Change these to strong, random values!
+db_password = "CHANGE_ME_TO_SECURE_PASSWORD"
+jwt_secret  = "CHANGE_ME_TO_RANDOM_SECRET_AT_LEAST_32_CHARS"
+
+# Optional: Upgrade instance type when needed
+# instance_type = "t3.small"
