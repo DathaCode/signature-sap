@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { getFabricGroup } from '../data/fabrics';
+
 import { AppError } from '../middleware/errorHandler';
 import { logger } from '../config/logger';
 import PricingService from './pricing.service';
@@ -146,35 +146,7 @@ export class ComprehensivePricingService {
     /**
      * Get component price from inventory (returns 0 if not found)
      */
-    private async getComponentPrice(componentName: string): Promise<number> {
-        try {
-            const item = await prisma.inventoryItem.findFirst({
-                where: {
-                    OR: [
-                        // Try exact match first
-                        { itemName: componentName },
-                        // Try with category-based search
-                        {
-                            itemName: {
-                                contains: componentName,
-                                mode: 'insensitive',
-                            },
-                        },
-                    ],
-                },
-            });
 
-            if (!item) {
-                logger.warn(`Component not found in inventory: ${componentName}, using $0.00`);
-                return 0;
-            }
-
-            return parseFloat(item.price.toString());
-        } catch (error) {
-            logger.error(`Error fetching component price for "${componentName}": ${error}`);
-            return 0;
-        }
-    }
 
     /**
      * Get bracket name based on motor type and selections

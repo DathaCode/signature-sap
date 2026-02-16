@@ -1,12 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
-import { PrismaClient } from '@prisma/client';
+
 import pricingService from '../services/pricing.service';
 import comprehensivePricingService from '../services/comprehensivePricing.service';
 import { AuthRequest } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
 import { z } from 'zod';
 
-const prisma = new PrismaClient();
+
 
 // Validation schemas
 const calculatePriceSchema = z.object({

@@ -25,7 +25,7 @@ interface JwtPayload {
  */
 export const authenticateToken = (
     req: Request,
-    res: Response,
+    _res: Response,
     next: NextFunction
 ): void => {
     try {
@@ -66,7 +66,7 @@ export const authenticateToken = (
  * Require specific role
  */
 export const requireRole = (allowedRoles: ('CUSTOMER' | 'ADMIN')[]) => {
-    return (req: Request, res: Response, next: NextFunction): void => {
+    return (req: Request, _res: Response, next: NextFunction): void => {
         const user = (req as AuthRequest).user;
 
         if (!user) {
@@ -109,7 +109,7 @@ export const generateToken = (user: {
             role: user.role,
             name: user.name,
         },
-        secret,
-        { expiresIn }
+        secret as string,
+        { expiresIn } as any
     );
 };

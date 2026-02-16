@@ -10,7 +10,7 @@ const upload = multer({
     limits: {
         fileSize: (parseInt(process.env.MAX_FILE_SIZE_MB || '10')) * 1024 * 1024,
     },
-    fileFilter: (req, file, cb) => {
+    fileFilter: (_req, file, cb) => {
         // Accept .xlsm and .xlsx files
         if (file.mimetype === 'application/vnd.ms-excel.sheet.macroEnabled.12' ||
             file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||

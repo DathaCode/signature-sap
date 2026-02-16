@@ -156,7 +156,7 @@ export const createOrder = async (
                         fabricType: item.fabricType,
                         fabricColour: item.fabricColour,
                         chainOrMotor: item.chainOrMotor,
-                        chainType: item.chainType,
+                        chainType: item.chainType || undefined,
                         bracketType: item.bracketType,
                         bracketColour: item.bracketColour,
                         bottomRailType: item.bottomRailType,
@@ -825,7 +825,7 @@ export const acceptWorksheets = async (
 
         // Mark worksheets as accepted
         await prisma.worksheetData.update({
-            where: { orderId: req.params.id },
+            where: { orderId: req.params.id as string },
             data: {
                 acceptedAt: new Date(),
                 acceptedBy: authReq.user?.email || 'unknown',
@@ -854,7 +854,7 @@ export const recalculateWorksheets = async (
 ): Promise<void> => {
     try {
         const order = await prisma.order.findUnique({
-            where: { id: req.params.id },
+            where: { id: req.params.id as string },
             include: { items: { orderBy: { itemNumber: 'asc' } } },
         });
 
@@ -902,7 +902,7 @@ export const downloadWorksheet = async (
         const { type } = req.params; // fabric-cut-csv, fabric-cut-pdf, tube-cut-csv, tube-cut-pdf
 
         const order = await prisma.order.findUnique({
-            where: { id: req.params.id },
+            where: { id: req.params.id as string },
         });
 
         if (!order) {
@@ -910,7 +910,7 @@ export const downloadWorksheet = async (
         }
 
         const worksheetData = await prisma.worksheetData.findUnique({
-            where: { orderId: req.params.id },
+            where: { orderId: req.params.id as string },
         });
 
         if (!worksheetData) {
@@ -980,7 +980,7 @@ export const updateOrderStatus = async (
         }
 
         const updated = await prisma.order.update({
-            where: { id: req.params.id },
+            where: { id: req.params.id as string },
             data: { status },
         });
 
