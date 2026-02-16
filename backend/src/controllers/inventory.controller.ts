@@ -37,7 +37,7 @@ export class InventoryController {
      */
     static async getInventoryItem(req: Request, res: Response, next: NextFunction) {
         try {
-            const { itemId } = req.params;
+            const { itemId } = req.params as { itemId: string };
 
             const item = await InventoryService.getInventoryItem(itemId);
 
@@ -89,7 +89,7 @@ export class InventoryController {
      */
     static async updateInventoryItem(req: Request, res: Response, next: NextFunction) {
         try {
-            const { itemId } = req.params;
+            const { itemId } = req.params as { itemId: string };
             const updates = req.body;
 
             const item = await InventoryService.updateInventoryItem(itemId, updates);
@@ -110,7 +110,7 @@ export class InventoryController {
      */
     static async adjustQuantity(req: Request, res: Response, next: NextFunction) {
         try {
-            const { itemId } = req.params;
+            const { itemId } = req.params as { itemId: string };
             const { quantityChange, notes } = req.body;
 
             if (quantityChange === undefined) {
@@ -135,7 +135,7 @@ export class InventoryController {
      */
     static async getTransactions(req: Request, res: Response, next: NextFunction) {
         try {
-            const { itemId } = req.params;
+            const { itemId } = req.params as { itemId: string };
 
             const transactions = await InventoryService.getTransactionHistory(itemId);
 
@@ -152,7 +152,7 @@ export class InventoryController {
      * GET /api/inventory/alerts/low-stock
      * Get low stock items
      */
-    static async getLowStockItems(req: Request, res: Response, next: NextFunction) {
+    static async getLowStockItems(_req: Request, res: Response, next: NextFunction) {
         try {
             const items = await InventoryService.getLowStockItems();
 
@@ -171,7 +171,7 @@ export class InventoryController {
      */
     static async deleteInventoryItem(req: Request, res: Response, next: NextFunction) {
         try {
-            const { itemId } = req.params;
+            const { itemId } = req.params as { itemId: string };
 
             await InventoryService.deleteInventoryItem(itemId);
 

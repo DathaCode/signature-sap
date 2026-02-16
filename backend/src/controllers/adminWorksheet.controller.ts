@@ -10,7 +10,7 @@ export class AdminWorksheetController {
      */
     static async getWorksheets(req: Request, res: Response, next: NextFunction) {
         try {
-            const { orderId } = req.params;
+            const { orderId } = req.params as { orderId: string };
 
             const worksheets = await WorksheetService.getWorksheets(orderId);
 
@@ -29,7 +29,7 @@ export class AdminWorksheetController {
      */
     static async downloadWorksheet(req: Request, res: Response, next: NextFunction) {
         try {
-            const { orderId } = req.params;
+            const { orderId } = req.params as { orderId: string };
             const { type, format } = req.query as { type: string; format: string };
 
             if (!type || !format) {

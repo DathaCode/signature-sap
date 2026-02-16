@@ -137,7 +137,7 @@ export const getUserById = async (
 ): Promise<void> => {
     try {
         const user = await prisma.user.findUnique({
-            where: { id: req.params.id },
+            where: { id: req.params.id as string },
             select: {
                 id: true,
                 name: true,
@@ -189,7 +189,7 @@ export const updateUser = async (
         const validatedData = updateUserSchema.parse(req.body);
 
         const user = await prisma.user.findUnique({
-            where: { id: req.params.id },
+            where: { id: req.params.id as string },
         });
 
         if (!user) {
@@ -197,7 +197,7 @@ export const updateUser = async (
         }
 
         const updated = await prisma.user.update({
-            where: { id: req.params.id },
+            where: { id: req.params.id as string },
             data: validatedData,
             select: {
                 id: true,
@@ -240,7 +240,7 @@ export const deactivateUser = async (
         const authReq = req as AuthRequest;
 
         const user = await prisma.user.findUnique({
-            where: { id: req.params.id },
+            where: { id: req.params.id as string },
         });
 
         if (!user) {
@@ -252,7 +252,7 @@ export const deactivateUser = async (
         }
 
         const updated = await prisma.user.update({
-            where: { id: req.params.id },
+            where: { id: req.params.id as string },
             data: { isActive: false },
         });
 

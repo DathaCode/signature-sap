@@ -44,7 +44,7 @@ export const getPricingMatrix = async (
     next: NextFunction
 ): Promise<void> => {
     try {
-        const fabricGroup = parseInt(req.params.fabricGroup);
+        const fabricGroup = parseInt(req.params.fabricGroup as string);
 
         if (isNaN(fabricGroup) || fabricGroup < 1 || fabricGroup > 3) {
             throw new AppError(400, 'Invalid fabric group. Must be 1-3');
@@ -102,9 +102,9 @@ export const updatePricingMatrix = async (
 ): Promise<void> => {
     try {
         const authReq = req as AuthRequest;
-        const fabricGroup = parseInt(req.params.fabricGroup);
-        const width = parseInt(req.params.width);
-        const drop = parseInt(req.params.drop);
+        const fabricGroup = parseInt(req.params.fabricGroup as string);
+        const width = parseInt(req.params.width as string);
+        const drop = parseInt(req.params.drop as string);
 
         if (isNaN(fabricGroup) || fabricGroup < 1 || fabricGroup > 3) {
             throw new AppError(400, 'Invalid fabric group. Must be 1-3');
@@ -212,7 +212,7 @@ export const updateComponentPrice = async (
 ): Promise<void> => {
     try {
         const authReq = req as AuthRequest;
-        const itemId = req.params.id;
+        const itemId = req.params.id as string;
         const validatedData = updatePriceSchema.parse(req.body);
 
         const updated = await comprehensivePricingService.updateComponentPrice(

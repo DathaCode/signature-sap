@@ -321,7 +321,7 @@ export const getOrderById = async (
         }
 
         const order = await prisma.order.findUnique({
-            where: { id: req.params.id },
+            where: { id: req.params.id as string },
             include: {
                 items: {
                     orderBy: { itemNumber: 'asc' },
@@ -371,7 +371,7 @@ export const cancelOrder = async (
         }
 
         const order = await prisma.order.findUnique({
-            where: { id: req.params.id },
+            where: { id: req.params.id as string },
         });
 
         if (!order) {
@@ -389,7 +389,7 @@ export const cancelOrder = async (
         }
 
         const updated = await prisma.order.update({
-            where: { id: req.params.id },
+            where: { id: req.params.id as string },
             data: { status: OrderStatus.CANCELLED },
         });
 
@@ -461,7 +461,7 @@ export const approveOrder = async (
         const { adminNotes } = req.body;
 
         const order = await prisma.order.findUnique({
-            where: { id: req.params.id },
+            where: { id: req.params.id as string },
         });
 
         if (!order) {
@@ -473,7 +473,7 @@ export const approveOrder = async (
         }
 
         const updated = await prisma.order.update({
-            where: { id: req.params.id },
+            where: { id: req.params.id as string },
             data: {
                 status: OrderStatus.CONFIRMED,
                 confirmedAt: new Date(),
@@ -510,7 +510,7 @@ export const sendToProduction = async (
         const authReq = req as AuthRequest;
 
         const order = await prisma.order.findUnique({
-            where: { id: req.params.id },
+            where: { id: req.params.id as string },
             include: { items: { orderBy: { itemNumber: 'asc' } } },
         });
 
@@ -526,7 +526,7 @@ export const sendToProduction = async (
 
         // Update order status
         await prisma.order.update({
-            where: { id: req.params.id },
+            where: { id: req.params.id as string },
             data: { status: OrderStatus.PRODUCTION },
         });
 
@@ -736,7 +736,7 @@ export const getWorksheetPreview = async (
 ): Promise<void> => {
     try {
         const worksheetData = await prisma.worksheetData.findUnique({
-            where: { orderId: req.params.id },
+            where: { orderId: req.params.id as string },
         });
 
         if (!worksheetData) {
@@ -774,7 +774,7 @@ export const acceptWorksheets = async (
         const authReq = req as AuthRequest;
 
         const worksheetData = await prisma.worksheetData.findUnique({
-            where: { orderId: req.params.id },
+            where: { orderId: req.params.id as string },
         });
 
         if (!worksheetData) {
@@ -786,7 +786,7 @@ export const acceptWorksheets = async (
         }
 
         const order = await prisma.order.findUnique({
-            where: { id: req.params.id },
+            where: { id: req.params.id as string },
         });
 
         if (!order) {

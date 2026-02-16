@@ -115,7 +115,7 @@ export class OrderController {
      */
     static async confirmOrder(req: Request, res: Response, next: NextFunction) {
         try {
-            const { orderId } = req.params;
+            const { orderId } = req.params as { orderId: string };
 
             const order = await prisma.order.findUnique({
                 where: { id: orderId },
@@ -158,7 +158,7 @@ export class OrderController {
      */
     static async getWorksheets(req: Request, res: Response, next: NextFunction) {
         try {
-            const { orderId } = req.params;
+            const { orderId } = req.params as { orderId: string };
             const worksheets = await WorksheetService.getWorksheets(orderId);
 
             res.status(200).json({
@@ -176,7 +176,7 @@ export class OrderController {
      */
     static async downloadWorksheet(req: Request, res: Response, next: NextFunction) {
         try {
-            const { orderId } = req.params;
+            const { orderId } = req.params as { orderId: string };
             const { type = 'fabric_cut', format = 'csv' } = req.query as {
                 type?: string;
                 format?: string;
@@ -219,7 +219,7 @@ export class OrderController {
      */
     static async getOrder(req: Request, res: Response, next: NextFunction) {
         try {
-            const { orderId } = req.params;
+            const { orderId } = req.params as { orderId: string };
 
             const order = await prisma.order.findUnique({
                 where: { id: orderId },

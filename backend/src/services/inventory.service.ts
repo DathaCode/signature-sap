@@ -284,7 +284,7 @@ export class InventoryService {
                 transactions: {
                     where: {
                         order: {
-                            status: 'pending',
+                            status: 'PENDING',
                         },
                     },
                     take: 1,
