@@ -45,6 +45,10 @@ resource "aws_s3_bucket_lifecycle_configuration" "backups" {
   rule {
     id     = "delete-old-backups"
     status = "Enabled"
+    
+    filter {
+      prefix = ""
+    }
 
     # Keep backups for 30 days
     expiration {

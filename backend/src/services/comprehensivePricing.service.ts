@@ -55,6 +55,9 @@ export class ComprehensivePricingService {
      */
     async calculateBlindPrice(data: BlindPricingData): Promise<PriceBreakdown> {
         try {
+            // All non-fabric component prices are flat $1.00 each
+            const COMPONENT_PRICE = 1.00;
+
             const breakdown: PriceBreakdown = {
                 fabricPrice: 0,
                 motorChainPrice: 0,
@@ -69,7 +72,7 @@ export class ComprehensivePricingService {
                 componentsUsed: [],
             };
 
-            // 1. FABRIC PRICE (from pricing matrix with discount)
+            // 1. FABRIC PRICE (from pricing matrix with group discount)
             const fabricResult = await PricingService.calculatePrice({
                 material: data.material,
                 fabricType: data.fabricType,
@@ -82,50 +85,41 @@ export class ComprehensivePricingService {
             breakdown.discountPercent = fabricResult.discountPercent;
             breakdown.componentsUsed.push(`Fabric: ${data.material} - ${data.fabricType} - ${data.fabricColour}`);
 
-            // 2. MOTOR/CHAIN PRICE
-            const motorPrice = await this.getComponentPrice(data.chainOrMotor);
-            breakdown.motorChainPrice = motorPrice;
+            // 2. MOTOR/CHAIN — $1
+            breakdown.motorChainPrice = COMPONENT_PRICE;
             breakdown.componentsUsed.push(data.chainOrMotor);
 
-            // 3. BRACKET PRICE
+            // 3. BRACKET — $1
             const bracketName = this.getBracketName(data.chainOrMotor, data.bracketType, data.bracketColour);
-            const bracketPrice = await this.getComponentPrice(bracketName);
-            breakdown.bracketPrice = bracketPrice;
+            breakdown.bracketPrice = COMPONENT_PRICE;
             breakdown.componentsUsed.push(bracketName);
 
-            // 4. CHAIN PRICE (if winder selected)
+            // 4. CHAIN (if winder selected) — $1
             if (this.isWinder(data.chainOrMotor)) {
                 if (!data.chainType) {
                     throw new AppError(400, 'Chain type is required for winder motors');
                 }
                 const chainLength = this.getChainLength(data.drop);
                 const chainName = `${data.chainType} Chain - ${chainLength}mm`;
-                const chainPrice = await this.getComponentPrice(chainName);
-                breakdown.chainPrice = chainPrice;
+                breakdown.chainPrice = COMPONENT_PRICE;
                 breakdown.componentsUsed.push(chainName);
             }
 
-            // 5. CLIPS PRICE (always 2 clips - left and right)
+            // 5. CLIPS (left + right = $1 each = $2 total)
             const clipLeftName = `Bottom bar Clips Left - ${data.bottomRailType} - ${data.bottomRailColour}`;
             const clipRightName = `Bottom bar Clips Right - ${data.bottomRailType} - ${data.bottomRailColour}`;
-            const clipLeftPrice = await this.getComponentPrice(clipLeftName);
-            const clipRightPrice = await this.getComponentPrice(clipRightName);
-            breakdown.clipsPrice = clipLeftPrice + clipRightPrice;
+            breakdown.clipsPrice = COMPONENT_PRICE + COMPONENT_PRICE;
             breakdown.componentsUsed.push(clipLeftName, clipRightName);
 
-            // 6. IDLER & CLUTCH (if applicable)
+            // 6. IDLER & CLUTCH (if applicable) — $1 each = $2
             if (this.needsIdlerClutch(data.chainOrMotor, data.bracketType)) {
-                const idlerPrice = await this.getComponentPrice('Acmeda Idler');
-                const clutchPrice = await this.getComponentPrice('Acmeda Clutch');
-                breakdown.idlerClutchPrice = idlerPrice + clutchPrice;
+                breakdown.idlerClutchPrice = COMPONENT_PRICE + COMPONENT_PRICE;
                 breakdown.componentsUsed.push('Acmeda Idler', 'Acmeda Clutch');
             }
 
-            // 7. STOP BOLT & SAFETY LOCK (if chain)
+            // 7. STOP BOLT & SAFETY LOCK (if chain) — $1 each = $2
             if (this.isWinder(data.chainOrMotor)) {
-                const stopBoltPrice = await this.getComponentPrice('Stop bolt');
-                const safetyLockPrice = await this.getComponentPrice('Safety lock');
-                breakdown.stopBoltSafetyLockPrice = stopBoltPrice + safetyLockPrice;
+                breakdown.stopBoltSafetyLockPrice = COMPONENT_PRICE + COMPONENT_PRICE;
                 breakdown.componentsUsed.push('Stop bolt', 'Safety lock');
             }
 

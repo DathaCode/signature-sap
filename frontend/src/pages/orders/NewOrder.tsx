@@ -81,7 +81,7 @@ export default function NewOrderPage() {
                 localStorage.removeItem('order_draft');
             }
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const clearDraft = useCallback(() => {
@@ -326,24 +326,30 @@ export default function NewOrderPage() {
                                 type="button"
                                 onClick={handleUpdateAndCopy}
                                 className="flex-1 min-w-[240px] bg-gradient-to-r from-blue-500 to-blue-600 text-white px-6 py-4 rounded-lg font-semibold text-lg flex items-center justify-center gap-3 hover:from-blue-600 hover:to-blue-700 transition-all hover:shadow-lg"
-                                title="Save this blind and copy settings (except Location, Width, Drop)"
+                                title={editingIndex !== null
+                                    ? "Update this blind and copy settings for a new blind"
+                                    : "Save this blind and copy settings (except Location, Width, Drop)"
+                                }
                             >
                                 <Copy className="h-5 w-5" />
-                                Update & Copy
+                                {editingIndex !== null ? 'Update & Copy' : 'Add & Copy'}
                             </button>
 
                             <button
                                 type="button"
                                 onClick={handleUpdateAndContinueAdding}
                                 className="flex-1 min-w-[240px] bg-gradient-to-r from-green-500 to-green-600 text-white px-6 py-4 rounded-lg font-semibold text-lg flex items-center justify-center gap-3 hover:from-green-600 hover:to-green-700 transition-all hover:shadow-lg"
-                                title="Save this blind and start fresh"
+                                title={editingIndex !== null
+                                    ? "Update this blind"
+                                    : "Save this blind and start fresh"
+                                }
                             >
                                 <PlusCircle className="h-5 w-5" />
-                                Update & Continue Adding
+                                {editingIndex !== null ? 'Update' : 'Add'}
                             </button>
                         </div>
 
-                        {savedBlinds.length > 0 && (
+                        {editingIndex === null && savedBlinds.length > 0 && (
                             <div className="pt-6 border-t border-gray-300 mt-6 text-center">
                                 <button
                                     type="button"

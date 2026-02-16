@@ -46,8 +46,8 @@ export const getPricingMatrix = async (
     try {
         const fabricGroup = parseInt(req.params.fabricGroup);
 
-        if (isNaN(fabricGroup) || fabricGroup < 1 || fabricGroup > 5) {
-            throw new AppError(400, 'Invalid fabric group. Must be 1-5');
+        if (isNaN(fabricGroup) || fabricGroup < 1 || fabricGroup > 3) {
+            throw new AppError(400, 'Invalid fabric group. Must be 1-3');
         }
 
         const pricing = await pricingService.getPricingMatrixByGroup(fabricGroup);
@@ -106,8 +106,8 @@ export const updatePricingMatrix = async (
         const width = parseInt(req.params.width);
         const drop = parseInt(req.params.drop);
 
-        if (isNaN(fabricGroup) || fabricGroup < 1 || fabricGroup > 5) {
-            throw new AppError(400, 'Invalid fabric group. Must be 1-5');
+        if (isNaN(fabricGroup) || fabricGroup < 1 || fabricGroup > 3) {
+            throw new AppError(400, 'Invalid fabric group. Must be 1-3');
         }
 
         if (isNaN(width) || width <= 0) {

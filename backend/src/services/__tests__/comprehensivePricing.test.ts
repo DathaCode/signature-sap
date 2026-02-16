@@ -36,9 +36,9 @@ jest.mock('../pricing.service', () => ({
     default: {
         calculatePrice: jest.fn().mockResolvedValue({
             basePrice: 100,
-            discountPercent: 25,
-            discountAmount: 25,
-            finalPrice: 75,
+            discountPercent: 0,
+            discountAmount: 0,
+            finalPrice: 100,
             fabricGroup: 2,
             roundedWidth: 1000,
             roundedDrop: 1200,
@@ -196,9 +196,9 @@ describe('ComprehensivePricingService', () => {
             // Clips: $10 + $10 = $20 (left + right)
             // Idler+Clutch: $10 + $10 = $20 (Acmeda winder needs it)
             // Stop bolt + Safety lock: $10 + $10 = $20 (winder)
-            // Total: 75 + 10 + 10 + 10 + 20 + 20 + 20 = 165
-            expect(result.totalPrice).toBe(165);
-            expect(result.fabricPrice).toBe(75);
+            // Total: 100 + 10 + 10 + 10 + 20 + 20 + 20 = 190
+            expect(result.totalPrice).toBe(190);
+            expect(result.fabricPrice).toBe(100);
             expect(result.motorChainPrice).toBe(10);
             expect(result.bracketPrice).toBe(10);
             expect(result.chainPrice).toBe(10);
@@ -206,7 +206,7 @@ describe('ComprehensivePricingService', () => {
             expect(result.idlerClutchPrice).toBe(20);
             expect(result.stopBoltSafetyLockPrice).toBe(20);
             expect(result.fabricGroup).toBe(2);
-            expect(result.discountPercent).toBe(25);
+            expect(result.discountPercent).toBe(0);
         });
 
         it('should not include chain/stopBolt for non-winder motor', async () => {

@@ -2,7 +2,7 @@ import FABRICS_DATA from './fabrics.json';
 
 // Type definitions
 export interface FabricColors {
-    group: string; // G1, G2, G3, G4, G5
+    group: string; // G1, G2, G3
     colors: string[];
 }
 
@@ -45,8 +45,8 @@ export function getFabricColors(material: string, fabricType: string): string[] 
 }
 
 /**
- * Get fabric group (G1-G5) for a given material and fabric type
- * Returns numeric group (1-5) or null if not found
+ * Get fabric group (G1-G3) for a given material and fabric type
+ * Returns numeric group (1-3) or null if not found
  */
 export function getFabricGroup(material: string, fabricType: string): number | null {
     if (!FABRICS[material] || !FABRICS[material][fabricType]) {
@@ -56,7 +56,7 @@ export function getFabricGroup(material: string, fabricType: string): number | n
     const groupString = FABRICS[material][fabricType].group; // e.g., "G1"
     const groupNumber = parseInt(groupString.substring(1)); // Remove "G" and parse number
 
-    return groupNumber >= 1 && groupNumber <= 5 ? groupNumber : null;
+    return groupNumber >= 1 && groupNumber <= 3 ? groupNumber : null;
 }
 
 /**

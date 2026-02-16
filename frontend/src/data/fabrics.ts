@@ -23,7 +23,7 @@ export const getFabricGroup = (material: string, type: string): number | null =>
     }
 
     const groupString = data[material][type].group;
-    const groupMapping: { [key: string]: number } = { 'G1': 1, 'G2': 2, 'G3': 3, 'G4': 4, 'G5': 5 };
+    const groupMapping: { [key: string]: number } = { 'G1': 1, 'G2': 2, 'G3': 3 };
 
     return groupMapping[groupString] || null;
 };

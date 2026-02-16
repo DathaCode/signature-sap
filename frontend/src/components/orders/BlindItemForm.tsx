@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useFormContext, useWatch } from 'react-hook-form';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { Label } from '../ui/Label';
@@ -59,6 +59,12 @@ export function BlindItemForm({ index, onRemove, onCopy, onContinue, canRemove =
     const [calculatingPrice, setCalculatingPrice] = useState(false);
     const [priceBreakdown, setPriceBreakdown] = useState<any>(null);
 
+    // Track previous values to only clear dependent fields on actual user change
+    const prevMaterialRef = useRef<string | undefined>(material);
+    const prevFabricTypeRef = useRef<string | undefined>(fabricType);
+    const prevChainOrMotorRef = useRef<string | undefined>(chainOrMotor);
+    const isInitialMount = useRef(true);
+
     // Show chain type dropdown only for winders
     const showChainType = chainOrMotor && isWinderMotor(chainOrMotor);
 
@@ -69,6 +75,11 @@ export function BlindItemForm({ index, onRemove, onCopy, onContinue, canRemove =
         bottomRailType && bottomRailColour &&
         (!showChainType || chainType) // If winder, chain type is required
     );
+
+    // Skip clearing on initial mount
+    useEffect(() => {
+        isInitialMount.current = false;
+    }, []);
 
     // Validate TBS + Extended bracket combination
     useEffect(() => {
@@ -86,21 +97,33 @@ export function BlindItemForm({ index, onRemove, onCopy, onContinue, canRemove =
         }
     }, [chainOrMotor, bracketType, setError, clearErrors, index]);
 
-    // Reset dependent fields when parent changes
+    // Reset dependent fields ONLY when the user actually changes the selection
     useEffect(() => {
-        setValue(`items.${index}.fabricType`, '');
-        setValue(`items.${index}.fabricColour`, '');
+        if (isInitialMount.current) return;
+        if (prevMaterialRef.current !== undefined && prevMaterialRef.current !== material) {
+            setValue(`items.${index}.fabricType`, '');
+            setValue(`items.${index}.fabricColour`, '');
+        }
+        prevMaterialRef.current = material;
     }, [material, setValue, index]);
 
     useEffect(() => {
-        setValue(`items.${index}.fabricColour`, '');
+        if (isInitialMount.current) return;
+        if (prevFabricTypeRef.current !== undefined && prevFabricTypeRef.current !== fabricType) {
+            setValue(`items.${index}.fabricColour`, '');
+        }
+        prevFabricTypeRef.current = fabricType;
     }, [fabricType, setValue, index]);
 
     // Reset chain type when motor changes to non-winder
     useEffect(() => {
-        if (chainOrMotor && !isWinderMotor(chainOrMotor)) {
-            setValue(`items.${index}.chainType`, '');
+        if (isInitialMount.current) return;
+        if (prevChainOrMotorRef.current !== undefined && prevChainOrMotorRef.current !== chainOrMotor) {
+            if (chainOrMotor && !isWinderMotor(chainOrMotor)) {
+                setValue(`items.${index}.chainType`, '');
+            }
         }
+        prevChainOrMotorRef.current = chainOrMotor;
     }, [chainOrMotor, setValue, index]);
 
     // Calculate comprehensive price (called on button click)
@@ -157,10 +180,28 @@ export function BlindItemForm({ index, onRemove, onCopy, onContinue, canRemove =
                 <div className="flex items-center gap-4">
                     <CardTitle className="text-lg">Blind #{blindNumber ?? index + 1}</CardTitle>
                     {price > 0 && (
-                        <Badge variant="success" className="text-sm px-3 py-1">
-                            ${price.toFixed(2)}
-                            {discount > 0 && <span className="ml-1 text-xs opacity-90">(-{discount}%)</span>}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                            {discount > 0 && (
+                                <>
+                                    <Badge variant="outline" className="text-xs px-2 py-0.5 line-through text-gray-400">
+                                        ${(() => {
+                                            // Reverse-calculate pre-discount fabric price
+                                            const otherComponents = (priceBreakdown?.motorChainPrice || 0) + (priceBreakdown?.bracketPrice || 0) +
+                                                (priceBreakdown?.chainPrice || 0) + (priceBreakdown?.clipsPrice || 0) +
+                                                (priceBreakdown?.idlerClutchPrice || 0) + (priceBreakdown?.stopBoltSafetyLockPrice || 0);
+                                            const fabricOrig = (priceBreakdown?.fabricPrice || 0) / (1 - discount / 100);
+                                            return (fabricOrig + otherComponents).toFixed(2);
+                                        })()}
+                                    </Badge>
+                                    <Badge variant="secondary" className="text-xs px-2 py-0.5 text-orange-600">
+                                        -{discount}%
+                                    </Badge>
+                                </>
+                            )}
+                            <Badge variant="success" className="text-sm px-3 py-1">
+                                ${price.toFixed(2)}
+                            </Badge>
+                        </div>
                     )}
                 </div>
                 {canRemove && onRemove && (
@@ -349,22 +390,49 @@ export function BlindItemForm({ index, onRemove, onCopy, onContinue, canRemove =
                         )}
                     </div>
 
-                    {/* Price Breakdown Details (Collapsible) */}
-                    {priceBreakdown && (
-                        <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-md text-sm">
-                            <div className="font-semibold text-green-800 mb-2">Price Breakdown:</div>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-gray-700">
-                                <div>Fabric: ${priceBreakdown.fabricPrice.toFixed(2)}</div>
-                                <div>Motor/Chain: ${priceBreakdown.motorChainPrice.toFixed(2)}</div>
-                                <div>Bracket: ${priceBreakdown.bracketPrice.toFixed(2)}</div>
-                                <div>Chain: ${priceBreakdown.chainPrice.toFixed(2)}</div>
-                                <div>Clips: ${priceBreakdown.clipsPrice.toFixed(2)}</div>
-                                <div>Idler/Clutch: ${priceBreakdown.idlerClutchPrice.toFixed(2)}</div>
-                                <div>Accessories: ${priceBreakdown.stopBoltSafetyLockPrice.toFixed(2)}</div>
-                                <div className="font-bold text-green-700">Total: ${priceBreakdown.totalPrice.toFixed(2)}</div>
+                    {/* Price Breakdown Details */}
+                    {priceBreakdown && (() => {
+                        const otherComponents = priceBreakdown.motorChainPrice + priceBreakdown.bracketPrice +
+                            priceBreakdown.chainPrice + priceBreakdown.clipsPrice +
+                            priceBreakdown.idlerClutchPrice + priceBreakdown.stopBoltSafetyLockPrice;
+                        const discPct = priceBreakdown.discountPercent || 0;
+                        const fabricOriginal = discPct > 0
+                            ? priceBreakdown.fabricPrice / (1 - discPct / 100)
+                            : priceBreakdown.fabricPrice;
+                        const subtotal = fabricOriginal + otherComponents;
+                        const discountAmount = subtotal - priceBreakdown.totalPrice;
+
+                        return (
+                            <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-md text-sm">
+                                <div className="font-semibold text-green-800 mb-2">Price Breakdown:</div>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-gray-700">
+                                    <div>Fabric: ${fabricOriginal.toFixed(2)}</div>
+                                    <div>Motor/Chain: ${priceBreakdown.motorChainPrice.toFixed(2)}</div>
+                                    <div>Bracket: ${priceBreakdown.bracketPrice.toFixed(2)}</div>
+                                    <div>Chain: ${priceBreakdown.chainPrice.toFixed(2)}</div>
+                                    <div>Clips: ${priceBreakdown.clipsPrice.toFixed(2)}</div>
+                                    <div>Idler/Clutch: ${priceBreakdown.idlerClutchPrice.toFixed(2)}</div>
+                                    <div>Accessories: ${priceBreakdown.stopBoltSafetyLockPrice.toFixed(2)}</div>
+                                </div>
+                                <div className="border-t border-green-300 mt-2 pt-2 space-y-1">
+                                    <div className="flex justify-between text-gray-600">
+                                        <span>Subtotal:</span>
+                                        <span>${subtotal.toFixed(2)}</span>
+                                    </div>
+                                    {discPct > 0 && (
+                                        <div className="flex justify-between text-orange-600">
+                                            <span>Discount (G{priceBreakdown.fabricGroup} - {discPct}%):</span>
+                                            <span>-${discountAmount.toFixed(2)}</span>
+                                        </div>
+                                    )}
+                                    <div className="flex justify-between font-bold text-green-700 text-base">
+                                        <span>Total:</span>
+                                        <span>${priceBreakdown.totalPrice.toFixed(2)}</span>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    )}
+                        );
+                    })()}
 
                     {/* Copy & Continue Buttons (only when callbacks provided) */}
                     {(onCopy || onContinue) && (
@@ -390,7 +458,7 @@ export function BlindItemForm({ index, onRemove, onCopy, onContinue, canRemove =
                                     className="text-green-600 border-green-300 hover:bg-green-50"
                                 >
                                     <PlusCircle className="h-4 w-4 mr-1" />
-                                    Update & Continue Adding
+                                    Update
                                 </Button>
                             )}
                         </div>

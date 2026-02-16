@@ -11,13 +11,13 @@ const WIDTH_TIERS = [600, 800, 1000, 1200, 1400, 1600, 1800, 2000, 2200, 2400, 2
 // Drop tiers (mm)
 const DROP_TIERS = [1200, 1400, 1600, 1800, 2000, 2200, 2400, 2600, 2800, 3000];
 
-// Discount percentages by group
-const DISCOUNT_BY_GROUP: { [key: number]: number } = {
-    1: 20,  // G1: 20%
-    2: 25,  // G2: 25%
-    3: 30,  // G3: 30%
-    4: 0,   // G4: 0%
-    5: 0,   // G5: 0%
+// Fabric group discount rates
+// G1: 20%, G2: 25%, G3: 30%
+// Only groups 1-3 are applicable (G4/G5 fabrics do not exist)
+const FABRIC_GROUP_DISCOUNTS: Record<number, number> = {
+    1: 20,
+    2: 25,
+    3: 30,
 };
 
 export interface BlindItemData {
@@ -56,18 +56,18 @@ export class PricingService {
             // Get base price from matrix
             const basePrice = await this.getPriceFromMatrix(fabricGroup, roundedWidth, roundedDrop);
 
-            // Calculate discount
-            const discountPercent = DISCOUNT_BY_GROUP[fabricGroup] || 0;
-            const discountAmount = (basePrice * discountPercent) / 100;
-            const finalPrice = basePrice - discountAmount;
+            // Apply fabric group discount
+            const discountPercent = FABRIC_GROUP_DISCOUNTS[fabricGroup] || 0;
+            const discountAmount = parseFloat((basePrice * discountPercent / 100).toFixed(2));
+            const finalPrice = parseFloat((basePrice - discountAmount).toFixed(2));
 
-            logger.info(`Price calculated: ${item.material} ${item.fabricType} (G${fabricGroup}) ${item.width}x${item.drop} → $${finalPrice.toFixed(2)}`);
+            logger.info(`Price calculated: ${item.material} ${item.fabricType} (G${fabricGroup}) ${item.width}x${item.drop} → Base: $${basePrice.toFixed(2)}, Discount: ${discountPercent}%, Final: $${finalPrice.toFixed(2)}`);
 
             return {
                 basePrice: parseFloat(basePrice.toFixed(2)),
                 discountPercent,
-                discountAmount: parseFloat(discountAmount.toFixed(2)),
-                finalPrice: parseFloat(finalPrice.toFixed(2)),
+                discountAmount,
+                finalPrice,
                 fabricGroup,
                 roundedWidth,
                 roundedDrop,
@@ -122,30 +122,33 @@ export class PricingService {
     }
 
     /**
-     * Round value to nearest tier (round UP if between tiers)
+     * Round value to nearest tier (round up if exactly in middle)
+     * Matches SAMPLE.html logic: find closest by absolute difference, prefer higher on tie
      */
     private roundToTier(value: number, tiers: number[]): number {
-        // If value is less than smallest tier, use smallest tier
+        // If value is less than or equal to smallest tier, use smallest tier
         if (value <= tiers[0]) {
             return tiers[0];
         }
 
-        // If value is greater than largest tier, use largest tier
+        // If value is greater than or equal to largest tier, use largest tier
         if (value >= tiers[tiers.length - 1]) {
             return tiers[tiers.length - 1];
         }
 
-        // Find the tier to round to
-        for (let i = 0; i < tiers.length - 1; i++) {
-            if (value > tiers[i] && value <= tiers[i + 1]) {
-                // Value is between tiers[i] and tiers[i+1]
-                // Round UP to the next tier
-                return tiers[i + 1];
+        // Find closest tier by absolute difference (prefer higher on tie)
+        let closestTier = tiers[0];
+        let minDiff = Math.abs(value - tiers[0]);
+
+        for (const tier of tiers) {
+            const diff = Math.abs(value - tier);
+            if (diff < minDiff || (diff === minDiff && tier > closestTier)) {
+                minDiff = diff;
+                closestTier = tier;
             }
         }
 
-        // Exact match
-        return tiers[tiers.length - 1];
+        return closestTier;
     }
 
     /**

@@ -1,10 +1,85 @@
 
-// Fabric data from JSON (excluding G4 and G5)
-export const FABRIC_DATA = {
-    "Gracetech": { "Platinum P05": { "group": "G1", "colors": ["2001 White", "2002 White Beige", "2003 White Grey", "2004 Beige", "2005 Beige Grey", "2006 Grey", "2007 Black Grey", "2009 Black", "2050 White Pearl", "2066 Super White", "2067 Charcoal Grey", "2079 Charcoal", "2080 caramel", "2081 Casper", "2082 Fudge", "2083 Hammer", "2084 Cloud Grey", "2098A Black Copper"] }, "Platinum P10": { "group": "G1", "colors": ["2001 White", "2002 White Beige", "2003 White Grey", "2004 Beige", "2005 Beige Grey", "2006 Grey", "2007 Black Grey", "2009 Black", "2050 White Pearl", "2066 Super White", "2067 Charcoal Grey", "2079 Charcoal", "2080 caramel", "2081 Casper", "2082 Fudge", "2083 Hammer", "2084 Cloud Grey", "2098A Black Copper"] } },
-    "Textstyle": { "Balmoral Blockout": { "group": "G3", "colors": ["Armour", "Birch", "Bourneville", "Chrome", "Concrete", "Dove", "Jet", "Pearl", "Platinum", "Putty", "Pyrite", "Steel", "White"] }, "Balmoral Light Filtering": { "group": "G3", "colors": ["Armour", "Birch", "Bourneville", "Chrome", "Concrete", "Dove", "Jet", "Pearl", "Platinum", "Putty", "Pyrite", "Steel", "White"] }, "Cascata": { "group": "G2", "colors": ["Ardesia", "Avorio", "Baltico", "Corvo", "Grigio", "Mercurio", "Neve", "Nuvola", "Pepe"] }, "Focus": { "group": "G1", "colors": ["Alabaster", "Almond", "Ash", "Bay", "Beechwood", "Carbon", "Chalk", "Cloud", "Coal", "Cotton", "Dove", "Drift", "Duck Egg", "Ebony", "Espresso", "Eucalypt", "Feather", "Fig", "Jarrah", "Latte", "Linen", "Magnetic", "Mist", "Oyster", "Polar", "Powder", "Putty", "Sandstone", "Shell", "Smoke", "Stone", "Tempest", "White"] }, "Jersey Blockout": { "group": "G3", "colors": ["Ashen", "Basalt", "Cinder", "Ember", "Lace", "Mink", "Opal", "Render", "Sable", "Willow"] }, "Jersey Light Filtering": { "group": "G3", "colors": ["Ashen", "Basalt", "Cinder", "Ember", "Lace", "Mink", "Opal", "Render", "Sable", "Willow"] }, "Kleenscreen": { "group": "G2", "colors": ["Alloy", "Barley", "Black", "Black Pearl", "Charcoal", "Graphite", "Ivory", "Pewter", "Pumice", "Pure White", "Shale"] }, "Kleenscreen Blockout": { "group": "G2", "colors": ["Alloy", "Barley", "Black", "Black Pearl", "Charcoal", "Ice", "Pewter", "Pumice"] }, "Metroshade Blockout": { "group": "G3", "colors": ["Black", "Dove/White", "Ecru", "Ice Grey", "Moonstone", "Nougat", "Pebble", "Quill", "Seal", "Slate", "Storm", "Whitewash"] }, "Metroshade Light Filtering": { "group": "G3", "colors": ["Dove/White", "Ecru", "Ice Grey", "Moonstone", "Nougat", "Quill"] }, "One Screen": { "group": "G2", "colors": ["Black", "Charcoal", "Dune", "Grey", "Gunmetal", "Ice", "Linen/Bronze", "Mercury", "Sand", "Silver/Black", "Wallaby", "White"] }, "Sanctuary Blockout": { "group": "G2", "colors": ["Baltic", "Ceramic", "Fossil", "Lava", "Limestone", "Marble", "Mineral", "Plaster", "Slate", "Suede", "Truffle"] }, "Sanctuary Light Filtering": { "group": "G2", "colors": ["Baltic", "Ceramic", "Fossil", "Lava", "Limestone", "Marble", "Mineral", "Plaster", "Slate", "Suede", "Truffle"] } },
-    "Uniline": { "Dawn": { "group": "G1", "colors": ["Alabaster", "Arum", "Ash Blue", "Beige", "Bison", "BK RB08", "Buttercream", "Cameo", "Champagne", "Cloud", "Coastline", "Cocoa", "Cosmos", "Dusty Rose", "Haze", "Lagoon", "Latte", "Natural", "Parchment", "Pebble", "RawHide", "Sepia", "Shale", "Tan", "Thunder Cloud", "White"] }, "Sunset": { "group": "G1", "colors": ["Antique", "Ash Grey", "Bark", "Beaver", "Bone", "Cashew", "Ecru", "Flax", "Lace", "Lava", "Mushroom", "Natural", "Onyx", "parchment", "Pepper", "Sahara", "Seal", "Silver", "Snow", "Stone", "Taupe", "Vanila", "Warm Grey"] }, "Tapestry Blockout": { "group": "G2", "colors": ["Buff", "Cloud", "Concrete", "Dove", "Gunmetal", "Portland", "Seagull", "Tuxedo", "White Wash"] }, "Tapestry Light Filtering": { "group": "G2", "colors": ["Buff", "Cloud", "Concrete", "Dove", "Gunmetal", "Portland", "Seagull", "Tuxedo", "White Wash"] } },
-    "Vertex": { "Iguzu": { "group": "G2", "colors": ["1901", "1902", "1903", "1904", "1905", "1906"] }, "Vale Blockout": { "group": "G2", "colors": ["Apricote", "Arctic", "Cobalt", "Dove", "Graphite", "Greige", "Hazel", "Misty", "Pale Gray", "Vanilla", "White"] }, "Vale Light Filtering": { "group": "G2", "colors": ["Apricote", "Arctic", "Cobalt", "Dove", "Graphite", "Greige", "Hazel", "Misty", "Pale Gray", "Vanilla", "White"] }, "Vegan Block Out": { "group": "G2", "colors": ["Clover", "Jasmine", "Tansy", "Tulip", "Willow"] }, "Vegas Blockout": { "group": "G2", "colors": ["Boulder", "Bunflow", "Caring Tan", "Cotton", "Darkwood", "Sand Dan"] }, "Vegas Light Filtering": { "group": "G2", "colors": ["Boulder", "Bunflow", "Caring Tan", "Cotton", "Darkwood", "Sand Dan"] }, "Velvet Block Out": { "group": "G2", "colors": ["Blush", "Chalk", "Mist", "Shell", "Whisper"] }, "Venus Block Out": { "group": "G2", "colors": ["Dove", "Ebony", "Granite", "Linen", "Pearl", "Snow", "Stone"] }, "Venus Light Filtering": { "group": "G2", "colors": ["Linen", "Pearl", "Snow"] }, "Verdure Block Out": { "group": "G2", "colors": ["Charcoal", "Cystal", "Ecru", "Flint", "Fog", "Midnight", "Mist", "Onyx", "Pebble", "Rainforest", "Silver", "Tan"] }, "Verdure Light Filter": { "group": "G2", "colors": ["Charcoal", "Crystal", "Ecru", "Flint", "Fog", "Mist", "Onyx", "Pebble", "Rainforest", "Silver", "Tan"] }, "Vermont Block Out": { "group": "G2", "colors": ["Alabaster", "Anchor", "Denim", "Fog", "Fossil", "Onyx", "Pewter", "White"] }, "Verne Blockout": { "group": "G2", "colors": ["Abalone", "Achor", "River", "Smoke", "Steel", "White"] }, "Verne Light Filtering": { "group": "G2", "colors": ["Abalone", "Achor", "River", "Smoke", "Steel", "White"] }, "Verona Block Out": { "group": "G2", "colors": ["Beige", "Black", "Gold", "Grey", "Off White", "White"] }, "Verona Plus Block Out": { "group": "G2", "colors": ["Beige", "Black", "Gold", "Grey", "Off White", "White"] }, "Versatile Block Out": { "group": "G1", "colors": ["Alloy", "Alloy RB08", "Bark", "Bark RB08", "Chrome", "Chrome RB08", "Cloud", "Cloud RB08", "Coal", "Coal RB08", "Coffon", "Coffon RB08", "Dusk", "Dusk RB08", "Ebony", "Ebony RB08", "Gardenia", "Gardenia RB08", "Gravel", "Gravel RB08", "Ice", "Ice RB08", "Lava", "Lava RB08", "Leather", "Leather RB08", "Luna", "Luna RB08", "Mocha", "Mocha RB08", "Natural", "Natural RB08", "Oyster", "Oyster RB08", "Peach", "Peach RB08", "Pine", "Pine RB08", "Seal", "Seal RB08", "Stone", "Stone RB08", "Taupe", "Taupe RB08", "Thunder", "Thunder RB08", "Wheat", "Wheat RB08"] }, "Victoria Block Out": { "group": "G2", "colors": ["Chrome", "Crema", "Eucalyptus", "Grey", "Leather", "Mont Blanc", "Natural", "Pure Black", "Putty", "Snow White", "Steel"] }, "Vintage Block Out": { "group": "G2", "colors": ["Almond", "Blush", "Chalk", "Cloud", "Espresso", "Jarrah", "Oyster"] }, "Vintage Light Filtering": { "group": "G2", "colors": ["Almond", "Blush", "Chalk", "Cloud", "Espresso", "Jarrah", "Oyster"] }, "Vision": { "group": "G2", "colors": ["Beige", "Beige RB08", "Black", "Black RB08", "Charcoal", "Copper", "Dark Pearl", "Grey", "Grey RB08", "Ice", "Ice RB08", "Light Grey", "Sand", "White", "White RB08"] }, "Vista Block Out": { "group": "G2", "colors": ["Ash", "Bone", "Daisy", "Ivory", "Lace", "Silver", "Slate", "Smoke", "Storm"] }, "Vista Light Filter": { "group": "G2", "colors": ["Ash", "Bone", "Daisy", "Ivory", "Lace", "Silver", "Slate", "Smoke", "Storm"] }, "Vital Block Out": { "group": "G2", "colors": ["Atlantic Salt", "Fog White", "Jet Black", "Ocean Foam", "Sandstone", "Slate Grey"] }, "Vital Light Filter": { "group": "G2", "colors": ["Atlantic Salt", "Fog White", "Jet Black", "Ocean Foam", "Sandstone", "Slate Grey"] }, "Voltas Blockout": { "group": "G2", "colors": ["Beige", "Cream", "Mink", "Silver Grey", "Stone", "White"] }, "Voltas Light Filtering": { "group": "G2", "colors": ["Beige", "Cream", "Mink", "Silver Grey", "Stone", "White"] } }
+// Fabric data from fabrics_filtered_with_groups.json (G1, G2, G3 only — G4/G5 not applicable)
+export const FABRIC_DATA: Record<string, Record<string, { group: string; colors: string[] }>> = {
+    "Alpha": {
+        "Avoca Block Out": { "group": "G2", "colors": ["Alabaster", "Black", "Chocolate", "Cream", "Dark Grey", "Ebony", "Ivory", "Lace", "Lght Grey", "Linen", "Mist", "Off White", "Pebble", "Powder", "Shale", "Stone", "White"] },
+        "Bondi Block Out": { "group": "G2", "colors": ["Cappuccino", "Champagne", "Dove", "Grey", "Leather", "Midnight", "White"] },
+        "Bondi Light Filtering": { "group": "G2", "colors": ["Cappuccino", "Champagne", "Dove", "Grey", "Leather", "Midnight", "White"] },
+        "Cottesloe Block Out": { "group": "G2", "colors": ["Biscuit Pearl", "Black Pearl", "Cream Pearl", "Metallic", "Silver Cloud", "Silver Pearl", "White Pearl"] },
+        "Cottesloe Light Filtering": { "group": "G2", "colors": ["Biscuit Pearl", "Black Pearl", "Cream Pearl", "Metallic", "Silver Cloud", "Silver Pearl", "White Pearl"] },
+        "Dalkeith Block Out": { "group": "G2", "colors": ["Beach Pearl", "Cream Pearl", "Dark Pearl", "Misty Pearl", "Silver Pearl", "White"] },
+        "Dalkeith Light Filtering": { "group": "G2", "colors": ["Beach Pearl", "Cream Pearl", "Dark Pearl", "Misty Pearl", "Silver Pearl", "White"] },
+        "Glenelg Block Out": { "group": "G2", "colors": ["Biscuit", "Cappuccino", "Cream", "Fog", "Seed Pearl", "White"] },
+        "Glenelg Light Filtering": { "group": "G2", "colors": ["Biscuit", "Cappuccino", "Cream", "Fog", "Seed Pearl", "White"] },
+        "Toorak Block Out": { "group": "G2", "colors": ["Blaze", "Grey Stone", "Nougat", "Off White", "Seed Pearl", "Silver", "Storm", "White"] },
+        "Toorak Light Filtering": { "group": "G2", "colors": ["Blaze", "Grey Stone", "Nougat", "Off White", "Seed Pearl", "Silver", "Storm", "White"] },
+        "Vaucluse Block Out": { "group": "G2", "colors": ["Biscuit", "Off White", "Pewter", "Shale", "Silver Grey", "White"] },
+        "Vaucluse Light Filtering": { "group": "G2", "colors": ["Biscuit", "Off White", "Pewter", "Shale", "Silver Grey", "White"] }
+    },
+    "Gracetech": {
+        "Platinum P05": { "group": "G1", "colors": ["2001 White", "2002 White Beige", "2003 White Grey", "2004 Beige", "2005 Beige Grey", "2006 Grey", "2007 Black Grey", "2009 Black", "2050 White Pearl", "2066 Super White", "2067 Charcoal Grey", "2079 Charcoal", "2080 caramel", "2081 Casper", "2082 Fudge", "2083 Hammer", "2084 Cloud Grey", "2098A Black Copper"] },
+        "Platinum P10": { "group": "G1", "colors": ["2001 White", "2002 White Beige", "2003 White Grey", "2004 Beige", "2005 Beige Grey", "2006 Grey", "2007 Black Grey", "2009 Black", "2050 White Pearl", "2066 Super White", "2067 Charcoal Grey", "2079 Charcoal", "2080 caramel", "2081 Casper", "2082 Fudge", "2083 Hammer", "2084 Cloud Grey", "2098A Black Copper"] }
+    },
+    "Textstyle": {
+        "Balmoral Blockout": { "group": "G3", "colors": ["Armour", "Birch", "Bourneville", "Chrome", "Concrete", "Dove", "Jet", "Pearl", "Platinum", "Putty", "Pyrite", "Steel", "White"] },
+        "Balmoral Light Filtering": { "group": "G3", "colors": ["Armour", "Birch", "Bourneville", "Chrome", "Concrete", "Dove", "Jet", "Pearl", "Platinum", "Putty", "Pyrite", "Steel", "White"] },
+        "Cascata": { "group": "G2", "colors": ["Ardesia", "Avorio", "Baltico", "Corvo", "Grigio", "Mercurio", "Neve", "Nuvola", "Pepe"] },
+        "Focus": { "group": "G1", "colors": ["Alabaster", "Almond", "Ash", "Bay", "Beechwood", "Carbon", "Chalk", "Cloud", "Coal", "Cotton", "Dove", "Drift", "Duck Egg", "Ebony", "Espresso", "Eucalypt", "Feather", "Fig", "Jarrah", "Latte", "Linen", "Magnetic", "Mist", "Oyster", "Polar", "Powder", "Putty", "Sandstone", "Shell", "Smoke", "Stone", "Tempest", "White"] },
+        "Jersey Blockout": { "group": "G3", "colors": ["Ashen", "Basalt", "Cinder", "Ember", "Lace", "Mink", "Opal", "Render", "Sable", "Willow"] },
+        "Jersey Light Filtering": { "group": "G3", "colors": ["Ashen", "Basalt", "Cinder", "Ember", "Lace", "Mink", "Opal", "Render", "Sable", "Willow"] },
+        "Kleenscreen": { "group": "G2", "colors": ["Alloy", "Barley", "Black", "Black Pearl", "Charcoal", "Graphite", "Ivory", "Pewter", "Pumice", "Pure White", "Shale"] },
+        "Kleenscreen Blockout": { "group": "G2", "colors": ["Alloy", "Barley", "Black", "Black Pearl", "Charcoal", "Ice", "Pewter", "Pumice"] },
+        "Metroshade Blockout": { "group": "G3", "colors": ["Black", "Dove/White", "Ecru", "Ice Grey", "Moonstone", "Nougat", "Pebble", "Quill", "Seal", "Slate", "Storm", "Whitewash"] },
+        "Metroshade Light Filtering": { "group": "G3", "colors": ["Dove/White", "Ecru", "Ice Grey", "Moonstone", "Nougat", "Quill"] },
+        "One Screen": { "group": "G2", "colors": ["Black", "Charcoal", "Dune", "Grey", "Gunmetal", "Ice", "Linen/Bronze", "Mercury", "Sand", "Silver/Black", "Wallaby", "White"] },
+        "Sanctuary Blockout": { "group": "G2", "colors": ["Baltic", "Ceramic", "Fossil", "Lava", "Limestone", "Marble", "Mineral", "Plaster", "Slate", "Suede", "Truffle"] },
+        "Sanctuary Light Filtering": { "group": "G2", "colors": ["Baltic", "Ceramic", "Fossil", "Lava", "Limestone", "Marble", "Mineral", "Plaster", "Slate", "Suede", "Truffle"] }
+    },
+    "Uniline": {
+        "Dawn": { "group": "G1", "colors": ["Alabaster", "Arum", "Ash Blue", "Beige", "Bison", "BK RB08", "Black", "Caviar", "Cotton", "Crane", "Custom Cream", "Dark Grey", "Daybreak", "Dune", "Earthen", "Ecru", "GR RB08", "Grey", "Ivory", "Light Bison", "Limestone RB08", "Linen", "Macchiato", "Mariah", "Mid Grey", "Misty", "Natural", "New Slate", "Nutmeg", "Oyster", "Pebble", "Pewter", "Putty", "Royal Blue", "Sesame", "Shale", "Slate", "Soft Grey", "Taupe", "Warm White", "WH RB08", "White"] },
+        "Evolution": { "group": "G3", "colors": ["Amber", "Bisque", "Blanched", "Canvas", "Cocoa", "Dark Grey", "Egg Shell", "Fallow", "Hessian", "Light Grey", "Pepper", "RawHide", "Sepia", "Shale", "Tan", "Thunder Cloud", "White"] },
+        "Sunset": { "group": "G1", "colors": ["Antique", "Ash Grey", "Bark", "Beaver", "Bone", "Cashew", "Ecru", "Flax", "Lace", "Lava", "Mushroom", "Natural", "Onyx", "parchment", "Pepper", "Sahara", "Seal", "Silver", "Snow", "Stone", "Taupe", "Vanila", "Warm Grey"] },
+        "Tapestry Blockout": { "group": "G2", "colors": ["Buff", "Cloud", "Concrete", "Dove", "Gunmetal", "Portland", "Seagull", "Tuxedo", "White Wash"] },
+        "Tapestry Light Filtering": { "group": "G2", "colors": ["Buff", "Cloud", "Concrete", "Dove", "Gunmetal", "Portland", "Seagull", "Tuxedo", "White Wash"] }
+    },
+    "Vertex": {
+        "Iguzu": { "group": "G2", "colors": ["1901", "1902", "1903", "1904", "1905", "1906"] },
+        "Vale Blockout": { "group": "G2", "colors": ["Apricote", "Arctic", "Cobalt", "Dove", "Graphite", "Greige", "Hazel", "Misty", "Pale Gray", "Vanilla", "White"] },
+        "Vale Light Filtering": { "group": "G2", "colors": ["Apricote", "Arctic", "Cobalt", "Dove", "Graphite", "Greige", "Hazel", "Misty", "Pale Gray", "Vanilla", "White"] },
+        "Vegan Block Out": { "group": "G2", "colors": ["Clover", "Jasmine", "Tansy", "Tulip", "Willow"] },
+        "Vegas Blockout": { "group": "G2", "colors": ["Boulder", "Bunflow", "Caring Tan", "Cotton", "Darkwood", "Sand Dan"] },
+        "Vegas Light Filtering": { "group": "G2", "colors": ["Boulder", "Bunflow", "Caring Tan", "Cotton", "Darkwood", "Sand Dan"] },
+        "Velvet Block Out": { "group": "G2", "colors": ["Blush", "Chalk", "Mist", "Shell", "Whisper"] },
+        "Venus Block Out": { "group": "G2", "colors": ["Dove", "Ebony", "Granite", "Linen", "Pearl", "Snow", "Stone"] },
+        "Venus Light Filtering": { "group": "G2", "colors": ["Linen", "Pearl", "Snow"] },
+        "Verdure Block Out": { "group": "G2", "colors": ["Charcoal", "Cystal", "Ecru", "Flint", "Fog", "Midnight", "Mist", "Onyx", "Pebble", "Rainforest", "Silver", "Tan"] },
+        "Verdure Light Filter": { "group": "G2", "colors": ["Charcoal", "Crystal", "Ecru", "Flint", "Fog", "Mist", "Onyx", "Pebble", "Rainforest", "Silver", "Tan"] },
+        "Vermont Block Out": { "group": "G2", "colors": ["Alabaster", "Anchor", "Denim", "Fog", "Fossil", "Onyx", "Pewter", "White"] },
+        "Verne Blockout": { "group": "G2", "colors": ["Abalone", "Achor", "River", "Smoke", "Steel", "White"] },
+        "Verne Light Filtering": { "group": "G2", "colors": ["Abalone", "Achor", "River", "Smoke", "Steel", "White"] },
+        "Verona Block Out": { "group": "G2", "colors": ["Beige", "Black", "Gold", "Grey", "Off White", "White"] },
+        "Verona Plus Block Out": { "group": "G2", "colors": ["Beige", "Black", "Gold", "Grey", "Off White", "White"] },
+        "Versatile Block Out": { "group": "G1", "colors": ["Alloy", "Alloy RB08", "Bark", "Bark RB08", "Chrome", "Chrome RB08", "Cloud", "Cloud RB08", "Coal", "Coal RB08", "Coffon", "Coffon RB08", "Dusk", "Dusk RB08", "Ebony", "Ebony RB08", "Gardenia", "Gardenia RB08", "Gravel", "Gravel RB08", "Ice", "Ice RB08", "Lava", "Lava RB08", "Leather", "Leather RB08", "Luna", "Luna RB08", "Mocha", "Mocha RB08", "Natural", "Natural RB08", "Oyster", "Oyster RB08", "Peach", "Peach RB08", "Pine", "Pine RB08", "Seal", "Seal RB08", "Stone", "Stone RB08", "Taupe", "Taupe RB08", "Thunder", "Thunder RB08", "Wheat", "Wheat RB08"] },
+        "Victoria Block Out": { "group": "G2", "colors": ["Chrome", "Crema", "Eucalyptus", "Grey", "Leather", "Mont Blanc", "Natural", "Pure Black", "Putty", "Snow White", "Steel"] },
+        "Vintage Block Out": { "group": "G2", "colors": ["Almond", "Blush", "Chalk", "Cloud", "Espresso", "Jarrah", "Oyster"] },
+        "Vintage Light Filtering": { "group": "G2", "colors": ["Almond", "Blush", "Chalk", "Cloud", "Espresso", "Jarrah", "Oyster"] },
+        "Vision": { "group": "G2", "colors": ["Beige", "Beige RB08", "Black", "Black RB08", "Charcoal", "Copper", "Dark Pearl", "Grey", "Grey RB08", "Ice", "Ice RB08", "Light Grey", "Sand", "White", "White RB08"] },
+        "Vista Block Out": { "group": "G2", "colors": ["Ash", "Bone", "Daisy", "Ivory", "Lace", "Silver", "Slate", "Smoke", "Storm"] },
+        "Vista Light Filter": { "group": "G2", "colors": ["Ash", "Bone", "Daisy", "Ivory", "Lace", "Silver", "Slate", "Smoke", "Storm"] },
+        "Vital Block Out": { "group": "G2", "colors": ["Atlantic Salt", "Fog White", "Jet Black", "Ocean Foam", "Sandstone", "Slate Grey"] },
+        "Vital Light Filter": { "group": "G2", "colors": ["Atlantic Salt", "Fog White", "Jet Black", "Ocean Foam", "Sandstone", "Slate Grey"] },
+        "Voltas Blockout": { "group": "G2", "colors": ["Beige", "Cream", "Mink", "Silver Grey", "Stone", "White"] },
+        "Voltas Light Filtering": { "group": "G2", "colors": ["Beige", "Cream", "Mink", "Silver Grey", "Stone", "White"] }
+    }
+};
+
+// Pricing matrix - BASE prices before fabric group discount
+// Group discounts: G1=20%, G2=25%, G3=30%
+// Only groups 1-3 are applicable
+export const FABRIC_GROUP_DISCOUNTS: Record<number, number> = {
+    1: 20,
+    2: 25,
+    3: 30,
 };
 
 export const PRICING_DATA: Record<number, Record<number, Record<number, number>>> = {
@@ -52,38 +127,30 @@ export const PRICING_DATA: Record<number, Record<number, Record<number, number>>
         2600: { 1200: 185.5, 1400: 195.04, 1600: 205.64, 1800: 216.24, 2000: 226.84, 2200: 237.44, 2400: 246.98, 2600: 256.52, 2800: 268.18, 3000: 277.72 },
         2800: { 1200: 193.98, 1400: 204.58, 1600: 216.24, 1800: 227.9, 2000: 239.56, 2200: 250.16, 2400: 260.76, 2600: 271.36, 2800: 281.96, 3000: 294.68 },
         3000: { 1200: 204.58, 1400: 216.24, 1600: 227.9, 1800: 240.62, 2000: 252.28, 2200: 265, 2400: 275.6, 2600: 287.26, 2800: 299.98, 3000: 311.64 }
-    },
-    4: {
-        600: { 1200: 70.72, 1400: 74.88, 1600: 78, 1800: 81.12, 2000: 84.24, 2200: 89.44, 2400: 93.6, 2600: 98.8, 2800: 102.96, 3000: 109.2 },
-        800: { 1200: 78, 1400: 82.16, 1600: 87.36, 1800: 91.52, 2000: 95.68, 2200: 100.88, 2400: 105.04, 2600: 110.24, 2800: 114.4, 3000: 121.68 },
-        1000: { 1200: 83.2, 1400: 89.44, 1600: 94.64, 1800: 99.84, 2000: 105.04, 2200: 111.28, 2400: 116.48, 2600: 121.68, 2800: 126.88, 3000: 133.12 },
-        1200: { 1200: 93.6, 1400: 100.88, 1600: 106.08, 1800: 113.36, 2000: 120.64, 2200: 125.84, 2400: 133.12, 2600: 139.36, 2800: 145.6, 3000: 151.84 },
-        1400: { 1200: 104, 1400: 111.28, 1600: 118.56, 1800: 126.88, 2000: 134.16, 2200: 141.44, 2400: 148.72, 2600: 157.04, 2800: 164.32, 3000: 171.6 },
-        1600: { 1200: 115.5, 1400: 123.9, 1600: 133.35, 1800: 140.7, 2000: 150.15, 2200: 158.55, 2400: 168, 2600: 175.35, 2800: 184.8, 3000: 193.2 },
-        1800: { 1200: 127.05, 1400: 136.5, 1600: 147, 1800: 156.45, 2000: 164.85, 2200: 175.35, 2400: 184.8, 2600: 195.3, 2800: 204.75, 3000: 214.2 },
-        2000: { 1200: 136.5, 1400: 147, 1600: 157.5, 1800: 169.05, 2000: 179.55, 2200: 189, 2400: 199.5, 2600: 211.05, 2800: 221.55, 3000: 232.05 },
-        2200: { 1200: 162.75, 1400: 174.3, 1600: 186.9, 1800: 198.45, 2000: 210, 2200: 221.55, 2400: 233.1, 2600: 245.7, 2800: 257.25, 3000: 268.8 },
-        2400: { 1200: 175.35, 1400: 187.95, 1600: 200.55, 1800: 214.2, 2000: 226.8, 2200: 239.4, 2400: 252, 2600: 264.6, 2800: 278.25, 3000: 290.85 },
-        2600: { 1200: 208.82, 1400: 222.6, 1600: 236.38, 1800: 251.22, 2000: 265, 2200: 278.78, 2400: 292.56, 2600: 306.34, 2800: 319.06, 3000: 333.9 },
-        2800: { 1200: 219.42, 1400: 234.26, 1600: 249.1, 1800: 265, 2000: 279.84, 2200: 294.68, 2400: 309.52, 2600: 324.36, 2800: 339.2, 3000: 354.04 },
-        3000: { 1200: 232.14, 1400: 246.98, 1600: 263.94, 1800: 279.84, 2000: 295.74, 2200: 312.7, 2400: 327.54, 2600: 344.5, 2800: 360.4, 3000: 376.3 }
-    },
-    5: {
-        600: { 1200: 88.4, 1400: 93.6, 1600: 98.8, 1800: 105.04, 2000: 110.24, 2200: 115.44, 2400: 121.68, 2600: 125.84, 2800: 132.08, 3000: 137.28 },
-        800: { 1200: 97.76, 1400: 102.96, 1600: 109.2, 1800: 116.48, 2000: 123.76, 2200: 132.08, 2400: 138.32, 2600: 145.6, 2800: 150.8, 3000: 160.16 },
-        1000: { 1200: 99.84, 1400: 106.08, 1600: 114.4, 1800: 121.68, 2000: 128.96, 2200: 136.24, 2400: 143.52, 2600: 150.8, 2800: 158.08, 3000: 164.32 },
-        1200: { 1200: 113.36, 1400: 121.68, 1600: 130, 1800: 138.32, 2000: 147.68, 2200: 156, 2400: 164.32, 2600: 173.68, 2800: 182, 3000: 191.36 },
-        1400: { 1200: 125.84, 1400: 136.24, 1600: 146.64, 1800: 156, 2000: 166.4, 2200: 175.76, 2400: 186.16, 2600: 195.52, 2800: 205.92, 3000: 216.32 },
-        1600: { 1200: 139.65, 1400: 151.2, 1600: 162.75, 1800: 174.3, 2000: 185.85, 2200: 197.4, 2400: 208.95, 2600: 220.5, 2800: 232.05, 3000: 243.6 },
-        1800: { 1200: 153.3, 1400: 165.9, 1600: 179.55, 1800: 192.15, 2000: 205.8, 2200: 218.4, 2400: 231, 2600: 243.6, 2800: 256.2, 3000: 269.85 },
-        2000: { 1200: 165.9, 1400: 181.65, 1600: 195.3, 1800: 208.95, 2000: 223.65, 2200: 238.35, 2400: 253.05, 2600: 266.7, 2800: 280.35, 3000: 296.1 },
-        2200: { 1200: 197.4, 1400: 214.2, 1600: 228.9, 1800: 244.65, 2000: 261.45, 2200: 276.15, 2400: 291.9, 2600: 307.65, 2800: 323.4, 3000: 339.15 },
-        2400: { 1200: 212.1, 1400: 229.95, 1600: 246.75, 1800: 264.6, 2000: 281.4, 2200: 298.2, 2400: 315, 2600: 332.85, 2800: 349.65, 3000: 367.5 },
-        2600: { 1200: 251.22, 1400: 269.24, 1600: 288.32, 1800: 306.34, 2000: 325.42, 2200: 344.5, 2400: 362.52, 2600: 381.6, 2800: 399.62, 3000: 418.7 },
-        2800: { 1200: 265, 1400: 284.08, 1600: 304.22, 1800: 325.42, 2000: 345.56, 2200: 364.64, 2400: 384.78, 2600: 404.92, 2800: 426.12, 3000: 445.2 },
-        3000: { 1200: 279.84, 1400: 301.04, 1600: 323.3, 1800: 346.62, 2000: 364.64, 2200: 385.84, 2400: 409.16, 2600: 430.36, 2800: 451.56, 3000: 478.06 }
     }
 };
+
+// Helper functions for fabric data access
+export function getMaterials(): string[] {
+    return Object.keys(FABRIC_DATA);
+}
+
+export function getFabricTypes(material: string): string[] {
+    if (!FABRIC_DATA[material]) return [];
+    return Object.keys(FABRIC_DATA[material]);
+}
+
+export function getFabricColors(material: string, fabricType: string): string[] {
+    if (!FABRIC_DATA[material] || !FABRIC_DATA[material][fabricType]) return [];
+    return FABRIC_DATA[material][fabricType].colors;
+}
+
+export function getFabricGroup(material: string, fabricType: string): number | null {
+    if (!FABRIC_DATA[material] || !FABRIC_DATA[material][fabricType]) return null;
+    const groupStr = FABRIC_DATA[material][fabricType].group;
+    const groupNum = parseInt(groupStr.substring(1));
+    return groupNum >= 1 && groupNum <= 3 ? groupNum : null;
+}
 
 export function getPrice(width: number, drop: number, group: number): number | null {
     if (!PRICING_DATA[group]) return null;
@@ -119,26 +186,35 @@ export function getPrice(width: number, drop: number, group: number): number | n
     return PRICING_DATA[group][closestWidth][closestDrop];
 }
 
+/**
+ * Calculate blind price from the pricing matrix.
+ * Applies fabric group discount automatically, then any additional user discount.
+ */
 export function calculateBlindPrice(
     width: number,
     drop: number,
-    discountPercent: number = 0, // renamed to clarify inputs
+    discountPercent: number = 0,
     fabricGroup: number
-): { price: number; originalPrice: number } | null {
+): { price: number; originalPrice: number; groupDiscount: number } | null {
     if (!width || !drop || !fabricGroup) return null;
 
     const basePrice = getPrice(width, drop, fabricGroup);
 
     if (basePrice === null) return null;
 
-    let finalPrice = basePrice;
+    // Apply fabric group discount first
+    const groupDiscountPercent = FABRIC_GROUP_DISCOUNTS[fabricGroup] || 0;
+    let finalPrice = basePrice * (1 - groupDiscountPercent / 100);
+
+    // Then apply any additional user-entered discount
     if (discountPercent > 0) {
-        finalPrice = basePrice * (1 - discountPercent / 100);
+        finalPrice = finalPrice * (1 - discountPercent / 100);
     }
 
     return {
         price: Number(finalPrice.toFixed(2)),
-        originalPrice: basePrice
+        originalPrice: basePrice,
+        groupDiscount: groupDiscountPercent,
     };
 }
 
