@@ -15,6 +15,7 @@
         "create:admin": "tsx scripts/create-admin.ts",
         "seed:pricing": "tsx scripts/seed-pricing.ts",
         "seed:prod": "node dist/prisma/seed.js",
+        "create-admin:prod": "node dist/scripts/create-admin.js",
         "lint": "eslint src/**/*.ts",
         "test": "jest"
     },
