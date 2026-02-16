@@ -39,14 +39,14 @@ RUN apk add --no-cache openssl libc6-compat
 COPY package*.json ./
 COPY tsconfig.json ./
 
-RUN npm ci --only=production
+RUN npm ci
 
 COPY prisma ./prisma
 RUN npx prisma generate
 
 COPY . .
 
-RUN npm run build
+RUN npm run build && npm prune --production
 
 # Production stage
 FROM node:20-alpine AS production
