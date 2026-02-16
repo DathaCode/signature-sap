@@ -1,5 +1,5 @@
 import axios from 'axios'
-import type { UploadResponse, WorksheetData } from '../types'
+import type { WorksheetData } from '../types'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
 
