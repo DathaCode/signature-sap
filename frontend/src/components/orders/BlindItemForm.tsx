@@ -185,12 +185,12 @@ export function BlindItemForm({ index, onRemove, onCopy, onContinue, canRemove =
                                 <>
                                     <Badge variant="outline" className="text-xs px-2 py-0.5 line-through text-gray-400">
                                         ${(() => {
-                                            // Reverse-calculate pre-discount fabric price
+                                            // Use base fabric price + other components
                                             const otherComponents = (priceBreakdown?.motorChainPrice || 0) + (priceBreakdown?.bracketPrice || 0) +
                                                 (priceBreakdown?.chainPrice || 0) + (priceBreakdown?.clipsPrice || 0) +
                                                 (priceBreakdown?.idlerClutchPrice || 0) + (priceBreakdown?.stopBoltSafetyLockPrice || 0);
-                                            const fabricOrig = (priceBreakdown?.fabricPrice || 0) / (1 - discount / 100);
-                                            return (fabricOrig + otherComponents).toFixed(2);
+                                            const fabricBase = priceBreakdown?.fabricBasePrice || priceBreakdown?.fabricPrice || 0;
+                                            return (fabricBase + otherComponents).toFixed(2);
                                         })()}
                                     </Badge>
                                     <Badge variant="secondary" className="text-xs px-2 py-0.5 text-orange-600">
@@ -396,17 +396,15 @@ export function BlindItemForm({ index, onRemove, onCopy, onContinue, canRemove =
                             priceBreakdown.chainPrice + priceBreakdown.clipsPrice +
                             priceBreakdown.idlerClutchPrice + priceBreakdown.stopBoltSafetyLockPrice;
                         const discPct = priceBreakdown.discountPercent || 0;
-                        const fabricOriginal = discPct > 0
-                            ? priceBreakdown.fabricPrice / (1 - discPct / 100)
-                            : priceBreakdown.fabricPrice;
-                        const subtotal = fabricOriginal + otherComponents;
-                        const discountAmount = subtotal - priceBreakdown.totalPrice;
+                        const fabricBase = priceBreakdown.fabricBasePrice || priceBreakdown.fabricPrice;
+                        const fabricDiscounted = priceBreakdown.fabricPrice;
+                        const fabricDiscountAmount = fabricBase - fabricDiscounted;
 
                         return (
                             <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-md text-sm">
                                 <div className="font-semibold text-green-800 mb-2">Price Breakdown:</div>
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-gray-700">
-                                    <div>Fabric: ${fabricOriginal.toFixed(2)}</div>
+                                    <div>Fabric: ${fabricBase.toFixed(2)}</div>
                                     <div>Motor/Chain: ${priceBreakdown.motorChainPrice.toFixed(2)}</div>
                                     <div>Bracket: ${priceBreakdown.bracketPrice.toFixed(2)}</div>
                                     <div>Chain: ${priceBreakdown.chainPrice.toFixed(2)}</div>
@@ -415,14 +413,10 @@ export function BlindItemForm({ index, onRemove, onCopy, onContinue, canRemove =
                                     <div>Accessories: ${priceBreakdown.stopBoltSafetyLockPrice.toFixed(2)}</div>
                                 </div>
                                 <div className="border-t border-green-300 mt-2 pt-2 space-y-1">
-                                    <div className="flex justify-between text-gray-600">
-                                        <span>Subtotal:</span>
-                                        <span>${subtotal.toFixed(2)}</span>
-                                    </div>
                                     {discPct > 0 && (
                                         <div className="flex justify-between text-orange-600">
-                                            <span>Discount (G{priceBreakdown.fabricGroup} - {discPct}%):</span>
-                                            <span>-${discountAmount.toFixed(2)}</span>
+                                            <span>Fabric Discount (G{priceBreakdown.fabricGroup} - {discPct}%):</span>
+                                            <span>-${fabricDiscountAmount.toFixed(2)}</span>
                                         </div>
                                     )}
                                     <div className="flex justify-between font-bold text-green-700 text-base">

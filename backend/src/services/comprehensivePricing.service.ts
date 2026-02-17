@@ -29,7 +29,8 @@ export interface BlindPricingData {
 }
 
 export interface PriceBreakdown {
-    fabricPrice: number;
+    fabricBasePrice: number;  // Before discount
+    fabricPrice: number;      // After discount
     motorChainPrice: number;
     bracketPrice: number;
     chainPrice: number;
@@ -59,6 +60,7 @@ export class ComprehensivePricingService {
             const COMPONENT_PRICE = 1.00;
 
             const breakdown: PriceBreakdown = {
+                fabricBasePrice: 0,
                 fabricPrice: 0,
                 motorChainPrice: 0,
                 bracketPrice: 0,
@@ -80,6 +82,7 @@ export class ComprehensivePricingService {
                 drop: data.drop,
             });
 
+            breakdown.fabricBasePrice = fabricResult.basePrice;
             breakdown.fabricPrice = fabricResult.finalPrice;
             breakdown.fabricGroup = fabricResult.fabricGroup;
             breakdown.discountPercent = fabricResult.discountPercent;
