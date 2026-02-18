@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import { BlindItemForm } from '../../components/orders/BlindItemForm';
 import OrderSummary from '../../components/orders/OrderSummary';
 import { Button } from '../../components/ui/Button';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { ArrowLeft, Copy, PlusCircle, CheckCircle } from 'lucide-react';
 import { BlindItem, CreateOrderRequest } from '../../types/order';
 import { toast } from 'react-hot-toast';
@@ -364,64 +363,6 @@ export default function NewOrderPage() {
                     </div>
                 </form>
 
-                {/* Blinds Added So Far */}
-                {savedBlinds.length > 0 && (
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Blinds Added ({savedBlinds.length})</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="relative w-full overflow-auto">
-                                <table className="w-full caption-bottom text-sm text-left">
-                                    <thead>
-                                        <tr className="border-b bg-gray-100">
-                                            <th className="h-10 px-4 font-medium text-gray-500">#</th>
-                                            <th className="h-10 px-4 font-medium text-gray-500">Location</th>
-                                            <th className="h-10 px-4 font-medium text-gray-500">Size</th>
-                                            <th className="h-10 px-4 font-medium text-gray-500">Fabric</th>
-                                            <th className="h-10 px-4 font-medium text-gray-500">Motor/Chain</th>
-                                            <th className="h-10 px-4 font-medium text-gray-500 text-right">Price</th>
-                                            <th className="h-10 px-4 font-medium text-gray-500 text-center">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {savedBlinds.map((blind, index) => (
-                                            <tr
-                                                key={index}
-                                                className={`border-b hover:bg-gray-50 ${editingIndex === index ? 'bg-yellow-50 border-l-4 border-l-yellow-500' : ''}`}
-                                            >
-                                                <td className="p-4 text-gray-500">{index + 1}</td>
-                                                <td className="p-4 font-medium">{blind.location}</td>
-                                                <td className="p-4">{blind.width} x {blind.drop} mm</td>
-                                                <td className="p-4 text-sm">{blind.material} - {blind.fabricType}</td>
-                                                <td className="p-4 text-sm">{blind.chainOrMotor}</td>
-                                                <td className="p-4 text-right font-semibold">${(blind.price || 0).toFixed(2)}</td>
-                                                <td className="p-4 text-center">
-                                                    <div className="flex gap-1 justify-center">
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => handleEditBlind(index)}
-                                                            className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 text-sm"
-                                                        >
-                                                            Edit
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => handleDeleteBlind(index)}
-                                                            className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 text-sm"
-                                                        >
-                                                            Delete
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </CardContent>
-                    </Card>
-                )}
 
             </div>
         </FormProvider>

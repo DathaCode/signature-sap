@@ -64,6 +64,7 @@ export function BlindItemForm({ index, onRemove, onCopy, onContinue, canRemove =
     const prevFabricTypeRef = useRef<string | undefined>(fabricType);
     const prevChainOrMotorRef = useRef<string | undefined>(chainOrMotor);
     const isInitialMount = useRef(true);
+    const autoCalcRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // Show chain type dropdown only for winders
     const showChainType = chainOrMotor && isWinderMotor(chainOrMotor);
@@ -97,23 +98,31 @@ export function BlindItemForm({ index, onRemove, onCopy, onContinue, canRemove =
         }
     }, [chainOrMotor, bracketType, setError, clearErrors, index]);
 
-    // Reset dependent fields ONLY when the user actually changes the selection
+    // Reset dependent fields ONLY when the new selection makes the existing value invalid
     useEffect(() => {
         if (isInitialMount.current) return;
         if (prevMaterialRef.current !== undefined && prevMaterialRef.current !== material) {
-            setValue(`items.${index}.fabricType`, '');
-            setValue(`items.${index}.fabricColour`, '');
+            // Only clear if the current fabricType is not available for the new material
+            const validTypes = material ? getFabricTypes(material) : [];
+            if (fabricType && !validTypes.includes(fabricType)) {
+                setValue(`items.${index}.fabricType`, '');
+                setValue(`items.${index}.fabricColour`, '');
+            }
         }
         prevMaterialRef.current = material;
-    }, [material, setValue, index]);
+    }, [material, fabricType, setValue, index]);
 
     useEffect(() => {
         if (isInitialMount.current) return;
         if (prevFabricTypeRef.current !== undefined && prevFabricTypeRef.current !== fabricType) {
-            setValue(`items.${index}.fabricColour`, '');
+            // Only clear if the current fabricColour is not available for the new fabricType
+            const validColors = (material && fabricType) ? getFabricColors(material, fabricType) : [];
+            if (fabricColour && !validColors.includes(fabricColour)) {
+                setValue(`items.${index}.fabricColour`, '');
+            }
         }
         prevFabricTypeRef.current = fabricType;
-    }, [fabricType, setValue, index]);
+    }, [fabricType, fabricColour, material, setValue, index]);
 
     // Reset chain type when motor changes to non-winder
     useEffect(() => {
@@ -125,6 +134,40 @@ export function BlindItemForm({ index, onRemove, onCopy, onContinue, canRemove =
         }
         prevChainOrMotorRef.current = chainOrMotor;
     }, [chainOrMotor, setValue, index]);
+
+    // Auto-calculate price when all required fields are filled (debounced)
+    useEffect(() => {
+        if (!canCalculatePrice) return;
+        if (autoCalcRef.current) clearTimeout(autoCalcRef.current);
+
+        autoCalcRef.current = setTimeout(async () => {
+            try {
+                const breakdown = await pricingApi.calculateBlindPrice({
+                    width: Number(width),
+                    drop: Number(drop),
+                    material,
+                    fabricType,
+                    fabricColour,
+                    chainOrMotor,
+                    chainType: showChainType ? chainType : undefined,
+                    bracketType,
+                    bracketColour,
+                    bottomRailType,
+                    bottomRailColour,
+                    controlSide,
+                });
+                setValue(`items.${index}.price`, breakdown.totalPrice);
+                setValue(`items.${index}.fabricGroup`, breakdown.fabricGroup);
+                setValue(`items.${index}.discountPercent`, breakdown.discountPercent);
+                setPriceBreakdown(breakdown);
+            } catch {
+                // Silent fail for auto-calculate
+            }
+        }, 800);
+
+        return () => { if (autoCalcRef.current) clearTimeout(autoCalcRef.current); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [canCalculatePrice, width, drop, material, fabricType, fabricColour, chainOrMotor, chainType, bracketType, bracketColour, bottomRailType, bottomRailColour, controlSide, showChainType, index]);
 
     // Calculate comprehensive price (called on button click)
     const handleCalculatePrice = async () => {

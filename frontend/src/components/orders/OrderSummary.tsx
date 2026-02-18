@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { Button } from '../ui/Button';
-import { Pencil, Trash2, ArrowLeft, Save, FileText } from 'lucide-react';
+import { Pencil, Trash2, Save, FileText, ChevronDown, ChevronUp, PlusCircle } from 'lucide-react';
 import { BlindItem } from '../../types/order';
+import { isWinderMotor } from '../../data/hardware';
 
 interface OrderSummaryProps {
     blinds: BlindItem[];
@@ -26,7 +28,16 @@ export default function OrderSummary({
     notes,
     onNotesChange,
 }: OrderSummaryProps) {
-    const subtotal = blinds.reduce((sum, b) => sum + (b.price || 0), 0);
+    const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
+
+    const toggleRow = (index: number) => {
+        setExpandedRows(prev => {
+            const next = new Set(prev);
+            if (next.has(index)) next.delete(index);
+            else next.add(index);
+            return next;
+        });
+    };
 
     return (
         <div className="space-y-6">
@@ -39,8 +50,8 @@ export default function OrderSummary({
                     </p>
                 </div>
                 <Button variant="outline" onClick={onBackToForm}>
-                    <ArrowLeft className="h-4 w-4 mr-2" />
-                    Back to Form
+                    <PlusCircle className="h-4 w-4 mr-2" />
+                    Add More Blinds
                 </Button>
             </div>
 
@@ -54,57 +65,117 @@ export default function OrderSummary({
                         <table className="w-full caption-bottom text-sm text-left">
                             <thead>
                                 <tr className="border-b">
+                                    <th className="h-12 px-4 font-medium text-gray-500 w-8"></th>
                                     <th className="h-12 px-4 font-medium text-gray-500">#</th>
                                     <th className="h-12 px-4 font-medium text-gray-500">Location</th>
                                     <th className="h-12 px-4 font-medium text-gray-500">Size</th>
                                     <th className="h-12 px-4 font-medium text-gray-500">Fabric</th>
-                                    <th className="h-12 px-4 font-medium text-gray-500">Motor/Chain</th>
                                     <th className="h-12 px-4 font-medium text-gray-500 text-right">Price</th>
                                     <th className="h-12 px-4 font-medium text-gray-500 text-center">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {blinds.map((blind, index) => (
-                                    <tr key={index} className="border-b hover:bg-gray-50">
-                                        <td className="p-4 text-gray-500">{index + 1}</td>
-                                        <td className="p-4 font-medium">{blind.location}</td>
-                                        <td className="p-4">{blind.width}mm x {blind.drop}mm</td>
-                                        <td className="p-4">
-                                            <div className="flex flex-col">
-                                                <span className="font-semibold text-sm">{blind.material} - {blind.fabricType}</span>
-                                                <span className="text-xs text-gray-500">{blind.fabricColour}</span>
-                                            </div>
-                                        </td>
-                                        <td className="p-4 text-sm">{blind.chainOrMotor || '-'}</td>
-                                        <td className="p-4 text-right">
-                                            <span className="font-semibold">${(blind.price || 0).toFixed(2)}</span>
-                                            {blind.discountPercent != null && Number(blind.discountPercent) > 0 && (
-                                                <span className="block text-xs text-green-600">
-                                                    -{Number(blind.discountPercent)}% discount
-                                                </span>
-                                            )}
-                                        </td>
-                                        <td className="p-4 text-center">
-                                            <div className="flex gap-1 justify-center">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => onEdit(index)}
-                                                    className="text-blue-600 hover:text-blue-800"
-                                                >
-                                                    <Pencil className="h-4 w-4" />
-                                                </Button>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => onDelete(index)}
-                                                    className="text-red-500 hover:text-red-700"
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                            </div>
-                                        </td>
-                                    </tr>
+                                    <>
+                                        <tr
+                                            key={`row-${index}`}
+                                            className="border-b hover:bg-gray-50 cursor-pointer"
+                                            onClick={() => toggleRow(index)}
+                                        >
+                                            {/* Expand toggle */}
+                                            <td className="px-4 py-3 text-gray-400">
+                                                {expandedRows.has(index)
+                                                    ? <ChevronUp className="h-4 w-4" />
+                                                    : <ChevronDown className="h-4 w-4" />
+                                                }
+                                            </td>
+                                            <td className="p-4 text-gray-500">{index + 1}</td>
+                                            <td className="p-4 font-medium">{blind.location}</td>
+                                            <td className="p-4">{blind.width}mm x {blind.drop}mm</td>
+                                            <td className="p-4">
+                                                <div className="flex flex-col">
+                                                    <span className="font-semibold text-sm">{blind.material} - {blind.fabricType}</span>
+                                                    <span className="text-xs text-gray-500">{blind.fabricColour}</span>
+                                                </div>
+                                            </td>
+                                            <td className="p-4 text-right">
+                                                <span className="font-semibold">${(blind.price || 0).toFixed(2)}</span>
+                                                {blind.discountPercent != null && Number(blind.discountPercent) > 0 && (
+                                                    <span className="block text-xs text-green-600">
+                                                        -{Number(blind.discountPercent)}% discount
+                                                    </span>
+                                                )}
+                                            </td>
+                                            <td className="p-4 text-center" onClick={e => e.stopPropagation()}>
+                                                <div className="flex gap-1 justify-center">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => onEdit(index)}
+                                                        className="text-blue-600 hover:text-blue-800"
+                                                    >
+                                                        <Pencil className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => onDelete(index)}
+                                                        className="text-red-500 hover:text-red-700"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                            </td>
+                                        </tr>
+
+                                        {/* Expanded details row */}
+                                        {expandedRows.has(index) && (
+                                            <tr key={`detail-${index}`} className="bg-blue-50 border-b">
+                                                <td colSpan={7} className="px-8 py-4">
+                                                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 text-sm">
+                                                        <div>
+                                                            <span className="text-gray-500 text-xs font-medium uppercase tracking-wide">Fixing Type</span>
+                                                            <p className="font-medium mt-0.5">{blind.fixing || '—'}</p>
+                                                        </div>
+                                                        <div>
+                                                            <span className="text-gray-500 text-xs font-medium uppercase tracking-wide">Control Side</span>
+                                                            <p className="font-medium mt-0.5">{blind.controlSide || '—'}</p>
+                                                        </div>
+                                                        <div>
+                                                            <span className="text-gray-500 text-xs font-medium uppercase tracking-wide">Bracket Type</span>
+                                                            <p className="font-medium mt-0.5">{blind.bracketType || '—'}</p>
+                                                        </div>
+                                                        <div>
+                                                            <span className="text-gray-500 text-xs font-medium uppercase tracking-wide">Bracket Colour</span>
+                                                            <p className="font-medium mt-0.5">{blind.bracketColour || '—'}</p>
+                                                        </div>
+                                                        <div>
+                                                            <span className="text-gray-500 text-xs font-medium uppercase tracking-wide">Chain/Motor</span>
+                                                            <p className="font-medium mt-0.5">{blind.chainOrMotor || '—'}</p>
+                                                        </div>
+                                                        {isWinderMotor(blind.chainOrMotor || '') && (
+                                                            <div>
+                                                                <span className="text-gray-500 text-xs font-medium uppercase tracking-wide">Chain Type</span>
+                                                                <p className="font-medium mt-0.5">{blind.chainType || '—'}</p>
+                                                            </div>
+                                                        )}
+                                                        <div>
+                                                            <span className="text-gray-500 text-xs font-medium uppercase tracking-wide">Roll Direction</span>
+                                                            <p className="font-medium mt-0.5">{blind.roll || '—'}</p>
+                                                        </div>
+                                                        <div>
+                                                            <span className="text-gray-500 text-xs font-medium uppercase tracking-wide">Bottom Rail Type</span>
+                                                            <p className="font-medium mt-0.5">{blind.bottomRailType || '—'}</p>
+                                                        </div>
+                                                        <div>
+                                                            <span className="text-gray-500 text-xs font-medium uppercase tracking-wide">Bottom Rail Colour</span>
+                                                            <p className="font-medium mt-0.5">{blind.bottomRailColour || '—'}</p>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </>
                                 ))}
                             </tbody>
                         </table>
@@ -124,28 +195,6 @@ export default function OrderSummary({
                         placeholder="Any special instructions or notes..."
                         className="w-full min-h-[80px] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                     />
-                </CardContent>
-            </Card>
-
-            {/* Pricing Summary */}
-            <Card className="border-2 border-blue-600">
-                <CardHeader>
-                    <CardTitle>Pricing Summary</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                    {blinds.map((blind, index) => (
-                        <div key={index} className="flex justify-between items-center py-1 text-sm">
-                            <span>Blind #{index + 1}: {blind.location}</span>
-                            <span className="font-medium">${(blind.price || 0).toFixed(2)}</span>
-                        </div>
-                    ))}
-                    <div className="pt-4 border-t-2 border-gray-300">
-                        <div className="flex justify-between items-center">
-                            <span className="text-lg font-bold">Total</span>
-                            <span className="text-2xl font-bold text-blue-600">${subtotal.toFixed(2)}</span>
-                        </div>
-                        <p className="text-sm text-gray-500 mt-1">{blinds.length} blind{blinds.length !== 1 ? 's' : ''}</p>
-                    </div>
                 </CardContent>
             </Card>
 
