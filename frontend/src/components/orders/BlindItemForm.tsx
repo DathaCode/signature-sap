@@ -435,9 +435,6 @@ export function BlindItemForm({ index, onRemove, onCopy, onContinue, canRemove =
 
                     {/* Price Breakdown Details */}
                     {priceBreakdown && (() => {
-                        const otherComponents = priceBreakdown.motorChainPrice + priceBreakdown.bracketPrice +
-                            priceBreakdown.chainPrice + priceBreakdown.clipsPrice +
-                            priceBreakdown.idlerClutchPrice + priceBreakdown.stopBoltSafetyLockPrice;
                         const discPct = priceBreakdown.discountPercent || 0;
                         const fabricBase = priceBreakdown.fabricBasePrice || priceBreakdown.fabricPrice;
                         const fabricDiscounted = priceBreakdown.fabricPrice;
