@@ -15,6 +15,7 @@ interface OrderSummaryProps {
     isSubmitting: boolean;
     notes: string;
     onNotesChange: (notes: string) => void;
+    customerReference?: string;
 }
 
 export default function OrderSummary({
@@ -27,6 +28,7 @@ export default function OrderSummary({
     isSubmitting,
     notes,
     onNotesChange,
+    customerReference,
 }: OrderSummaryProps) {
     const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
 
@@ -48,6 +50,11 @@ export default function OrderSummary({
                     <p className="text-gray-500 mt-1">
                         {blinds.length} blind{blinds.length !== 1 ? 's' : ''} ready to submit
                     </p>
+                    {customerReference && (
+                        <p className="text-sm text-blue-700 mt-1 font-medium">
+                            Reference: {customerReference}
+                        </p>
+                    )}
                 </div>
                 <Button variant="outline" onClick={onBackToForm}>
                     <PlusCircle className="h-4 w-4 mr-2" />
@@ -102,7 +109,7 @@ export default function OrderSummary({
                                                 <span className="font-semibold">${(blind.price || 0).toFixed(2)}</span>
                                                 {blind.discountPercent != null && Number(blind.discountPercent) > 0 && (
                                                     <span className="block text-xs text-green-600">
-                                                        -{Number(blind.discountPercent)}% discount
+                                                        -{Number(blind.discountPercent)}% fabric discount
                                                     </span>
                                                 )}
                                             </td>
@@ -133,6 +140,30 @@ export default function OrderSummary({
                                             <tr key={`detail-${index}`} className="bg-blue-50 border-b">
                                                 <td colSpan={7} className="px-8 py-4">
                                                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 text-sm">
+                                                        {/* Fabric price (without & with discount) */}
+                                                        <div className="col-span-2 md:col-span-2">
+                                                            <span className="text-gray-500 text-xs font-medium uppercase tracking-wide">Fabric Price</span>
+                                                            <p className="font-medium mt-0.5">
+                                                                {blind.fabricPrice != null ? (
+                                                                    blind.discountPercent && Number(blind.discountPercent) > 0 ? (
+                                                                        <span className="flex items-center gap-2">
+                                                                            <span className="line-through text-gray-400">
+                                                                                ${(Number(blind.fabricPrice) / (1 - Number(blind.discountPercent) / 100)).toFixed(2)}
+                                                                            </span>
+                                                                            <span className="text-green-700 font-semibold">
+                                                                                ${Number(blind.fabricPrice).toFixed(2)}
+                                                                            </span>
+                                                                            <span className="text-xs text-orange-600">
+                                                                                (-{Number(blind.discountPercent)}%)
+                                                                            </span>
+                                                                        </span>
+                                                                    ) : (
+                                                                        <span>${Number(blind.fabricPrice).toFixed(2)}</span>
+                                                                    )
+                                                                ) : '—'}
+                                                            </p>
+                                                        </div>
+
                                                         <div>
                                                             <span className="text-gray-500 text-xs font-medium uppercase tracking-wide">Fixing Type</span>
                                                             <p className="font-medium mt-0.5">{blind.fixing || '—'}</p>
@@ -141,18 +172,38 @@ export default function OrderSummary({
                                                             <span className="text-gray-500 text-xs font-medium uppercase tracking-wide">Control Side</span>
                                                             <p className="font-medium mt-0.5">{blind.controlSide || '—'}</p>
                                                         </div>
+
+                                                        {/* Bracket Type with price indicator */}
                                                         <div>
                                                             <span className="text-gray-500 text-xs font-medium uppercase tracking-wide">Bracket Type</span>
-                                                            <p className="font-medium mt-0.5">{blind.bracketType || '—'}</p>
+                                                            <p className="font-medium mt-0.5 flex items-center gap-1.5">
+                                                                {blind.bracketPrice != null && Number(blind.bracketPrice) > 0 && (
+                                                                    <span className="text-xs font-semibold text-green-700 bg-green-100 px-1.5 py-0.5 rounded">
+                                                                        +${Number(blind.bracketPrice).toFixed(2)}
+                                                                    </span>
+                                                                )}
+                                                                {blind.bracketType || '—'}
+                                                            </p>
                                                         </div>
+
                                                         <div>
                                                             <span className="text-gray-500 text-xs font-medium uppercase tracking-wide">Bracket Colour</span>
                                                             <p className="font-medium mt-0.5">{blind.bracketColour || '—'}</p>
                                                         </div>
+
+                                                        {/* Chain/Motor with price indicator */}
                                                         <div>
                                                             <span className="text-gray-500 text-xs font-medium uppercase tracking-wide">Chain/Motor</span>
-                                                            <p className="font-medium mt-0.5">{blind.chainOrMotor || '—'}</p>
+                                                            <p className="font-medium mt-0.5 flex items-center gap-1.5">
+                                                                {blind.motorPrice != null && Number(blind.motorPrice) > 0 && (
+                                                                    <span className="text-xs font-semibold text-green-700 bg-green-100 px-1.5 py-0.5 rounded">
+                                                                        +${Number(blind.motorPrice).toFixed(2)}
+                                                                    </span>
+                                                                )}
+                                                                {blind.chainOrMotor || '—'}
+                                                            </p>
                                                         </div>
+
                                                         {isWinderMotor(blind.chainOrMotor || '') && (
                                                             <div>
                                                                 <span className="text-gray-500 text-xs font-medium uppercase tracking-wide">Chain Type</span>

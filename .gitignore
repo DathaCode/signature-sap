@@ -74,3 +74,9 @@ terraform/terraform.tfvars
 .cache/
 temp/
 tmp/
+
+# N/A .MD
+PROGRESS.md
+user_process_flow_UPDATED.md
+MIGRATION_STRATEGY.md
+UPGRADE.md

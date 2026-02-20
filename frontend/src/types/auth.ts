@@ -9,6 +9,8 @@ export interface User {
     company?: string;
     address?: string;
     isActive: boolean;
+    createdAt?: string;
+    updatedAt?: string;
 }
 
 export interface AuthResponse {

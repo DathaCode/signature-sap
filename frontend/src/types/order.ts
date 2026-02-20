@@ -45,6 +45,7 @@ export interface CreateOrderRequest {
     items: BlindItem[];
     dateRequired?: string;
     notes?: string;
+    customerReference?: string;
 }
 
 export interface OrderSummary {
@@ -162,6 +163,7 @@ export interface Order {
 
     notes?: string;
     adminNotes?: string;
+    customerReference?: string;
 
     items: BlindItem[];
 

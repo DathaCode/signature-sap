@@ -52,6 +52,7 @@ const CreateQuoteSchema = z.object({
     productType: z.enum(['BLINDS', 'CURTAINS', 'SHUTTERS']),
     items: z.array(QuoteItemSchema).min(1, 'At least one item is required'),
     notes: z.string().optional(),
+    customerReference: z.string().max(255).optional(),
 });
 
 /**
@@ -122,6 +123,7 @@ export const createQuote = async (
                 subtotal,
                 total,
                 notes: validatedData.notes,
+                customerReference: validatedData.customerReference || null,
                 expiresAt,
             },
         });

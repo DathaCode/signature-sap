@@ -137,7 +137,8 @@ model Order {
   // Notes
   notes               String?           @db.Text
   adminNotes          String?           @map("admin_notes") @db.Text
-  
+  customerReference   String?           @map("customer_reference") @db.VarChar(255)
+
   // Approval tracking
   confirmedAt         DateTime?         @map("confirmed_at") @db.Timestamp(6)
   confirmedBy         String?           @map("confirmed_by") @db.VarChar(255)
@@ -352,8 +353,9 @@ model Quote {
   total            Decimal     @db.Decimal(10, 2)
   notes            String?     @db.Text
   
-  convertedToOrder String?     @map("converted_to_order") @db.Uuid // Order ID if converted
-  
+  convertedToOrder  String?     @map("converted_to_order") @db.Uuid // Order ID if converted
+  customerReference String?     @map("customer_reference") @db.VarChar(255)
+
   createdAt        DateTime    @default(now()) @map("created_at") @db.Timestamp(6)
   expiresAt        DateTime    @map("expires_at") @db.Timestamp(6) // +30 days
   

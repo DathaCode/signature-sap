@@ -1,12 +1,12 @@
 # Signature Shades - Development Progress Report
 
-**Last Updated:** 2026-02-11
+**Last Updated:** 2026-02-20
 **Project:** Signature Shades Order Management System
-**Phase:** UPGRADE.md Implementation (Parts 1-9) + Bug Fixes
+**Phase:** UPGRADE.md Implementation (Parts 1-9) + Bug Fixes + Pricing/UX/User Mgmt Fixes
 
 ---
 
-## Overall Progress: 100% Complete + Post-Launch Bug Fixes Applied
+## Overall Progress: 100% Complete + Post-Launch Bug Fixes + v2 Fixes
 
 ### Implementation Status Overview
 
@@ -21,6 +21,8 @@ Part 7: Database Schema Updates                [100%] Complete
 Part 8: Testing Requirements                   [100%] Complete
 Part 9: Deliverables Checklist                 [100%] Complete
 Bug Fix Round (5 Parts)                        [100%] Complete (2026-02-11)
+Pricing Fix (double-discount removal)          [100%] Complete (2026-02-15)
+v2 Fixes (pricing, reference, user mgmt)       [100%] Complete (2026-02-20)
 ```
 
 ---
@@ -90,6 +92,63 @@ After Parts 1-9 were complete, a 5-part bug fix pass was performed to address UX
 - `frontend/src/services/api.ts` - Added `quoteApi` namespace (5 methods)
 - `frontend/src/pages/customer/Dashboard.tsx` - Live quote count from API
 - `frontend/src/pages/orders/NewOrder.tsx` - Draft auto-save/restore + clear on submit
+
+---
+
+## v2 Fixes (2026-02-20)
+
+### 1. Pricing Simplification (BlindItemForm)
+- **Removed** the price breakdown section from the bottom of the blind form
+- **Pricing model simplified:**
+  - Fabric: API-calculated price (with group discount G1-G3 applied), shows strikethrough if discount applies
+  - Chain/Motor: **$1 flat fee** for all selections EXCEPT TBS winder-32mm and Acmeda winder-29mm (free)
+  - Bracket Type: **$1 flat fee** only for `Single Extension`, `Dual Left`, `Dual Right` — AND only when motor is NOT TBS/Acmeda winder
+  - No other component charges
+- **Auto-pricing** uses `calculatePrice` (fabric only) + local motor/bracket calc
+- **Check Price** button remains for immediate on-demand calculation
+- **Stores** `fabricPrice`, `motorPrice`, `bracketPrice` on the BlindItem for use in review
+
+### 2. Prices in Final Review Expandable (OrderSummary)
+- **Fabric Price row** added to expandable: shows base price (strikethrough) + discounted price + discount %
+- **Bracket Type** shows `+$X.XX` badge to its LEFT when charged
+- **Chain/Motor** shows `+$X.XX` badge to its LEFT when charged
+- Free motors and uncharged bracket types show no badge
+
+### 3. Order/Quote Reference
+- New **"Order Reference" card** appears before the blind form in NewOrder.tsx
+- Customer can enter a custom reference (e.g. "Smith Kitchen", "House-123")
+- Reference is saved with orders and quotes
+- Admin sees BOTH the customer reference AND the system-generated number (SS-YYMMDD-XXXX / QT-YYMMDD-XXXX)
+- **DB migration:** `20260220095642_add_customer_reference` — adds `customer_reference` column to `orders` and `quotes` tables
+- Draft auto-save/restore includes the customer reference
+
+### 4. User Management Fix & Enhancement
+- **Fixed:** `adminUserApi` was calling `/admin/users` but backend routes are at `/users` → corrected to `/users`
+- **Added search** by name, email, or company (backend now supports `search` query param)
+- **Enhanced User list:** shows Orders count and Quotes count columns
+- **Expandable user rows:** click any user row to expand and see:
+  - Full profile: phone, company, address, member since date
+  - Recent orders (up to 20): system ref, customer ref, status badge, total, date
+  - Recent quotes (up to 20): system ref, customer ref, active/converted badge, total, date
+- Lazy-loaded detail (fetched on expand, cached for session)
+
+### Files Modified (v2 Fixes)
+
+**Backend:**
+- `backend/prisma/schema.prisma` — added `customerReference` to Order + Quote models
+- `backend/prisma/migrations/20260220095642_add_customer_reference/` — migration SQL
+- `backend/src/controllers/webOrder.controller.ts` — accept/store `customerReference` in create order
+- `backend/src/controllers/quote.controller.ts` — accept/store `customerReference` in create quote
+- `backend/src/controllers/user.controller.ts` — search filter + quotes in getUserById
+
+**Frontend:**
+- `frontend/src/components/orders/BlindItemForm.tsx` — simplified pricing, removed breakdown
+- `frontend/src/components/orders/OrderSummary.tsx` — fabric/motor/bracket prices in expandable
+- `frontend/src/pages/orders/NewOrder.tsx` — Order Reference card
+- `frontend/src/pages/admin/UserManagement.tsx` — expandable user profiles with orders/quotes
+- `frontend/src/services/api.ts` — fixed `/admin/users` → `/users`, added `getUserById`, `createUser`
+- `frontend/src/types/order.ts` — added `customerReference` to `CreateOrderRequest` and `Order`
+- `frontend/src/types/auth.ts` — added `createdAt`, `updatedAt` to User
 
 ---
 

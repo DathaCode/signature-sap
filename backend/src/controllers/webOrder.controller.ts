@@ -70,6 +70,7 @@ const CreateOrderSchema = z.object({
     dateRequired: z.string().optional(),
     items: z.array(OrderItemSchema).min(1, 'At least one item is required'),
     notes: z.string().optional(),
+    customerReference: z.string().max(255).optional(),
 });
 
 /**
@@ -239,6 +240,7 @@ export const createOrder = async (
                 subtotal,
                 total: subtotal,
                 notes: validatedData.notes || null,
+                customerReference: validatedData.customerReference || null,
                 fileSource: 'WEB_FORM',
                 items: {
                     create: processedItems,

@@ -330,19 +330,35 @@ export const adminOrderApi = {
 
 export const adminUserApi = {
     /**
-     * Get all users
+     * Get all users (admin)
      */
-    getAllUsers: async (params?: { role?: string; search?: string }): Promise<{ users: import('../types/auth').User[]; count: number }> => {
-        const response = await api.get('/admin/users', { params })
+    getAllUsers: async (params?: { role?: string; search?: string; isActive?: string }): Promise<{ users: import('../types/auth').User[]; count: number }> => {
+        const response = await api.get('/users', { params })
         return response.data.data
     },
 
     /**
-     * Update user (e.g. deactivate)
+     * Get single user with orders and quotes (admin)
+     */
+    getUserById: async (id: string): Promise<any> => {
+        const response = await api.get(`/users/${id}`)
+        return response.data.data.user
+    },
+
+    /**
+     * Create a new customer account (admin)
+     */
+    createUser: async (data: { name: string; email: string; password: string; phone: string; address: string; company?: string }): Promise<import('../types/auth').User> => {
+        const response = await api.post('/users', data)
+        return response.data.data.user
+    },
+
+    /**
+     * Update user (e.g. deactivate/activate, change details)
      */
     updateUser: async (id: string, data: Partial<import('../types/auth').User>): Promise<import('../types/auth').User> => {
-        const response = await api.patch(`/admin/users/${id}`, data)
-        return response.data.data
+        const response = await api.patch(`/users/${id}`, data)
+        return response.data.data.user
     }
 }
 

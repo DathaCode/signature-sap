@@ -4,6 +4,9 @@ import { useNavigate } from 'react-router-dom';
 import { BlindItemForm } from '../../components/orders/BlindItemForm';
 import OrderSummary from '../../components/orders/OrderSummary';
 import { Button } from '../../components/ui/Button';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
+import { Label } from '../../components/ui/Label';
+import { Input } from '../../components/ui/Input';
 import { ArrowLeft, Copy, PlusCircle, CheckCircle } from 'lucide-react';
 import { BlindItem, CreateOrderRequest } from '../../types/order';
 import { toast } from 'react-hot-toast';
@@ -36,6 +39,7 @@ export default function NewOrderPage() {
     const [showSummary, setShowSummary] = useState(false);
     const [editingIndex, setEditingIndex] = useState<number | null>(null);
     const [notes, setNotes] = useState('');
+    const [customerReference, setCustomerReference] = useState('');
 
     const methods = useForm<CreateOrderRequest>({
         defaultValues: {
@@ -52,11 +56,12 @@ export default function NewOrderPage() {
             const draft = {
                 blinds: savedBlinds,
                 notes,
+                customerReference,
                 timestamp: Date.now(),
             };
             localStorage.setItem('order_draft', JSON.stringify(draft));
         }
-    }, [savedBlinds, notes]);
+    }, [savedBlinds, notes, customerReference]);
 
     // Restore draft on mount
     useEffect(() => {
@@ -69,6 +74,7 @@ export default function NewOrderPage() {
                     if (confirm(`You have an unsaved draft from ${new Date(draft.timestamp).toLocaleString()} with ${draft.blinds.length} blind(s). Restore it?`)) {
                         setSavedBlinds(draft.blinds);
                         if (draft.notes) setNotes(draft.notes);
+                        if (draft.customerReference) setCustomerReference(draft.customerReference);
                         toast.success('Draft restored!');
                     } else {
                         localStorage.removeItem('order_draft');
@@ -236,6 +242,7 @@ export default function NewOrderPage() {
                 productType: 'BLINDS',
                 items: savedBlinds,
                 notes: notes || undefined,
+                customerReference: customerReference || undefined,
             };
             await api.post('/web-orders/create', data);
             clearDraft();
@@ -257,6 +264,7 @@ export default function NewOrderPage() {
                 productType: 'BLINDS',
                 items: savedBlinds,
                 notes: notes || undefined,
+                customerReference: customerReference || undefined,
             });
             clearDraft();
             toast.success('Quote saved successfully!');
@@ -283,6 +291,7 @@ export default function NewOrderPage() {
                     isSubmitting={isSubmitting}
                     notes={notes}
                     onNotesChange={setNotes}
+                    customerReference={customerReference}
                 />
             </div>
         );
@@ -310,6 +319,29 @@ export default function NewOrderPage() {
                         </p>
                     </div>
                 </div>
+
+                {/* Order Reference Card */}
+                <Card className="border-l-4 border-l-indigo-500">
+                    <CardHeader className="py-4">
+                        <CardTitle className="text-lg">Order Reference</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-end">
+                            <div className="space-y-2 flex-1 max-w-md">
+                                <Label htmlFor="customerReference">Your Reference (optional)</Label>
+                                <Input
+                                    id="customerReference"
+                                    value={customerReference}
+                                    onChange={(e) => setCustomerReference(e.target.value)}
+                                    placeholder="e.g. Smith Kitchen, House-123, Project XYZ"
+                                />
+                            </div>
+                            <p className="text-xs text-gray-500 pb-2">
+                                A system reference will also be assigned automatically.
+                            </p>
+                        </div>
+                    </CardContent>
+                </Card>
 
                 {/* Single Blind Form */}
                 <form className="space-y-6">

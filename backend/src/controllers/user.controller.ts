@@ -94,12 +94,19 @@ export const getAllUsers = async (
     next: NextFunction
 ): Promise<void> => {
     try {
-        const { role, isActive } = req.query;
+        const { role, isActive, search } = req.query;
 
         const users = await prisma.user.findMany({
             where: {
                 ...(role && { role: role as any }),
                 ...(isActive !== undefined && { isActive: isActive === 'true' }),
+                ...(search && {
+                    OR: [
+                        { name: { contains: search as string, mode: 'insensitive' } },
+                        { email: { contains: search as string, mode: 'insensitive' } },
+                        { company: { contains: search as string, mode: 'insensitive' } },
+                    ],
+                }),
             },
             select: {
                 id: true,
@@ -112,7 +119,7 @@ export const getAllUsers = async (
                 isActive: true,
                 createdAt: true,
                 _count: {
-                    select: { orders: true },
+                    select: { orders: true, quotes: true },
                 },
             },
             orderBy: { createdAt: 'desc' },
@@ -153,12 +160,26 @@ export const getUserById = async (
                     select: {
                         id: true,
                         orderNumber: true,
+                        customerReference: true,
                         status: true,
                         total: true,
                         createdAt: true,
                     },
                     orderBy: { createdAt: 'desc' },
-                    take: 10,
+                    take: 20,
+                },
+                quotes: {
+                    select: {
+                        id: true,
+                        quoteNumber: true,
+                        customerReference: true,
+                        total: true,
+                        convertedToOrder: true,
+                        createdAt: true,
+                        expiresAt: true,
+                    },
+                    orderBy: { createdAt: 'desc' },
+                    take: 20,
                 },
             },
         });
