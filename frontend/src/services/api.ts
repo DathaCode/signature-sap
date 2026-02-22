@@ -163,7 +163,7 @@ export const pricingApi = {
         fabricType: string;
         width: number;
         drop: number
-    }): Promise<{ price: number; fabricGroup: number; discountPercent: number }> => {
+    }): Promise<{ basePrice: number; finalPrice: number; discountPercent: number; discountAmount: number; fabricGroup: number }> => {
         const response = await api.post('/pricing/calculate', data)
         return response.data.data
     },

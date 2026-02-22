@@ -25,26 +25,8 @@ import { Trash2, AlertCircle, Calculator, Copy, PlusCircle } from 'lucide-react'
 import { pricingApi } from '../../services/api';
 import toast from 'react-hot-toast';
 
-// Motors that are free (no charge)
-const FREE_MOTORS = ['TBS winder-32mm', 'Acmeda winder-29mm'];
-
-// Bracket types that are charged $1 (when motor is not free)
-const CHARGED_BRACKETS = ['Single Extension', 'Dual Left', 'Dual Right'];
-
-function getMotorPrice(motor: string): number {
-    if (!motor) return 0;
-    return FREE_MOTORS.includes(motor) ? 0 : 1;
-}
-
-function getBracketPrice(bracket: string, motor: string): number {
-    if (!bracket || !motor) return 0;
-    return CHARGED_BRACKETS.includes(bracket) && !FREE_MOTORS.includes(motor) ? 1 : 0;
-}
-
 interface SimplePriceBreakdown {
     fabricBase: number;
-    motorPrice: number;
-    bracketPrice: number;
 }
 
 interface BlindItemFormProps {
@@ -163,25 +145,17 @@ export function BlindItemForm({ index, onRemove, onCopy, onContinue, canRemove =
             drop: Number(drop),
         });
 
-        const fabricDiscounted = fabricResult.price;
-        const fabricBase = fabricResult.discountPercent > 0
-            ? fabricDiscounted / (1 - fabricResult.discountPercent / 100)
-            : fabricDiscounted;
+        const fabricDiscounted = fabricResult.finalPrice;   // after discount
+        const fabricBase = fabricResult.basePrice;           // before discount
 
-        const motorP = getMotorPrice(chainOrMotor);
-        const bracketP = getBracketPrice(bracketType, chainOrMotor);
-        const total = fabricDiscounted + motorP + bracketP;
-
-        setValue(`items.${index}.price`, total);
+        setValue(`items.${index}.price`, fabricDiscounted);
         setValue(`items.${index}.fabricGroup`, fabricResult.fabricGroup);
         setValue(`items.${index}.discountPercent`, fabricResult.discountPercent);
         setValue(`items.${index}.fabricPrice`, fabricDiscounted);
-        setValue(`items.${index}.motorPrice`, motorP);
-        setValue(`items.${index}.bracketPrice`, bracketP);
 
-        setPriceBreakdown({ fabricBase, motorPrice: motorP, bracketPrice: bracketP });
+        setPriceBreakdown({ fabricBase });
 
-        return total;
+        return fabricDiscounted;
     };
 
     // Auto-calculate price when all required fields are filled (debounced)
@@ -198,7 +172,7 @@ export function BlindItemForm({ index, onRemove, onCopy, onContinue, canRemove =
         }, 800);
 
         return () => { if (autoCalcRef.current) clearTimeout(autoCalcRef.current); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [canCalculatePrice, width, drop, material, fabricType, fabricColour, chainOrMotor, chainType, bracketType, bracketColour, bottomRailType, bottomRailColour, controlSide, showChainType, index]);
 
     // Manual check price (immediate, no debounce)
@@ -225,10 +199,8 @@ export function BlindItemForm({ index, onRemove, onCopy, onContinue, canRemove =
     const fabricTypes = material ? getFabricTypes(material).map(t => ({ label: t, value: t })) : [];
     const fabricColors = (material && fabricType) ? getFabricColors(material, fabricType).map(c => ({ label: c, value: c })) : [];
 
-    // Strikethrough price (before fabric discount, but includes motor/bracket)
-    const strikethroughPrice = priceBreakdown
-        ? priceBreakdown.fabricBase + priceBreakdown.motorPrice + priceBreakdown.bracketPrice
-        : null;
+    // Strikethrough price (fabric base, before discount)
+    const strikethroughPrice = priceBreakdown ? priceBreakdown.fabricBase : null;
 
     return (
         <Card className={`mb-6 border-l-4 ${validationError ? 'border-l-red-600' : 'border-l-blue-600'}`}>
