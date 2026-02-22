@@ -23,7 +23,6 @@ import {
 } from '../../data/hardware';
 import { Trash2, AlertCircle, Copy, PlusCircle } from 'lucide-react';
 import { pricingApi } from '../../services/api';
-import toast from 'react-hot-toast';
 
 interface SimplePriceBreakdown {
     fabricBase: number;
