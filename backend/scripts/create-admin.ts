@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 async function main() {
     console.log('🔐 Creating admin user...');
 
-    const adminEmail = 'orders@signatureshades.com.au';
+    const adminEmail = 'admin@signatureshades.com';
     const adminPassword = 'Admin@123'; // Should be changed on first login
 
     // Check if admin already exists
