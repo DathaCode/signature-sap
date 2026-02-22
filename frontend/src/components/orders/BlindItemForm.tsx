@@ -21,7 +21,7 @@ import {
     isWinderMotor,
     isTBSExtendedInvalid
 } from '../../data/hardware';
-import { Trash2, AlertCircle, Calculator, Copy, PlusCircle } from 'lucide-react';
+import { Trash2, AlertCircle, Copy, PlusCircle } from 'lucide-react';
 import { pricingApi } from '../../services/api';
 import toast from 'react-hot-toast';
 
@@ -59,7 +59,6 @@ export function BlindItemForm({ index, onRemove, onCopy, onContinue, canRemove =
 
     // Validation error state
     const [validationError, setValidationError] = useState<string | null>(null);
-    const [calculatingPrice, setCalculatingPrice] = useState(false);
     const [priceBreakdown, setPriceBreakdown] = useState<SimplePriceBreakdown | null>(null);
 
     // Track previous values to only clear dependent fields on actual user change
@@ -175,24 +174,6 @@ export function BlindItemForm({ index, onRemove, onCopy, onContinue, canRemove =
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [canCalculatePrice, width, drop, material, fabricType, fabricColour, chainOrMotor, chainType, bracketType, bracketColour, bottomRailType, bottomRailColour, controlSide, showChainType, index]);
 
-    // Manual check price (immediate, no debounce)
-    const handleCalculatePrice = async () => {
-        if (!canCalculatePrice) {
-            toast.error('Please fill in all required fields to calculate price');
-            return;
-        }
-
-        try {
-            setCalculatingPrice(true);
-            const total = await calculateAndSetPrice();
-            toast.success(`Price updated: $${total.toFixed(2)}`);
-        } catch (error: any) {
-            console.error('Price calculation error:', error);
-            toast.error(error.response?.data?.error || 'Failed to calculate price');
-        } finally {
-            setCalculatingPrice(false);
-        }
-    };
 
     // Dropdown options
     const materials = getMaterials().map(m => ({ label: m, value: m }));
@@ -386,25 +367,8 @@ export function BlindItemForm({ index, onRemove, onCopy, onContinue, canRemove =
                     </div>
                 </div>
 
-                {/* Check Price Button */}
+                {/* Action Buttons */}
                 <div className="border-t pt-4 mt-2">
-                    <div className="flex items-center gap-4">
-                        <Button
-                            type="button"
-                            onClick={handleCalculatePrice}
-                            disabled={!canCalculatePrice || calculatingPrice}
-                            className="bg-blue-600 hover:bg-blue-700 text-white"
-                        >
-                            <Calculator className="h-4 w-4 mr-2" />
-                            {calculatingPrice ? 'Calculating...' : 'Check Price'}
-                        </Button>
-                        {price > 0 && (
-                            <span className="text-sm text-gray-500">
-                                Price auto-updates when all fields are filled
-                            </span>
-                        )}
-                    </div>
-
                     {/* Copy & Continue Buttons (only when callbacks provided) */}
                     {(onCopy || onContinue) && (
                         <div className="flex gap-2 mt-3">
