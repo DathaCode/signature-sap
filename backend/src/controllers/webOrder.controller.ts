@@ -1010,12 +1010,13 @@ export const trashOrder = async (
 ): Promise<void> => {
     try {
         const authReq = req as AuthRequest;
-        const order = await prisma.order.findUnique({ where: { id: req.params.id } });
+        const orderId = req.params.id as string;
+        const order = await prisma.order.findUnique({ where: { id: orderId } });
         if (!order) throw new AppError(404, 'Order not found');
         if (order.deletedAt) throw new AppError(400, 'Order is already in trash');
 
         await prisma.order.update({
-            where: { id: req.params.id },
+            where: { id: orderId },
             data: { deletedAt: new Date(), status: 'CANCELLED' },
         });
 
@@ -1030,7 +1031,7 @@ export const trashOrder = async (
  * Get all trashed orders – Admin only (auto-purges orders > 10 days old)
  */
 export const getTrashOrders = async (
-    req: Request,
+    _req: Request,
     res: Response,
     next: NextFunction
 ): Promise<void> => {
@@ -1062,12 +1063,13 @@ export const restoreOrder = async (
     next: NextFunction
 ): Promise<void> => {
     try {
-        const order = await prisma.order.findUnique({ where: { id: req.params.id } });
+        const orderId = req.params.id as string;
+        const order = await prisma.order.findUnique({ where: { id: orderId } });
         if (!order) throw new AppError(404, 'Order not found');
         if (!order.deletedAt) throw new AppError(400, 'Order is not in trash');
 
         await prisma.order.update({
-            where: { id: req.params.id },
+            where: { id: orderId },
             data: { deletedAt: null, status: 'PENDING' },
         });
 
@@ -1086,11 +1088,12 @@ export const purgeOrder = async (
     next: NextFunction
 ): Promise<void> => {
     try {
-        const order = await prisma.order.findUnique({ where: { id: req.params.id } });
+        const orderId = req.params.id as string;
+        const order = await prisma.order.findUnique({ where: { id: orderId } });
         if (!order) throw new AppError(404, 'Order not found');
         if (!order.deletedAt) throw new AppError(400, 'Order must be in trash before permanent deletion');
 
-        await prisma.order.delete({ where: { id: req.params.id } });
+        await prisma.order.delete({ where: { id: orderId } });
         res.json({ success: true, message: 'Order permanently deleted' });
     } catch (error) {
         next(error);
