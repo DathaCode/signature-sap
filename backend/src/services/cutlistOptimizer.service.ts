@@ -131,14 +131,21 @@ export class CutlistOptimizer {
         return expanded;
     }
 
+    /**
+     * Sort panels for optimal packing:
+     * - Sort by width first (since stock has fixed width of 3000mm)
+     * - Then by area descending
+     */
     private sortPanels(panels: ExpandedPanel[]): ExpandedPanel[] {
         return [...panels].sort((a, b) => {
-            const areaA = a.width * a.length;
-            const areaB = b.width * b.length;
-            if (areaA !== areaB) return areaB - areaA;
+            // Sort by longest dimension first (FFD heuristic)
             const maxA = Math.max(a.width, a.length);
             const maxB = Math.max(b.width, b.length);
-            return maxB - maxA;
+            if (maxA !== maxB) return maxB - maxA;
+            // Tie-break by area
+            const areaA = a.width * a.length;
+            const areaB = b.width * b.length;
+            return areaB - areaA;
         });
     }
 
@@ -149,11 +156,51 @@ export class CutlistOptimizer {
         for (const panel of panels) {
             let placed = false;
 
+            // Try to place in existing sheets — pick the sheet with the best fit
+            let bestSheet: Sheet | null = null;
+            let bestRectIdx = -1;
+            let bestRotated = false;
+            let bestShortSide = Infinity;
+
             for (const sheet of sheets) {
-                if (this.tryPlacePanel(sheet, panel)) {
-                    placed = true;
-                    break;
+                for (let i = 0; i < sheet.freeRectangles.length; i++) {
+                    const rect = sheet.freeRectangles[i];
+
+                    // Try normal orientation
+                    if (this.canFit(panel.width, panel.length, rect)) {
+                        const shortSide = Math.min(
+                            rect.width - panel.width,
+                            rect.length - panel.length
+                        );
+                        if (shortSide < bestShortSide) {
+                            bestShortSide = shortSide;
+                            bestSheet = sheet;
+                            bestRectIdx = i;
+                            bestRotated = false;
+                        }
+                    }
+
+                    // Try rotated
+                    if (panel.width !== panel.length &&
+                        this.canFit(panel.length, panel.width, rect)) {
+                        const shortSide = Math.min(
+                            rect.width - panel.length,
+                            rect.length - panel.width
+                        );
+                        if (shortSide < bestShortSide) {
+                            bestShortSide = shortSide;
+                            bestSheet = sheet;
+                            bestRectIdx = i;
+                            bestRotated = true;
+                        }
+                    }
                 }
+            }
+
+            if (bestSheet && bestRectIdx >= 0) {
+                const rect = bestSheet.freeRectangles[bestRectIdx];
+                this.placePanel(bestSheet, panel, rect, bestRectIdx, bestRotated);
+                placed = true;
             }
 
             if (!placed) {
@@ -188,28 +235,51 @@ export class CutlistOptimizer {
     }
 
     private tryPlacePanel(sheet: Sheet, panel: ExpandedPanel): boolean {
+        // Best Short Side Fit for new sheets too
+        let bestIdx = -1;
+        let bestRotated = false;
+        let bestShortSide = Infinity;
+
         for (let i = 0; i < sheet.freeRectangles.length; i++) {
             const rect = sheet.freeRectangles[i];
 
-            // Try normal orientation
             if (this.canFit(panel.width, panel.length, rect)) {
-                this.placePanel(sheet, panel, rect, i, false);
-                return true;
+                const shortSide = Math.min(
+                    rect.width - panel.width,
+                    rect.length - panel.length
+                );
+                if (shortSide < bestShortSide) {
+                    bestShortSide = shortSide;
+                    bestIdx = i;
+                    bestRotated = false;
+                }
             }
 
-            // Try rotated orientation
             if (panel.width !== panel.length &&
                 this.canFit(panel.length, panel.width, rect)) {
-                this.placePanel(sheet, panel, rect, i, true);
-                return true;
+                const shortSide = Math.min(
+                    rect.width - panel.length,
+                    rect.length - panel.width
+                );
+                if (shortSide < bestShortSide) {
+                    bestShortSide = shortSide;
+                    bestIdx = i;
+                    bestRotated = true;
+                }
             }
+        }
+
+        if (bestIdx >= 0) {
+            const rect = sheet.freeRectangles[bestIdx];
+            this.placePanel(sheet, panel, rect, bestIdx, bestRotated);
+            return true;
         }
         return false;
     }
 
     private canFit(width: number, length: number, rect: FreeRectangle): boolean {
         return width + this.kerfThickness <= rect.width &&
-               length + this.kerfThickness <= rect.length;
+            length + this.kerfThickness <= rect.length;
     }
 
     private placePanel(
@@ -242,32 +312,75 @@ export class CutlistOptimizer {
         // Remove used rectangle
         sheet.freeRectangles.splice(rectIndex, 1);
 
-        // Split remaining space (Guillotine split)
+        // Split remaining space (Shorter Leftover Axis heuristic)
         this.splitRectangle(sheet, rect, placedPanel);
     }
 
+    /**
+     * Guillotine split with Shorter Leftover Axis (SLA) heuristic:
+     * Decide whether to extend the right remainder downward or
+     * the bottom remainder rightward, based on which produces
+     * the larger (more usable) free rectangle.
+     */
     private splitRectangle(sheet: Sheet, rect: FreeRectangle, panel: PlacedPanel): void {
-        const kerfWidth = panel.width + this.kerfThickness;
-        const kerfLength = panel.length + this.kerfThickness;
+        const kerfW = panel.width + this.kerfThickness;
+        const kerfL = panel.length + this.kerfThickness;
 
-        // Right rectangle
-        if (rect.width > kerfWidth) {
-            sheet.freeRectangles.push({
-                x: rect.x + kerfWidth,
-                y: rect.y,
-                width: rect.width - kerfWidth,
-                length: rect.length,
-            });
-        }
+        const remainW = rect.width - kerfW;   // remaining width to the right
+        const remainL = rect.length - kerfL;   // remaining length below
 
-        // Top rectangle
-        if (rect.length > kerfLength) {
+        if (remainW <= 0 && remainL <= 0) return;
+
+        if (remainW <= 0) {
+            // Only bottom remainder
             sheet.freeRectangles.push({
                 x: rect.x,
-                y: rect.y + kerfLength,
-                width: kerfWidth,
-                length: rect.length - kerfLength,
+                y: rect.y + kerfL,
+                width: rect.width,
+                length: remainL,
             });
+        } else if (remainL <= 0) {
+            // Only right remainder
+            sheet.freeRectangles.push({
+                x: rect.x + kerfW,
+                y: rect.y,
+                width: remainW,
+                length: rect.length,
+            });
+        } else {
+            // Both remain — use SLA: split so the shorter leftover axis
+            // gets the full length, producing larger usable rectangles
+            if (remainW < remainL) {
+                // Right piece is narrow → give it full height
+                // Bottom piece is wide → give it only the panel width
+                sheet.freeRectangles.push({
+                    x: rect.x + kerfW,
+                    y: rect.y,
+                    width: remainW,
+                    length: rect.length,   // full height
+                });
+                sheet.freeRectangles.push({
+                    x: rect.x,
+                    y: rect.y + kerfL,
+                    width: kerfW,           // only panel width
+                    length: remainL,
+                });
+            } else {
+                // Bottom piece is narrow → give it full width
+                // Right piece is tall → give it only the panel height
+                sheet.freeRectangles.push({
+                    x: rect.x + kerfW,
+                    y: rect.y,
+                    width: remainW,
+                    length: kerfL,          // only panel height
+                });
+                sheet.freeRectangles.push({
+                    x: rect.x,
+                    y: rect.y + kerfL,
+                    width: rect.width,      // full width
+                    length: remainL,
+                });
+            }
         }
 
         // Merge overlapping rectangles
@@ -285,9 +398,9 @@ export class CutlistOptimizer {
 
     private isRectangleInside(rect1: FreeRectangle, rect2: FreeRectangle): boolean {
         return rect1.x >= rect2.x &&
-               rect1.y >= rect2.y &&
-               rect1.x + rect1.width <= rect2.x + rect2.width &&
-               rect1.y + rect1.length <= rect2.y + rect2.length;
+            rect1.y >= rect2.y &&
+            rect1.x + rect1.width <= rect2.x + rect2.width &&
+            rect1.y + rect1.length <= rect2.y + rect2.length;
     }
 
     private calculateStatistics(sheets: Sheet[], originalPanels: PanelInput[]): OptimizationStatistics {

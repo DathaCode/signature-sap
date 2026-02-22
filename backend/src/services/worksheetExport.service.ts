@@ -31,6 +31,17 @@ const MOTOR_DEDUCTIONS: Record<string, number> = {
  */
 const DROP_ADDITION = 150;
 
+/**
+ * Determine chain size (mm) from calculated drop
+ */
+function getChainSize(calcDrop: number): number {
+    if (calcDrop <= 850) return 500;
+    if (calcDrop <= 1100) return 750;
+    if (calcDrop <= 1600) return 1000;
+    if (calcDrop <= 2200) return 1200;
+    return 1500;
+}
+
 export class WorksheetExportService {
     /**
      * Get motor-specific width deduction
@@ -52,56 +63,61 @@ export class WorksheetExportService {
     private static calculateDrop(originalDrop: number): number {
         return originalDrop + DROP_ADDITION;
     }
+
     /**
      * Generate Fabric Cut CSV
+     * Updated columns: Panel No, Location, Fab Cut W, Calc D, Ctrl, Ctrl Col,
+     * Chain/Motor, Roll, Fabric, Colour, BR Colour, Chain Size
      */
     static generateFabricCutCSV(
         orderInfo: OrderInfo,
         fabricCutData: Record<string, { optimization: OptimizationResult; items: any[] }>
     ): string {
         const headers = [
-            'Sheet #', 'Position', 'Location', 'Original Width (mm)', 'Original Drop (mm)',
-            'Fabric Cut Width (mm)', 'Calculated Drop (mm)', 'Control Side', 'Control Colour',
-            'Chain/Motor', 'Roll', 'Fabric Type', 'Fabric Colour', 'Rotated'
+            'Panel No', 'Location', 'Fabric Cut Width (mm)', 'Calculated Drop (mm)',
+            'Control Side', 'Control Colour', 'Chain/Motor', 'Roll',
+            'Fabric Type', 'Fabric Colour', 'Bottom Rail Colour', 'Chain Size (mm)'
         ];
 
-        const rows: string[] = [headers.join(',')];
+        const rows: string[] = [];
 
         // Add order info as comment rows
-        rows.unshift(`# Order: ${orderInfo.orderNumber}`);
-        rows.splice(1, 0, `# Customer: ${orderInfo.customerName}`);
-        rows.splice(2, 0, `# Date: ${orderInfo.orderDate.toISOString().split('T')[0]}`);
-        rows.splice(3, 0, '');
+        rows.push(`# Order: ${orderInfo.orderNumber}`);
+        rows.push(`# Customer: ${orderInfo.customerName}`);
+        rows.push(`# Date: ${orderInfo.orderDate.toISOString().split('T')[0]}`);
+        rows.push('');
+        rows.push(headers.join(','));
+
+        let panelNo = 0;
 
         for (const [fabricKey, groupData] of Object.entries(fabricCutData)) {
             rows.push(`# Fabric Group: ${fabricKey}`);
 
             for (const sheet of groupData.optimization.sheets) {
                 for (const panel of sheet.panels) {
-                    // Find matching order item
+                    panelNo++;
                     const item = groupData.items.find(
                         (it: any) => it.id === panel.orderItemId
                     );
 
                     const motorType = item?.chainOrMotor || '';
                     const fabricCutWidth = item ? this.calculateFabricCutWidth(item.width, motorType) : '';
-                    const calculatedDrop = item ? this.calculateDrop(item.drop) : '';
+                    const calculatedDrop = item ? this.calculateDrop(item.drop) : 0;
+                    const chainSize = calculatedDrop > 0 ? getChainSize(calculatedDrop) : '';
 
                     rows.push([
-                        sheet.id,
-                        `"(${panel.x}, ${panel.y})"`,
+                        panelNo,
                         `"${item?.location || panel.label}"`,
-                        item?.width || '',
-                        item?.drop || '',
                         fabricCutWidth,
-                        calculatedDrop,
+                        calculatedDrop || '',
                         `"${item?.controlSide || '-'}"`,
                         `"${item?.bracketColour || '-'}"`,
                         `"${(motorType || '-').replace(/_/g, ' ')}"`,
                         `"${item?.roll || '-'}"`,
                         `"${item?.fabricType || '-'}"`,
                         `"${item?.fabricColour || '-'}"`,
-                        panel.rotated ? 'Yes' : 'No',
+                        `"${item?.bottomRailColour || '-'}"`,
+                        chainSize,
                     ].join(','));
                 }
             }
@@ -118,6 +134,7 @@ export class WorksheetExportService {
 
     /**
      * Generate Tube Cut CSV
+     * Removed Pieces column
      */
     static generateTubeCutCSV(
         orderInfo: OrderInfo,
@@ -125,7 +142,7 @@ export class WorksheetExportService {
     ): string {
         const headers = [
             'Location', 'Original Width (mm)', 'Tube Cut Width (mm)',
-            'Bottom Rail Type', 'Bottom Rail Colour', 'Group Qty Needed', 'Stock Pieces'
+            'Bottom Rail Type', 'Bottom Rail Colour'
         ];
 
         const rows: string[] = [];
@@ -143,8 +160,6 @@ export class WorksheetExportService {
                     blind.originalWidth - 28,
                     `"${group.bottomRailType}"`,
                     `"${group.bottomRailColour}"`,
-                    group.piecesToDeduct,
-                    group.piecesToDeduct,
                 ].join(','));
             }
             rows.push(`# Group Total: ${group.totalWidth}mm, Base: ${group.baseQuantity}, +10% wastage = ${group.finalQuantity}, Pieces: ${group.piecesToDeduct}`);
@@ -158,6 +173,8 @@ export class WorksheetExportService {
 
     /**
      * Generate Fabric Cut PDF with Cutting Layout Visualization
+     * - Page 1: Visual layout (bigger scale, panel numbers, fixed label overlap)
+     * - Page 2+: Detailed table (new columns: Panel No, BR Colour, Chain Size)
      */
     static generateFabricCutPDF(
         orderInfo: OrderInfo,
@@ -175,6 +192,7 @@ export class WorksheetExportService {
 
         const fabricColors = ['#E6F3FF', '#FFE6E6', '#E6FFE6', '#FFFFE6', '#FFE6FF', '#E6FFF3'];
         let fabricIndex = 0;
+        let globalPanelNo = 0;
 
         for (const [fabricKey, groupData] of Object.entries(fabricCutData)) {
             const color = fabricColors[fabricIndex % fabricColors.length];
@@ -184,89 +202,96 @@ export class WorksheetExportService {
             doc.fontSize(12).font('Helvetica-Bold')
                 .fillColor('#000000')
                 .text(`Fabric: ${fabricKey}`, { underline: true });
-            doc.moveDown(0.3);
+            doc.moveDown(0.5);
 
             // Draw each sheet
             for (const sheet of groupData.optimization.sheets) {
                 // Check if we need a new page
-                if (doc.y > 480) {
+                if (doc.y > 350) {
                     doc.addPage();
                     doc.fontSize(12).font('Helvetica-Bold').text(`Fabric: ${fabricKey} (continued)`, { underline: true });
-                    doc.moveDown(0.3);
+                    doc.moveDown(0.5);
                 }
 
                 const startY = doc.y;
 
-                // Scale factor: Stock sheet is 3000mm × 10000mm
-                // We'll fit it in approximately 200mm × 667mm on paper (scaled to fit landscape A4)
-                const scale = 0.02; // 1mm in real life = 0.02mm on paper
-                const sheetWidth = 3000 * scale; // 60mm on paper
-                const sheetLength = 10000 * scale; // 200mm on paper
+                // Scale: Stock sheet is 3000mm wide × 10000mm long
+                // Increased scale: 0.05 instead of 0.02 for better visibility
+                const scale = 0.05;
+                const sheetWidth = 3000 * scale;    // 150mm on paper
+                const sheetLength = 10000 * scale;  // 500mm → capped for page
+                const maxSheetHeight = Math.min(sheetLength, 250); // cap at 250pt to fit on page
+                const displayScale = maxSheetHeight / (10000); // actual scale for drawing
                 const marginLeft = 50;
 
-                // Draw sheet border
-                doc.rect(marginLeft, startY, sheetWidth, sheetLength)
-                    .stroke('#333333');
-
-                // Sheet label
-                doc.fontSize(9).font('Helvetica-Bold')
+                // Sheet label — positioned above, with enough gap
+                doc.fontSize(10).font('Helvetica-Bold')
                     .fillColor('#000000')
-                    .text(`Sheet ${sheet.id}`, marginLeft, startY - 15);
+                    .text(`Sheet ${sheet.id}`, marginLeft, startY);
+                const sheetStartY = startY + 16;
+
+                // Draw sheet border
+                doc.rect(marginLeft, sheetStartY, sheetWidth, maxSheetHeight)
+                    .stroke('#333333');
 
                 // Draw each panel
                 for (const panel of sheet.panels) {
-                    const panelX = marginLeft + (panel.x * scale);
-                    const panelY = startY + (panel.y * scale);
-                    const panelW = panel.width * scale;
-                    const panelH = panel.length * scale;
+                    globalPanelNo++;
+                    const panelX = marginLeft + (panel.x * displayScale);
+                    const panelY = sheetStartY + (panel.y * displayScale);
+                    const panelW = panel.width * displayScale;
+                    const panelH = panel.length * displayScale;
 
                     // Draw panel rectangle with fill
                     doc.rect(panelX, panelY, panelW, panelH)
                         .fillAndStroke(color, '#666666');
 
-                    // Add panel dimensions label (if panel is large enough)
-                    if (panelW > 15 && panelH > 8) {
+                    // Panel number label (always shown)
+                    doc.fontSize(8).font('Helvetica-Bold')
+                        .fillColor('#000000')
+                        .text(
+                            `#${globalPanelNo}`,
+                            panelX + 2,
+                            panelY + 2,
+                            { width: Math.max(panelW - 4, 20) }
+                        );
+
+                    // Dimensions label
+                    if (panelW > 20 && panelH > 18) {
                         doc.fontSize(6).font('Helvetica')
-                            .fillColor('#000000')
+                            .fillColor('#333333')
                             .text(
                                 `${panel.width}×${panel.length}`,
-                                panelX + 1,
-                                panelY + 1,
-                                { width: panelW - 2, align: 'center' }
+                                panelX + 2,
+                                panelY + 12,
+                                { width: Math.max(panelW - 4, 20) }
                             );
+                    }
 
-                        // Add label (location) if space allows
-                        if (panelH > 15) {
-                            doc.fontSize(5).text(
-                                panel.label || `#${panel.id}`,
-                                panelX + 1,
-                                panelY + 8,
-                                { width: panelW - 2, align: 'center' }
+                    // Location label
+                    if (panelH > 28 && panelW > 20) {
+                        doc.fontSize(5).font('Helvetica')
+                            .fillColor('#555555')
+                            .text(
+                                panel.label || '',
+                                panelX + 2,
+                                panelY + 20,
+                                { width: Math.max(panelW - 4, 20) }
                             );
-                        }
-
-                        // Show rotation indicator
-                        if (panel.rotated) {
-                            doc.fontSize(5).fillColor('#FF0000').text(
-                                '⟳',
-                                panelX + panelW - 8,
-                                panelY + 1
-                            );
-                        }
                     }
                 }
 
                 // Sheet statistics (to the right of the sheet)
-                const statsX = marginLeft + sheetWidth + 10;
-                doc.fontSize(8).font('Helvetica')
+                const statsX = marginLeft + sheetWidth + 15;
+                doc.fontSize(9).font('Helvetica')
                     .fillColor('#000000')
-                    .text(`Panels: ${sheet.panels.length}`, statsX, startY + 10)
-                    .text(`Efficiency: ${sheet.efficiency.toFixed(1)}%`, statsX, startY + 22)
-                    .text(`Used: ${(sheet.usedArea / 1000000).toFixed(2)}m²`, statsX, startY + 34)
-                    .text(`Waste: ${(sheet.wastedArea / 1000000).toFixed(2)}m²`, statsX, startY + 46);
+                    .text(`Panels: ${sheet.panels.length}`, statsX, sheetStartY + 5)
+                    .text(`Efficiency: ${sheet.efficiency.toFixed(1)}%`, statsX, sheetStartY + 18)
+                    .text(`Used: ${(sheet.usedArea / 1000000).toFixed(2)}m²`, statsX, sheetStartY + 31)
+                    .text(`Waste: ${(sheet.wastedArea / 1000000).toFixed(2)}m²`, statsX, sheetStartY + 44);
 
                 // Move down for next sheet
-                doc.moveDown(sheetLength / 10 + 1);
+                doc.y = sheetStartY + maxSheetHeight + 20;
             }
 
             // Overall fabric group statistics
@@ -282,6 +307,8 @@ export class WorksheetExportService {
 
         // ============================================================================
         // NEW PAGE: DETAILED WORKSHEET TABLE
+        // Columns: Panel No, Location, Fab Cut W, Calc D, Ctrl, Ctrl Col,
+        //          Chain/Motor, Roll, Fabric, Colour, BR Colour, Chain Size
         // ============================================================================
         doc.addPage();
         doc.fontSize(16).font('Helvetica-Bold').text('Fabric Cut Worksheet - Details', { align: 'center' });
@@ -289,8 +316,11 @@ export class WorksheetExportService {
             .text(`Order: ${orderInfo.orderNumber}  |  Customer: ${orderInfo.customerName}  |  Date: ${orderInfo.orderDate.toISOString().split('T')[0]}`, { align: 'center' });
         doc.moveDown();
 
-        const colWidths = [35, 55, 70, 45, 45, 45, 45, 40, 50, 60, 35, 60, 55, 35];
-        const headers = ['Sheet', 'Position', 'Location', 'Orig W', 'Orig D', 'Fab Cut W', 'Calc D', 'Ctrl', 'Ctrl Col', 'Chain/Motor', 'Roll', 'Fabric', 'Colour', 'Rot'];
+        const colWidths = [40, 70, 55, 50, 40, 50, 75, 35, 70, 55, 55, 50];
+        const headers = ['Panel', 'Location', 'Fab Cut W', 'Calc D', 'Ctrl', 'Ctrl Col', 'Chain/Motor', 'Roll', 'Fabric', 'Colour', 'BR Colour', 'Chain'];
+
+        // Reset panel number for table
+        let tablePanelNo = 0;
 
         for (const [fabricKey, groupData] of Object.entries(fabricCutData)) {
             doc.fontSize(11).font('Helvetica-Bold').text(`Fabric: ${fabricKey}`, { underline: true });
@@ -313,6 +343,7 @@ export class WorksheetExportService {
             doc.fontSize(7).font('Helvetica');
             for (const sheet of groupData.optimization.sheets) {
                 for (const panel of sheet.panels) {
+                    tablePanelNo++;
                     const item = groupData.items.find((it: any) => it.id === panel.orderItemId);
 
                     if (doc.y > 530) {
@@ -321,25 +352,24 @@ export class WorksheetExportService {
 
                     const motorType = item?.chainOrMotor || '';
                     const fabricCutWidth = item ? this.calculateFabricCutWidth(item.width, motorType) : '';
-                    const calculatedDrop = item ? this.calculateDrop(item.drop) : '';
+                    const calculatedDrop = item ? this.calculateDrop(item.drop) : 0;
+                    const chainSize = calculatedDrop > 0 ? getChainSize(calculatedDrop) : '';
 
                     const rowY = doc.y;
                     let rx = 30;
                     const values = [
-                        String(sheet.id),
-                        `(${panel.x},${panel.y})`,
+                        String(tablePanelNo),
                         item?.location || panel.label,
-                        String(item?.width || ''),
-                        String(item?.drop || ''),
                         String(fabricCutWidth),
-                        String(calculatedDrop),
+                        String(calculatedDrop || ''),
                         item?.controlSide || '-',
                         item?.bracketColour || '-',
                         (motorType || '-').replace(/_/g, ' '),
                         item?.roll || '-',
                         item?.fabricType || '-',
                         item?.fabricColour || '-',
-                        panel.rotated ? 'Yes' : 'No',
+                        item?.bottomRailColour || '-',
+                        chainSize ? `${chainSize}mm` : '-',
                     ];
 
                     values.forEach((val, i) => {
@@ -364,6 +394,7 @@ export class WorksheetExportService {
 
     /**
      * Generate Tube Cut PDF
+     * Removed Pieces column
      */
     static generateTubeCutPDF(
         orderInfo: OrderInfo,
@@ -377,8 +408,8 @@ export class WorksheetExportService {
             .text(`Order: ${orderInfo.orderNumber}  |  Customer: ${orderInfo.customerName}  |  Date: ${orderInfo.orderDate.toISOString().split('T')[0]}`, { align: 'center' });
         doc.moveDown();
 
-        const colWidths = [120, 80, 80, 80, 80, 75];
-        const headers = ['Location', 'Orig Width', 'Tube Cut W', 'Rail Type', 'Rail Colour', 'Pieces'];
+        const colWidths = [130, 90, 90, 90, 90];
+        const headers = ['Location', 'Orig Width', 'Tube Cut W', 'Rail Type', 'Rail Colour'];
 
         for (const group of tubeCutData.groups) {
             doc.fontSize(11).font('Helvetica-Bold')
@@ -394,7 +425,7 @@ export class WorksheetExportService {
                 x += colWidths[i];
             });
             doc.moveDown(0.5);
-            doc.moveTo(40, doc.y).lineTo(555, doc.y).stroke();
+            doc.moveTo(40, doc.y).lineTo(530, doc.y).stroke();
             doc.moveDown(0.2);
 
             doc.fontSize(8).font('Helvetica');
@@ -411,7 +442,6 @@ export class WorksheetExportService {
                     `${blind.originalWidth - 28}mm`,
                     group.bottomRailType,
                     group.bottomRailColour,
-                    String(group.piecesToDeduct),
                 ];
 
                 values.forEach((val, i) => {
