@@ -7,7 +7,6 @@ import { logger } from './config/logger';
 import { errorHandler } from './middleware/errorHandler';
 
 // Existing routes
-import orderRoutes from './routes/orderRoutes';
 import inventoryRoutes from './routes/inventoryRoutes';
 
 // New routes for Order Management System
@@ -64,8 +63,7 @@ app.get('/api/health', (_req, res) => {
     });
 });
 
-// Existing API Routes (Excel upload + Inventory)
-app.use('/api/orders', orderRoutes);
+// Existing API Routes (Inventory)
 app.use('/api/inventory', inventoryRoutes);
 
 // New API Routes (Order Management System)

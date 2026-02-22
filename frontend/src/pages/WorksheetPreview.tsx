@@ -70,8 +70,8 @@ export default function WorksheetPreview() {
         return (
             <div className="text-center py-12">
                 <p className="text-gray-600">Worksheets not found</p>
-                <button onClick={() => navigate('/orders/upload')} className="btn-primary mt-4">
-                    Back to Upload
+                <button onClick={() => navigate('/admin/orders')} className="btn-primary mt-4">
+                    Back to Orders
                 </button>
             </div>
         )
@@ -85,11 +85,11 @@ export default function WorksheetPreview() {
             <div className="flex items-center justify-between">
                 <div>
                     <button
-                        onClick={() => navigate('/orders/upload')}
+                        onClick={() => navigate('/admin/orders')}
                         className="flex items-center space-x-2 text-brand-gold hover:text-brand-gold-dark transition-colors mb-3"
                     >
                         <ArrowLeft className="h-5 w-5" />
-                        <span>Back to Upload</span>
+                        <span>Back to Orders</span>
                     </button>
                     <h1 className="text-3xl font-bold text-brand-navy">Worksheets</h1>
                     <p className="text-gray-600 mt-2">
@@ -105,8 +105,8 @@ export default function WorksheetPreview() {
                         <button
                             onClick={() => setActiveTab('fabric')}
                             className={`flex items-center space-x-2 px-6 py-3 rounded-lg font-medium transition-colors ${activeTab === 'fabric'
-                                    ? 'bg-brand-gold text-white shadow-brand'
-                                    : 'text-gray-600 hover:bg-gray-100'
+                                ? 'bg-brand-gold text-white shadow-brand'
+                                : 'text-gray-600 hover:bg-gray-100'
                                 }`}
                         >
                             <FileSpreadsheet className="h-5 w-5" />
@@ -119,8 +119,8 @@ export default function WorksheetPreview() {
                         <button
                             onClick={() => setActiveTab('tube')}
                             className={`flex items-center space-x-2 px-6 py-3 rounded-lg font-medium transition-colors ${activeTab === 'tube'
-                                    ? 'bg-brand-gold text-white shadow-brand'
-                                    : 'text-gray-600 hover:bg-gray-100'
+                                ? 'bg-brand-gold text-white shadow-brand'
+                                : 'text-gray-600 hover:bg-gray-100'
                                 }`}
                         >
                             <FileText className="h-5 w-5" />
