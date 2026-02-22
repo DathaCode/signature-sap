@@ -151,6 +151,14 @@ export const authApi = {
     getCurrentUser: async (): Promise<{ user: import('../types/auth').User }> => {
         const response = await api.get('/auth/me')
         return response.data.data
+    },
+
+    forgotPassword: async (email: string): Promise<void> => {
+        await api.post('/auth/forgot-password', { email })
+    },
+
+    resetPassword: async (token: string, password: string): Promise<void> => {
+        await api.post('/auth/reset-password', { token, password })
     }
 }
 
@@ -325,6 +333,35 @@ export const adminOrderApi = {
     updateStatus: async (id: string, status: string): Promise<import('../types/order').Order> => {
         const response = await api.patch(`/web-orders/${id}/status`, { status })
         return response.data.data
+    },
+
+    /**
+     * Move order to trash (soft delete)
+     */
+    trashOrder: async (id: string): Promise<void> => {
+        await api.delete(`/web-orders/${id}/trash`)
+    },
+
+    /**
+     * Get all trashed orders
+     */
+    getTrashOrders: async (): Promise<{ orders: import('../types/order').Order[]; count: number }> => {
+        const response = await api.get('/web-orders/admin/trash')
+        return response.data.data
+    },
+
+    /**
+     * Restore order from trash
+     */
+    restoreOrder: async (id: string): Promise<void> => {
+        await api.post(`/web-orders/${id}/restore`)
+    },
+
+    /**
+     * Permanently delete order from trash
+     */
+    purgeOrder: async (id: string): Promise<void> => {
+        await api.delete(`/web-orders/${id}/purge`)
     }
 }
 

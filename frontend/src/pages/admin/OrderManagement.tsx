@@ -4,11 +4,12 @@ import { Order, WorksheetPreviewResponse } from '../../types/order';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
-import { Loader2, Check, Factory, Filter, Eye, FileText } from 'lucide-react';
+import { Loader2, Check, Factory, Filter, Eye, FileText, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { toast } from 'react-hot-toast';
 import WorksheetPreview from '../../components/admin/WorksheetPreview';
+import api from '../../services/api';
 
 export default function OrderManagement() {
     const [orders, setOrders] = useState<Order[]>([]);
@@ -66,6 +67,18 @@ export default function OrderManagement() {
             toast.error('Failed to send to production');
         } finally {
             setSendingToProduction(null);
+        }
+    };
+
+    const handleTrash = async (id: string, orderNumber: string) => {
+        if (!confirm(`Move order ${orderNumber} to trash? It will be permanently deleted after 10 days.`)) return;
+        try {
+            await api.delete(`/web-orders/${id}/trash`);
+            toast.success('Order moved to trash');
+            fetchOrders();
+        } catch (error) {
+            console.error(error);
+            toast.error('Failed to move order to trash');
         }
     };
 
@@ -193,6 +206,18 @@ export default function OrderManagement() {
                                                         >
                                                             <FileText className="mr-2 h-4 w-4" />
                                                             Worksheets
+                                                        </Button>
+                                                    )}
+
+                                                    {order.status !== 'CANCELLED' && (
+                                                        <Button
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            onClick={() => handleTrash(order.id, order.orderNumber)}
+                                                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                                            title="Move to trash"
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
                                                         </Button>
                                                     )}
                                                 </div>

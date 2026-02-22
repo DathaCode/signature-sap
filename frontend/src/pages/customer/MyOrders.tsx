@@ -56,7 +56,7 @@ export default function MyOrders() {
                     <h1 className="text-3xl font-bold tracking-tight">My Orders</h1>
                     <p className="text-muted-foreground">Manage and track your recent orders.</p>
                 </div>
-                <Link to="/orders/new">
+                <Link to="/new-order">
                     <Button>
                         <Plus className="mr-2 h-4 w-4" />
                         New Order
@@ -72,9 +72,6 @@ export default function MyOrders() {
                         </div>
                         <h3 className="text-lg font-semibold">No orders yet</h3>
                         <p className="text-muted-foreground mt-1 mb-4">Get started by creating your first order.</p>
-                        <Link to="/orders/new">
-                            <Button variant="outline">Create Order</Button>
-                        </Link>
                     </CardContent>
                 </Card>
             ) : (

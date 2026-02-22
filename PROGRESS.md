@@ -1,12 +1,12 @@
 # Signature Shades - Development Progress Report
 
-**Last Updated:** 2026-02-20
+**Last Updated:** 2026-02-22
 **Project:** Signature Shades Order Management System
-**Phase:** UPGRADE.md Implementation (Parts 1-9) + Bug Fixes + Pricing/UX/User Mgmt Fixes
+**Phase:** UPGRADE.md Implementation (Parts 1-9) + Bug Fixes + Pricing/UX/User Mgmt Fixes + v3 UX/Trash/Auth Fixes
 
 ---
 
-## Overall Progress: 100% Complete + Post-Launch Bug Fixes + v2 Fixes
+## Overall Progress: 100% Complete + Post-Launch Bug Fixes + v2 Fixes + v3 Fixes
 
 ### Implementation Status Overview
 
@@ -23,6 +23,7 @@ Part 9: Deliverables Checklist                 [100%] Complete
 Bug Fix Round (5 Parts)                        [100%] Complete (2026-02-11)
 Pricing Fix (double-discount removal)          [100%] Complete (2026-02-15)
 v2 Fixes (pricing, reference, user mgmt)       [100%] Complete (2026-02-20)
+v3 Fixes (UX, Trash, Forgot Password)          [100%] Complete (2026-02-22)
 ```
 
 ---
@@ -313,5 +314,77 @@ After Parts 1-9 were complete, a 5-part bug fix pass was performed to address UX
 
 ---
 
-**Report Generated:** 2026-02-11
-**All Parts Complete** - UPGRADE.md implementation finished 2026-02-10, bug fixes applied 2026-02-11
+**Report Generated:** 2026-02-22
+**All Parts Complete** - UPGRADE.md implementation finished 2026-02-10, bug fixes applied 2026-02-11, v3 fixes applied 2026-02-22
+
+---
+
+## v3 Fixes (2026-02-22)
+
+### 1. Order Reference Visibility
+- Order Reference card is now **only shown before the first blind is saved**
+- Once a blind is added, the card is replaced with a **compact inline reference badge**
+- Files: `frontend/src/pages/orders/NewOrder.tsx`
+
+### 2. User Management — Dialog Box
+- **Replaced** expandable table rows with a `UserDialog` modal component
+- Clicking any user's name opens a dialog showing full profile, recent orders, and recent quotes
+- Admins can **edit all user fields** from within the dialog (name, email, phone, company, address, role, isActive)
+- Files: `frontend/src/pages/admin/UserManagement.tsx` (full rewrite)
+
+### 3. Admin Orders — View Details Fix + Trash
+- Created new `AdminOrderDetails.tsx` — admin order detail page with proper back navigation and full admin actions (Approve, Send to Production, Mark Completed, Move to Trash)
+- Route `/admin/orders/:orderId` now correctly uses `AdminOrderDetails` instead of the customer-facing `OrderDetails`
+- **Trash feature (soft delete):**
+  - `deletedAt` field added to `Order` model
+  - `getAllOrders` / `getMyOrders` exclude soft-deleted records
+  - New endpoints: `DELETE /:id/trash`, `GET /admin/trash`, `POST /:id/restore`, `DELETE /:id/purge`
+  - Auto-purge after 10 days in `getTrashOrders`
+  - New `TrashOrders.tsx` page at `/admin/trash`
+  - Trash button added to Order Management table and Dashboard (admin-only)
+- Migration: `20260222000001_add_trash_and_password_reset`
+- Files: `AdminOrderDetails.tsx` (NEW), `TrashOrders.tsx` (NEW), `OrderManagement.tsx`, `webOrder.controller.ts`, `webOrderRoutes.ts`, `schema.prisma`
+
+### 4. Dashboard Fixes + Bar Chart
+- Fixed broken "Place New Order" link (`/orders/new` → `/new-order`)
+- Removed redundant centered "Create Order" button from `MyOrders` empty state
+- Added **SVG bar chart** showing logged user's monthly order count (current year, last 6 months)
+- Added Trash shortcut link to Dashboard (admin-only)
+- Files: `frontend/src/pages/customer/Dashboard.tsx`, `frontend/src/pages/customer/MyOrders.tsx`
+
+### 5. My Quotes — Expandable Blind Details
+- Quote details now show **expandable blind rows** matching the Order Summary style
+- Expanding a row reveals: fixing type, bracket, control side, motor/chain, chain type, bottom rail, and per-component price breakdown
+- Files: `frontend/src/pages/quotes/QuoteDetails.tsx`
+
+### 6. Forgot Password Flow
+- `ForgotPassword.tsx` — email input, always shows success (prevents enumeration)
+- `ResetPassword.tsx` — reads token from URL `?token=` param, validates, updates password
+- "Forgot your password?" link added to `LoginForm.tsx`
+- Backend: `POST /auth/forgot-password` logs reset URL to Docker console (no email server), `POST /auth/reset-password` validates token + updates DB
+- DB columns added to `users`: `password_reset_token`, `password_reset_expires`
+- Files: `ForgotPassword.tsx` (NEW), `ResetPassword.tsx` (NEW), `LoginForm.tsx`, `auth.controller.ts`, `authRoutes.ts`, `schema.prisma`
+
+### Backend Files Modified (v3)
+- `backend/prisma/schema.prisma`
+- `backend/prisma/migrations/20260222000001_add_trash_and_password_reset/migration.sql`
+- `backend/src/controllers/auth.controller.ts`
+- `backend/src/routes/authRoutes.ts`
+- `backend/src/controllers/webOrder.controller.ts`
+- `backend/src/routes/webOrderRoutes.ts`
+
+### Frontend Files Modified (v3)
+- `frontend/src/pages/orders/NewOrder.tsx`
+- `frontend/src/pages/admin/UserManagement.tsx`
+- `frontend/src/pages/admin/AdminOrderDetails.tsx` (NEW)
+- `frontend/src/pages/admin/TrashOrders.tsx` (NEW)
+- `frontend/src/pages/admin/OrderManagement.tsx`
+- `frontend/src/pages/customer/Dashboard.tsx`
+- `frontend/src/pages/customer/MyOrders.tsx`
+- `frontend/src/pages/quotes/QuoteDetails.tsx`
+- `frontend/src/pages/auth/ForgotPassword.tsx` (NEW)
+- `frontend/src/pages/auth/ResetPassword.tsx` (NEW)
+- `frontend/src/components/auth/LoginForm.tsx`
+- `frontend/src/App.tsx`
+- `frontend/src/services/api.ts`
+- `frontend/src/types/order.ts`

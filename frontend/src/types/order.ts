@@ -169,4 +169,5 @@ export interface Order {
 
     createdAt: string;
     updatedAt: string;
+    deletedAt?: string;
 }

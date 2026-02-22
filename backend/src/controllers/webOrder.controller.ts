@@ -288,6 +288,7 @@ export const getMyOrders = async (
         const orders = await prisma.order.findMany({
             where: {
                 userId: authReq.user.id,
+                deletedAt: null,
                 ...(status && { status: status as OrderStatus }),
                 ...(productType && { productType: productType as any }),
             },
@@ -420,6 +421,7 @@ export const getAllOrders = async (
 
         const orders = await prisma.order.findMany({
             where: {
+                deletedAt: null, // Exclude trashed orders
                 ...(status && { status: status as OrderStatus }),
                 ...(productType && { productType: productType as any }),
                 ...(userId && { userId: userId as string }),
@@ -993,6 +995,103 @@ export const updateOrderStatus = async (
             message: 'Order status updated successfully',
             data: { order: updated },
         });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Soft-delete (trash) an order – Admin only
+ */
+export const trashOrder = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> => {
+    try {
+        const authReq = req as AuthRequest;
+        const order = await prisma.order.findUnique({ where: { id: req.params.id } });
+        if (!order) throw new AppError(404, 'Order not found');
+        if (order.deletedAt) throw new AppError(400, 'Order is already in trash');
+
+        await prisma.order.update({
+            where: { id: req.params.id },
+            data: { deletedAt: new Date(), status: 'CANCELLED' },
+        });
+
+        logger.info(`Order ${order.orderNumber} moved to trash by ${authReq.user?.email}`);
+        res.json({ success: true, message: 'Order moved to trash' });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Get all trashed orders – Admin only (auto-purges orders > 10 days old)
+ */
+export const getTrashOrders = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> => {
+    try {
+        // Auto-purge orders older than 10 days
+        const tenDaysAgo = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000);
+        await prisma.order.deleteMany({
+            where: { deletedAt: { lt: tenDaysAgo } },
+        });
+
+        const orders = await prisma.order.findMany({
+            where: { deletedAt: { not: null } },
+            include: { items: true },
+            orderBy: { deletedAt: 'desc' },
+        });
+
+        res.json({ success: true, data: { orders, count: orders.length } });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Restore an order from trash – Admin only
+ */
+export const restoreOrder = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> => {
+    try {
+        const order = await prisma.order.findUnique({ where: { id: req.params.id } });
+        if (!order) throw new AppError(404, 'Order not found');
+        if (!order.deletedAt) throw new AppError(400, 'Order is not in trash');
+
+        await prisma.order.update({
+            where: { id: req.params.id },
+            data: { deletedAt: null, status: 'PENDING' },
+        });
+
+        res.json({ success: true, message: 'Order restored' });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Permanently delete (purge) an order from trash – Admin only
+ */
+export const purgeOrder = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> => {
+    try {
+        const order = await prisma.order.findUnique({ where: { id: req.params.id } });
+        if (!order) throw new AppError(404, 'Order not found');
+        if (!order.deletedAt) throw new AppError(400, 'Order must be in trash before permanent deletion');
+
+        await prisma.order.delete({ where: { id: req.params.id } });
+        res.json({ success: true, message: 'Order permanently deleted' });
     } catch (error) {
         next(error);
     }

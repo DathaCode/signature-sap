@@ -12,10 +12,18 @@ import {
     acceptWorksheets,
     recalculateWorksheets,
     downloadWorksheet,
+    trashOrder,
+    getTrashOrders,
+    restoreOrder,
+    purgeOrder,
 } from '../controllers/webOrder.controller';
 import { authenticateToken, requireAdmin } from '../middleware/auth';
 
 const router = Router();
+
+// Admin-specific fixed routes (must come BEFORE /:id parameterised routes)
+router.get('/admin/all', authenticateToken, requireAdmin, getAllOrders);
+router.get('/admin/trash', authenticateToken, requireAdmin, getTrashOrders);
 
 // Customer routes (authentication required)
 router.post('/create', authenticateToken, createOrder);
@@ -23,11 +31,13 @@ router.get('/my-orders', authenticateToken, getMyOrders);
 router.get('/:id', authenticateToken, getOrderById);
 router.delete('/:id', authenticateToken, cancelOrder);
 
-// Admin routes (admin role required)
-router.get('/admin/all', authenticateToken, requireAdmin, getAllOrders);
+// Admin order actions
 router.post('/:id/approve', authenticateToken, requireAdmin, approveOrder);
 router.post('/:id/send-to-production', authenticateToken, requireAdmin, sendToProduction);
 router.patch('/:id/status', authenticateToken, requireAdmin, updateOrderStatus);
+router.delete('/:id/trash', authenticateToken, requireAdmin, trashOrder);
+router.post('/:id/restore', authenticateToken, requireAdmin, restoreOrder);
+router.delete('/:id/purge', authenticateToken, requireAdmin, purgeOrder);
 
 // Worksheet routes (admin)
 router.get('/:id/worksheets/preview', authenticateToken, requireAdmin, getWorksheetPreview);

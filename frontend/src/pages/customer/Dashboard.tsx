@@ -3,26 +3,95 @@ import { Button } from "../../components/ui/Button";
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { webOrderApi, quoteApi } from "../../services/api";
-import { Loader2 } from "lucide-react";
+import { Loader2, Trash2 } from "lucide-react";
+import { Order } from "../../types/order";
+
+// Simple SVG bar chart for monthly order counts
+function MonthlyOrderChart({ orders }: { orders: Order[] }) {
+    // Build last 6 months data
+    const now = new Date();
+    const months: { label: string; count: number }[] = [];
+    for (let i = 5; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const label = d.toLocaleString('default', { month: 'short' });
+        const count = orders.filter(o => {
+            const od = new Date(o.createdAt);
+            return od.getFullYear() === d.getFullYear() && od.getMonth() === d.getMonth();
+        }).length;
+        months.push({ label, count });
+    }
+
+    const maxCount = Math.max(...months.map(m => m.count), 1);
+    const barW = 36;
+    const gap = 14;
+    const chartH = 100;
+    const svgW = months.length * (barW + gap);
+
+    return (
+        <div>
+            <h3 className="font-semibold leading-none tracking-tight mb-3">Monthly Orders</h3>
+            <svg width={svgW} height={chartH + 28} className="overflow-visible">
+                {months.map((m, i) => {
+                    const barH = Math.max(4, Math.round((m.count / maxCount) * chartH));
+                    const x = i * (barW + gap);
+                    const y = chartH - barH;
+                    return (
+                        <g key={m.label}>
+                            <rect
+                                x={x}
+                                y={y}
+                                width={barW}
+                                height={barH}
+                                rx={4}
+                                fill={i === 5 ? '#3b82f6' : '#93c5fd'}
+                            />
+                            {m.count > 0 && (
+                                <text
+                                    x={x + barW / 2}
+                                    y={y - 4}
+                                    textAnchor="middle"
+                                    fontSize={11}
+                                    fill="#374151"
+                                    fontWeight="600"
+                                >
+                                    {m.count}
+                                </text>
+                            )}
+                            <text
+                                x={x + barW / 2}
+                                y={chartH + 18}
+                                textAnchor="middle"
+                                fontSize={11}
+                                fill="#6b7280"
+                            >
+                                {m.label}
+                            </text>
+                        </g>
+                    );
+                })}
+            </svg>
+        </div>
+    );
+}
 
 export default function CustomerDashboard() {
     const { user, logout } = useAuth();
     const [stats, setStats] = useState({ pending: 0, activeQuotes: 0, totalOrders: 0, completedOrders: 0 });
+    const [allOrders, setAllOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchStats = async () => {
             try {
-                // Fetch orders
                 const { orders } = await webOrderApi.getMyOrders();
                 const pendingCount = orders.filter(o => o.status === 'PENDING').length;
                 const completedCount = orders.filter(o => o.status === 'COMPLETED').length;
+                setAllOrders(orders);
 
-                // Fetch quotes and count only non-converted ones
                 let activeQuotesCount = 0;
                 try {
                     const { quotes } = await quoteApi.getMyQuotes();
-                    activeQuotesCount = quotes.filter(q => !q.convertedToOrder).length;
+                    activeQuotesCount = quotes.filter((q: any) => !q.convertedToOrder).length;
                 } catch (e) {
                     console.error("Failed to fetch quotes for stats", e);
                 }
@@ -42,6 +111,8 @@ export default function CustomerDashboard() {
 
         if (user) fetchStats();
     }, [user]);
+
+    const isAdmin = user?.role === 'ADMIN';
 
     return (
         <div className="space-y-6 p-8 max-w-7xl mx-auto">
@@ -80,13 +151,33 @@ export default function CustomerDashboard() {
                 </div>
             </div>
 
-            <div className="flex gap-4">
-                <Link to="/orders/new">
-                    <Button size="lg">Place New Order</Button>
+            {/* Monthly Orders Bar Chart */}
+            <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
+                {loading ? (
+                    <div className="flex items-center gap-2 text-gray-500">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Loading chart...
+                    </div>
+                ) : (
+                    <MonthlyOrderChart orders={allOrders} />
+                )}
+            </div>
+
+            <div className="flex gap-4 flex-wrap">
+                <Link to="/new-order">
+                    <Button size="lg">+ New Order</Button>
                 </Link>
                 <Link to="/orders">
                     <Button variant="outline" size="lg">View All Orders</Button>
                 </Link>
+                {isAdmin && (
+                    <Link to="/admin/trash">
+                        <Button variant="outline" size="lg" className="text-red-600 border-red-200 hover:bg-red-50">
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Trash
+                        </Button>
+                    </Link>
+                )}
             </div>
         </div>
     );

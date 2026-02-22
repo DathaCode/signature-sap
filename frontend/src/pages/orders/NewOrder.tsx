@@ -321,28 +321,36 @@ export default function NewOrderPage() {
                     </div>
                 </div>
 
-                {/* Order Reference Card */}
-                <Card className="border-l-4 border-l-indigo-500">
-                    <CardHeader className="py-4">
-                        <CardTitle className="text-lg">Order Reference</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-end">
-                            <div className="space-y-2 flex-1 max-w-md">
-                                <Label htmlFor="customerReference">Your Reference (optional)</Label>
-                                <Input
-                                    id="customerReference"
-                                    value={customerReference}
-                                    onChange={(e) => setCustomerReference(e.target.value)}
-                                    placeholder="e.g. Smith Kitchen, House-123, Project XYZ"
-                                />
+                {/* Order Reference Card — only show before first blind is saved */}
+                {savedBlinds.length === 0 && (
+                    <Card className="border-l-4 border-l-indigo-500">
+                        <CardHeader className="py-4">
+                            <CardTitle className="text-lg">Order Reference</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-end">
+                                <div className="space-y-2 flex-1 max-w-md">
+                                    <Label htmlFor="customerReference">Your Reference (optional)</Label>
+                                    <Input
+                                        id="customerReference"
+                                        value={customerReference}
+                                        onChange={(e) => setCustomerReference(e.target.value)}
+                                        placeholder="e.g. Smith Kitchen, House-123, Project XYZ"
+                                    />
+                                </div>
+                                <p className="text-xs text-gray-500 pb-2">
+                                    A system reference will also be assigned automatically.
+                                </p>
                             </div>
-                            <p className="text-xs text-gray-500 pb-2">
-                                A system reference will also be assigned automatically.
-                            </p>
-                        </div>
-                    </CardContent>
-                </Card>
+                        </CardContent>
+                    </Card>
+                )}
+                {savedBlinds.length > 0 && customerReference && (
+                    <div className="flex items-center gap-2 text-sm text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg px-4 py-2">
+                        <span className="font-medium">Reference:</span>
+                        <span>{customerReference}</span>
+                    </div>
+                )}
 
                 {/* Single Blind Form */}
                 <form className="space-y-6">

@@ -842,4 +842,41 @@ const optimizer = new CutlistOptimizer({
 
 ---
 
+## v3 Updates (2026-02-22)
+
+### New Features Added
+
+#### Order Reference UX
+- Order Reference card only shows before the first blind is saved
+- After adding the first blind, a compact reference badge replaces the card
+
+#### Admin Order Management
+- Dedicated `AdminOrderDetails` page (separate from customer-facing `OrderDetails`)
+- **Trash workflow:** Orders can be soft-deleted → appear in `/admin/trash` → auto-purge after 10 days
+- Restore or permanent-delete from Trash page
+
+#### User Management
+- Dialog-based user detail/edit replaces expandable table rows
+- Admins can edit all user fields inline in the dialog
+
+#### Dashboard
+- Monthly order bar chart (SVG, last 6 months, per-user)
+- Trash shortcut link for admins
+
+#### My Quotes
+- Quote details now show expandable blind rows with full settings and price breakdown
+
+#### Forgot Password
+- `POST /auth/forgot-password` — generates token, logs reset URL to Docker console
+- `POST /auth/reset-password` — validates token, updates password
+- ForgotPassword and ResetPassword pages on frontend
+- "Forgot your password?" link on login page
+
+### Database Changes (v3)
+- `orders.deleted_at` — soft delete timestamp (migration `20260222000001_add_trash_and_password_reset`)
+- `users.password_reset_token` — hashed reset token
+- `users.password_reset_expires` — token expiry timestamp
+
+---
+
 **End of Document**

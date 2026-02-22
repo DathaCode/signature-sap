@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import { generateToken, AuthRequest } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
 import { logger } from '../config/logger';
@@ -232,6 +233,100 @@ export const logout = async (
         });
     } catch (error) {
         next(error);
+    }
+};
+
+/**
+ * Forgot Password – generates a reset token and logs the reset URL
+ */
+export const forgotPassword = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> => {
+    try {
+        const { email } = z.object({ email: z.string().email() }).parse(req.body);
+
+        const user = await prisma.user.findUnique({ where: { email } });
+
+        // Generic response to prevent email enumeration
+        if (!user) {
+            res.json({ success: true, message: 'If that email is registered, a reset link has been generated.' });
+            return;
+        }
+
+        const resetToken = crypto.randomBytes(32).toString('hex');
+        const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+        const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+        await prisma.user.update({
+            where: { id: user.id },
+            data: {
+                passwordResetToken: hashedToken,
+                passwordResetExpires: expires,
+            },
+        });
+
+        const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`;
+        logger.info(`[PASSWORD RESET] User: ${email} | Link (valid 1h): ${resetUrl}`);
+
+        res.json({ success: true, message: 'If that email is registered, a reset link has been generated. Check with your administrator or system logs.' });
+    } catch (error) {
+        if (error instanceof z.ZodError) {
+            next(new AppError(400, error.errors[0].message));
+        } else {
+            next(error);
+        }
+    }
+};
+
+/**
+ * Reset Password – validates token and sets new password
+ */
+export const resetPassword = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> => {
+    try {
+        const { token, password } = z.object({
+            token: z.string().min(1),
+            password: z.string().min(6, 'Password must be at least 6 characters'),
+        }).parse(req.body);
+
+        const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+        const user = await prisma.user.findFirst({
+            where: {
+                passwordResetToken: hashedToken,
+                passwordResetExpires: { gt: new Date() },
+            },
+        });
+
+        if (!user) {
+            throw new AppError(400, 'Invalid or expired reset token');
+        }
+
+        const bcryptRounds = parseInt(process.env.BCRYPT_ROUNDS || '10');
+        const hashedPassword = await bcrypt.hash(password, bcryptRounds);
+
+        await prisma.user.update({
+            where: { id: user.id },
+            data: {
+                password: hashedPassword,
+                passwordResetToken: null,
+                passwordResetExpires: null,
+            },
+        });
+
+        logger.info(`Password reset successful for ${user.email}`);
+        res.json({ success: true, message: 'Password updated successfully. You can now sign in.' });
+    } catch (error) {
+        if (error instanceof z.ZodError) {
+            next(new AppError(400, error.errors[0].message));
+        } else {
+            next(error);
+        }
     }
 };
 

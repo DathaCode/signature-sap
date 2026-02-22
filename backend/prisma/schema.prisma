@@ -86,22 +86,24 @@ enum FileSource {
 // ============================================================================
 
 model User {
-  id         String      @id @default(uuid()) @db.Uuid
-  name       String      @db.VarChar(255)
-  email      String      @unique @db.VarChar(255)
-  password   String      @db.VarChar(255) // bcrypt hashed
-  phone      String      @db.VarChar(50)
-  company    String?     @db.VarChar(255)
-  address    String      @db.Text
-  role       UserRole    @default(CUSTOMER)
-  isActive   Boolean     @default(true) @map("is_active")
-  createdAt  DateTime    @default(now()) @map("created_at") @db.Timestamp(6)
-  updatedAt  DateTime    @updatedAt @map("updated_at") @db.Timestamp(6)
-  
+  id                   String      @id @default(uuid()) @db.Uuid
+  name                 String      @db.VarChar(255)
+  email                String      @unique @db.VarChar(255)
+  password             String      @db.VarChar(255) // bcrypt hashed
+  phone                String      @db.VarChar(50)
+  company              String?     @db.VarChar(255)
+  address              String      @db.Text
+  role                 UserRole    @default(CUSTOMER)
+  isActive             Boolean     @default(true) @map("is_active")
+  passwordResetToken   String?     @map("password_reset_token") @db.VarChar(255)
+  passwordResetExpires DateTime?   @map("password_reset_expires") @db.Timestamp(6)
+  createdAt            DateTime    @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt            DateTime    @updatedAt @map("updated_at") @db.Timestamp(6)
+
   // Relations
   orders     Order[]     @relation("UserOrders")
   quotes     Quote[]     @relation("UserQuotes")
-  
+
   @@map("users")
   @@index([email])
   @@index([role])
@@ -138,6 +140,9 @@ model Order {
   notes               String?           @db.Text
   adminNotes          String?           @map("admin_notes") @db.Text
   customerReference   String?           @map("customer_reference") @db.VarChar(255)
+
+  // Soft delete (Trash)
+  deletedAt           DateTime?         @map("deleted_at") @db.Timestamp(6)
 
   // Approval tracking
   confirmedAt         DateTime?         @map("confirmed_at") @db.Timestamp(6)
