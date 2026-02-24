@@ -17,7 +17,11 @@
       "Bash(docker context:*)",
       "Bash(docker info:*)",
       "Bash(docker start:*)",
-      "Bash(cd \"/f/SIGNATUR SHADES/signature-sap/backend\" && npx prisma migrate dev --name add_trash_and_password_reset 2>&1)"
+      "Bash(cd \"/f/SIGNATUR SHADES/signature-sap/backend\" && npx prisma migrate dev --name add_trash_and_password_reset 2>&1)",
+      "Bash(test:*)",
+      "Bash(docker ps:*)",
+      "Bash(docker.exe ps:*)",
+      "Bash(powershell:*)"
     ]
   }
 }

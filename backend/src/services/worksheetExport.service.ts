@@ -32,14 +32,15 @@ const MOTOR_DEDUCTIONS: Record<string, number> = {
 const DROP_ADDITION = 150;
 
 /**
- * Determine chain size (mm) from calculated drop
+ * Chain length (mm) based on blind drop.
+ * Inventory chains: 500 / 900 / 1200 / 1500 / 2000 mm
  */
 function getChainSize(calcDrop: number): number {
-    if (calcDrop <= 850) return 500;
-    if (calcDrop <= 1100) return 750;
-    if (calcDrop <= 1600) return 1000;
-    if (calcDrop <= 2200) return 1200;
-    return 1500;
+    if (calcDrop <= 850)  return 500;
+    if (calcDrop <= 1200) return 900;
+    if (calcDrop <= 1600) return 1200;
+    if (calcDrop <= 2200) return 1500;
+    return 2000;
 }
 
 export class WorksheetExportService {

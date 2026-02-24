@@ -71,9 +71,13 @@ export default function AddInventoryModal({ isOpen, onClose }: AddInventoryModal
                             <label className="label">Category</label>
                             <select {...register('category')} className="input">
                                 <option value="FABRIC">Fabric</option>
-                                <option value="BOTTOM_BAR">Bottom Bar</option>
-                                <option value="MOTOR">Motor</option>
-                                <option value="CHAIN">Chain</option>
+                                <option value="BOTTOM_BAR">Bottom Bars</option>
+                                <option value="BOTTOM_BAR_CLIP">Bottom Bar Clips</option>
+                                <option value="CHAIN">Chains</option>
+                                <option value="ACMEDA">Acmeda (winder-29mm)</option>
+                                <option value="TBS">TBS (winder-32mm)</option>
+                                <option value="MOTOR">Motors (Automate / Alpha)</option>
+                                <option value="ACCESSORY">Accessories</option>
                             </select>
                         </div>
 

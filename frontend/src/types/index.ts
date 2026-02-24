@@ -53,7 +53,15 @@ export interface WorksheetData {
     tubeCut: Worksheet
 }
 
-export type InventoryCategory = 'FABRIC' | 'BOTTOM_BAR' | 'MOTOR' | 'CHAIN'
+export type InventoryCategory =
+  | 'FABRIC'
+  | 'BOTTOM_BAR'
+  | 'BOTTOM_BAR_CLIP'
+  | 'CHAIN'
+  | 'ACMEDA'
+  | 'TBS'
+  | 'MOTOR'
+  | 'ACCESSORY'
 export type UnitType = 'MM' | 'UNITS'
 export type TransactionType = 'ADDITION' | 'DEDUCTION' | 'ADJUSTMENT'
 

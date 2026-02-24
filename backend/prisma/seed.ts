@@ -2,284 +2,172 @@ import { PrismaClient, InventoryCategory, UnitType } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
+// Helper: create an inventory item + initial ADDITION transaction
+async function seedItem(
+  category: InventoryCategory,
+  itemName: string,
+  colorVariant: string | null,
+  quantity: number,
+  minStockAlert: number,
+  price: number,
+  unitType: UnitType = UnitType.UNITS
+) {
+  const item = await prisma.inventoryItem.create({
+    data: { category, itemName, colorVariant, quantity, unitType, minStockAlert, price },
+  });
+  await prisma.inventoryTransaction.create({
+    data: {
+      inventoryItemId: item.id,
+      transactionType: 'ADDITION',
+      quantityChange: quantity,
+      newBalance: quantity,
+      notes: 'Initial stock - Database seed',
+    },
+  });
+  const label = colorVariant ? `${itemName} (${colorVariant})` : itemName;
+  console.log(`  ✓ ${label}: ${quantity} ${unitType === 'MM' ? 'mm' : 'units'}`);
+}
+
 async function main() {
-  console.log('🌱 Starting database seed (80+ items)...\\n');
+  console.log('🌱 Starting database seed...\n');
 
-  // Clear existing data
-  console.log('🗑️  Clearing existing inventory...');
-  await prisma.inventoryTransaction.deleteMany();
-  await prisma.inventoryItem.deleteMany();
-  console.log('✅ Existing inventory cleared\\n');
+  // Clear existing non-fabric inventory (fabric rows managed separately)
+  console.log('🗑️  Clearing existing non-fabric inventory...');
+  const nonFabricItems = await prisma.inventoryItem.findMany({
+    where: { category: { not: InventoryCategory.FABRIC } },
+    select: { id: true },
+  });
+  if (nonFabricItems.length > 0) {
+    await prisma.inventoryTransaction.deleteMany({
+      where: { inventoryItemId: { in: nonFabricItems.map(i => i.id) } },
+    });
+    await prisma.inventoryItem.deleteMany({
+      where: { category: { not: InventoryCategory.FABRIC } },
+    });
+  }
+  console.log('✅ Cleared\n');
 
   // ============================================================================
-  // MOTORS
+  // BOTTOM BARS  (D30 / Oval  ×  White / Black / Dune / Bone / Anodised)
+  // itemName = rail type,  colorVariant = colour
   // ============================================================================
-  console.log('📦 Seeding Motors...');
+  console.log('📦 Seeding Bottom Bars...');
+  const barTypes   = ['D30', 'Oval'];
+  const barColours = ['White', 'Black', 'Dune', 'Bone', 'Anodised'];
+  for (const type of barTypes) {
+    for (const colour of barColours) {
+      await seedItem(InventoryCategory.BOTTOM_BAR, type, colour, 50, 10, 12.00);
+    }
+  }
 
+  // ============================================================================
+  // BOTTOM BAR CLIPS  (Left / Right – no colour split)
+  // ============================================================================
+  console.log('\n📦 Seeding Bottom Bar Clips...');
+  await seedItem(InventoryCategory.BOTTOM_BAR_CLIP, 'Left Clip',  null, 200, 30, 3.50);
+  await seedItem(InventoryCategory.BOTTOM_BAR_CLIP, 'Right Clip', null, 200, 30, 3.50);
+
+  // ============================================================================
+  // CHAINS  (5 lengths selected by blind drop)
+  // Drop ≤850 → 500  |  ≤1200 → 900  |  ≤1600 → 1200  |  ≤2200 → 1500  |  >2200 → 2000
+  // ============================================================================
+  console.log('\n📦 Seeding Chains...');
+  const chainLengths = [500, 900, 1200, 1500, 2000];
+  for (const length of chainLengths) {
+    const price = length <= 900 ? 8.00 : length <= 1500 ? 10.00 : 12.00;
+    await seedItem(InventoryCategory.CHAIN, `Chain ${length}mm`, null, 100, 20, price);
+  }
+
+  // ============================================================================
+  // ACMEDA  (winder + idler + clutch + 4 bracket types × White/Black)
+  // ============================================================================
+  console.log('\n📦 Seeding Acmeda...');
+  await seedItem(InventoryCategory.ACMEDA, 'Acmeda winder-29mm', null, 20, 5,  45.00);
+  await seedItem(InventoryCategory.ACMEDA, 'Acmeda Idler',        null, 100, 20, 8.00);
+  await seedItem(InventoryCategory.ACMEDA, 'Acmeda Clutch',       null, 100, 20, 8.00);
+
+  const acmedaBrackets = [
+    'Acmeda Single Bracket set',
+    'Acmeda Extended Bracket set',
+    'Acmeda Dual Bracket set Left',
+    'Acmeda Dual Bracket set Right',
+  ];
+  const bracketColours = ['White', 'Black'];
+  for (const type of acmedaBrackets) {
+    for (const colour of bracketColours) {
+      const price = type.includes('Extended') ? 22.00 : type.includes('Dual') ? 28.00 : 18.00;
+      await seedItem(InventoryCategory.ACMEDA, type, colour, 30, 10, price);
+    }
+  }
+
+  // ============================================================================
+  // TBS  (winder + 3 bracket types × White/Black – Extended not compatible)
+  // ============================================================================
+  console.log('\n📦 Seeding TBS...');
+  await seedItem(InventoryCategory.TBS, 'TBS winder-32mm', null, 15, 5, 48.00);
+
+  const tbsBrackets = [
+    'TBS Single Bracket set',
+    'TBS Dual Bracket set Left',
+    'TBS Dual Bracket set Right',
+  ];
+  for (const type of tbsBrackets) {
+    for (const colour of bracketColours) {
+      const price = type.includes('Dual') ? 28.00 : 18.00;
+      await seedItem(InventoryCategory.TBS, type, colour, 30, 10, price);
+    }
+  }
+
+  // ============================================================================
+  // MOTORS  (Automate / Alpha motors + generic brackets for these motors)
+  // ============================================================================
+  console.log('\n📦 Seeding Motors...');
   const motors = [
-    // Winders (28mm width deduction)
-    { name: 'TBS winder-32mm', quantity: 15, price: 48.00 },
-    { name: 'Acmeda winder-29mm', quantity: 20, price: 45.00 },
-
-    // Automate motors (29mm width deduction)
-    { name: 'Automate 1.1NM Li-Ion Quiet Motor', quantity: 20, price: 120.00 },
-    { name: 'Automate 0.7NM Li-Ion Quiet Motor', quantity: 15, price: 110.00 },
-    { name: 'Automate 2NM Li-Ion Quiet Motor', quantity: 18, price: 135.00 },
-    { name: 'Automate 3NM Li-Ion Motor', quantity: 12, price: 150.00 },
-    { name: 'Automate E6 6NM Motor', quantity: 10, price: 180.00 },
-
-    // Alpha Battery motors (30mm width deduction)
-    { name: 'Alpha 1NM Battery Motor', quantity: 15, price: 100.00 },
-    { name: 'Alpha 2NM Battery Motor', quantity: 12, price: 115.00 },
-    { name: 'Alpha 3NM Battery Motor', quantity: 10, price: 130.00 },
-
-    // Alpha AC motors (35mm width deduction)
-    { name: 'Alpha AC 5NM Motor', quantity: 8, price: 165.00 },
+    { name: 'Automate 1.1NM Li-Ion Quiet Motor', qty: 20, price: 120.00 },
+    { name: 'Automate 0.7NM Li-Ion Quiet Motor', qty: 15, price: 110.00 },
+    { name: 'Automate 2NM Li-Ion Quiet Motor',   qty: 18, price: 135.00 },
+    { name: 'Automate 3NM Li-Ion Motor',         qty: 12, price: 150.00 },
+    { name: 'Automate E6 6NM Motor',             qty: 10, price: 180.00 },
+    { name: 'Alpha 1NM Battery Motor',           qty: 15, price: 100.00 },
+    { name: 'Alpha 2NM Battery Motor',           qty: 12, price: 115.00 },
+    { name: 'Alpha 3NM Battery Motor',           qty: 10, price: 130.00 },
+    { name: 'Alpha AC 5NM Motor',                qty:  8, price: 165.00 },
   ];
-
-  for (const motor of motors) {
-    const item = await prisma.inventoryItem.create({
-      data: {
-        category: InventoryCategory.MOTOR,
-        itemName: motor.name,
-        colorVariant: null,
-        quantity: motor.quantity,
-        unitType: UnitType.UNITS,
-        minStockAlert: 5,
-        price: motor.price,
-      },
-    });
-
-    await prisma.inventoryTransaction.create({
-      data: {
-        inventoryItemId: item.id,
-        transactionType: 'ADDITION',
-        quantityChange: motor.quantity,
-        newBalance: motor.quantity,
-        notes: 'Initial stock - Database seed',
-      },
-    });
-
-    console.log(`  ✓ ${motor.name}: ${motor.quantity} units ($${motor.price})`);
+  for (const m of motors) {
+    await seedItem(InventoryCategory.MOTOR, m.name, null, m.qty, 5, m.price);
   }
 
-  // ============================================================================
-  // BRACKETS
-  // ============================================================================
-  console.log('\\n📦 Seeding Brackets...');
-
-  const bracketBrands = ['Acmeda', 'TBS'];
-  const bracketTypes = ['Single Bracket set', 'Extended Bracket set', 'Duel Bracket set Left', 'Duel Bracket set Right'];
-  const bracketColours = ['White', 'Black', 'Sandstone', 'Barley', 'Silver Grey'];
-
-  for (const brand of bracketBrands) {
-    for (const type of bracketTypes) {
-      // Skip Extended bracket for TBS (not compatible)
-      if (brand === 'TBS' && type === 'Extended Bracket set') continue;
-
-      for (const colour of bracketColours) {
-        const name = `${brand} ${type} - ${colour}`;
-        const quantity = 30;
-        const price = type.includes('Extended') ? 22.00 : type.includes('Duel') ? 28.00 : 18.00;
-
-        const item = await prisma.inventoryItem.create({
-          data: {
-            category: InventoryCategory.BRACKET,
-            itemName: name,
-            colorVariant: null,
-            quantity,
-            unitType: UnitType.UNITS,
-            minStockAlert: 10,
-            price,
-          },
-        });
-
-        await prisma.inventoryTransaction.create({
-          data: {
-            inventoryItemId: item.id,
-            transactionType: 'ADDITION',
-            quantityChange: quantity,
-            newBalance: quantity,
-            notes: 'Initial stock - Database seed',
-          },
-        });
-
-        console.log(`  ✓ ${name}: ${quantity} units ($${price})`);
-      }
-    }
-  }
-
-  // ============================================================================
-  // CHAINS
-  // ============================================================================
-  console.log('\\n📦 Seeding Chains...');
-
-  const chainTypes = ['Stainless Steel', 'Plastic Pure White'];
-  const chainLengths = [500, 750, 1000, 1200, 1500]; // mm
-
-  for (const chainType of chainTypes) {
-    for (const length of chainLengths) {
-      const name = `${chainType} Chain - ${length}mm`;
-      const quantity = 50;
-      const price = length <= 750 ? 8.00 : length <= 1200 ? 10.00 : 12.00;
-
-      const item = await prisma.inventoryItem.create({
-        data: {
-          category: InventoryCategory.CHAIN,
-          itemName: name,
-          colorVariant: null,
-          quantity,
-          unitType: UnitType.UNITS,
-          minStockAlert: 15,
-          price,
-        },
-      });
-
-      await prisma.inventoryTransaction.create({
-        data: {
-          inventoryItemId: item.id,
-          transactionType: 'ADDITION',
-          quantityChange: quantity,
-          newBalance: quantity,
-          notes: 'Initial stock - Database seed',
-        },
-      });
-
-      console.log(`  ✓ ${name}: ${quantity} units ($${price})`);
-    }
-  }
-
-  // ============================================================================
-  // CLIPS
-  // ============================================================================
-  console.log('\\n📦 Seeding Bottom Bar Clips...');
-
-  const clipPositions = ['Left', 'Right'];
-  const bottomRailTypes = ['D30', 'Oval'];
-  const clipColours = ['Anodised', 'Black', 'Bone', 'Dune'];
-
-  for (const position of clipPositions) {
-    for (const railType of bottomRailTypes) {
-      for (const colour of clipColours) {
-        const name = `Bottom bar Clips ${position} - ${railType} - ${colour}`;
-        const quantity = 100;
-        const price = 3.50;
-
-        const item = await prisma.inventoryItem.create({
-          data: {
-            category: InventoryCategory.CLIP,
-            itemName: name,
-            colorVariant: null,
-            quantity,
-            unitType: UnitType.UNITS,
-            minStockAlert: 20,
-            price,
-          },
-        });
-
-        await prisma.inventoryTransaction.create({
-          data: {
-            inventoryItemId: item.id,
-            transactionType: 'ADDITION',
-            quantityChange: quantity,
-            newBalance: quantity,
-            notes: 'Initial stock - Database seed',
-          },
-        });
-
-        console.log(`  ✓ ${name}: ${quantity} units ($${price})`);
-      }
-    }
-  }
-
-  // ============================================================================
-  // ACCESSORIES
-  // ============================================================================
-  console.log('\\n📦 Seeding Accessories...');
-
-  const accessories = [
-    { name: 'Acmeda Idler', quantity: 100, price: 8.00 },
-    { name: 'Acmeda Clutch', quantity: 100, price: 8.00 },
-    { name: 'Stop bolt', quantity: 200, price: 1.50 },
-    { name: 'Safety lock', quantity: 200, price: 2.00 },
+  // Brackets used with Automate/Alpha motors (White/Black only)
+  const motorBrackets = [
+    'Single Bracket set',
+    'Extended Bracket set',
+    'Dual Left Bracket set',
+    'Dual Right Bracket set',
   ];
-
-  for (const accessory of accessories) {
-    const item = await prisma.inventoryItem.create({
-      data: {
-        category: InventoryCategory.ACCESSORY,
-        itemName: accessory.name,
-        colorVariant: null,
-        quantity: accessory.quantity,
-        unitType: UnitType.UNITS,
-        minStockAlert: 30,
-        price: accessory.price,
-      },
-    });
-
-    await prisma.inventoryTransaction.create({
-      data: {
-        inventoryItemId: item.id,
-        transactionType: 'ADDITION',
-        quantityChange: accessory.quantity,
-        newBalance: accessory.quantity,
-        notes: 'Initial stock - Database seed',
-      },
-    });
-
-    console.log(`  ✓ ${accessory.name}: ${accessory.quantity} units ($${accessory.price})`);
-  }
-
-  // ============================================================================
-  // BOTTOM BARS (TUBES)
-  // ============================================================================
-  console.log('\\n📦 Seeding Bottom Bars (Tubes)...');
-
-  const tubeTypes = ['D30', 'Oval'];
-  const tubeColours = ['Anodised', 'Black', 'Bone', 'Dune'];
-
-  for (const tubeType of tubeTypes) {
-    for (const colour of tubeColours) {
-      const name = `${tubeType} - ${colour}`;
-      const quantity = 50;
-      const price = 12.00;
-
-      const item = await prisma.inventoryItem.create({
-        data: {
-          category: InventoryCategory.BOTTOM_BAR,
-          itemName: name,
-          colorVariant: null,
-          quantity,
-          unitType: UnitType.UNITS,
-          minStockAlert: 10,
-          price,
-        },
-      });
-
-      await prisma.inventoryTransaction.create({
-        data: {
-          inventoryItemId: item.id,
-          transactionType: 'ADDITION',
-          quantityChange: quantity,
-          newBalance: quantity,
-          notes: 'Initial stock - Database seed',
-        },
-      });
-
-      console.log(`  ✓ ${name}: ${quantity} units ($${price})`);
+  for (const type of motorBrackets) {
+    for (const colour of bracketColours) {
+      const price = type.includes('Extended') ? 22.00 : type.includes('Dual') ? 28.00 : 18.00;
+      await seedItem(InventoryCategory.MOTOR, type, colour, 30, 10, price);
     }
   }
+
+  // ============================================================================
+  // ACCESSORIES  (Stop bolt, Safety lock)
+  // ============================================================================
+  console.log('\n📦 Seeding Accessories...');
+  await seedItem(InventoryCategory.ACCESSORY, 'Stop bolt',   null, 200, 30, 1.50);
+  await seedItem(InventoryCategory.ACCESSORY, 'Safety lock', null, 200, 30, 2.00);
 
   // ============================================================================
   // SUMMARY
   // ============================================================================
-  console.log('\\n✨ Seed completed successfully!\\n');
+  console.log('\n✨ Inventory seed completed!\n');
 
   const totalItems = await prisma.inventoryItem.count();
   const totalTransactions = await prisma.inventoryTransaction.count();
 
   // ─── PRICING MATRIX SEED ───────────────────────────────────
-  console.log('\\n💰 Seeding Pricing Matrix...');
+  console.log('\n💰 Seeding Pricing Matrix...');
 
   const PRICING_DATA: Record<number, Record<number, Record<number, number>>> = {
     1: {
@@ -356,7 +244,7 @@ async function main() {
   console.log('📊 Summary:');
   console.log(`   Total Items: ${totalItems}`);
   console.log(`   Total Transactions: ${totalTransactions}`);
-  console.log('\\n   By Category:');
+  console.log('\n   By Category:');
   categoryCount.forEach(cat => {
     console.log(`     ${cat.category}: ${cat._count} items`);
   });

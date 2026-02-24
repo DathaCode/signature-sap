@@ -33,11 +33,12 @@ enum ChainOrMotor {
 enum InventoryCategory {
   FABRIC
   BOTTOM_BAR
-  MOTOR
+  BOTTOM_BAR_CLIP  // Left / Right clips
   CHAIN
-  BRACKET    // Acmeda/TBS brackets
-  CLIP       // Bottom bar clips
-  ACCESSORY  // Idlers, clutches, stop bolts, safety locks
+  ACMEDA     // Acmeda winder-29mm, idler, clutch, Acmeda brackets
+  TBS        // TBS winder-32mm, TBS brackets
+  MOTOR      // Automate / Alpha motors + their brackets
+  ACCESSORY  // Stop bolt, safety lock
 }
 
 enum TransactionType {

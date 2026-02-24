@@ -9,11 +9,12 @@ export const MOTORS = [
     'TBS winder-32mm',
     'Automate 1.1NM Li-Ion Quiet Motor',
     'Automate 0.7NM Li-Ion Quiet Motor',
-    'Automate 2NM Li-Ion Motor',
+    'Automate 2NM Li-Ion Quiet Motor',
     'Automate 3NM Li-Ion Motor',
+    'Automate E6 6NM Motor',
     'Alpha 1NM Battery Motor',
     'Alpha 2NM Battery Motor',
-    'Alpha AC 3NM Motor',
+    'Alpha 3NM Battery Motor',
     'Alpha AC 5NM Motor',
 ];
 
@@ -39,7 +40,7 @@ export const CHAIN_TYPES = ['Stainless Steel', 'Plastic Pure White'];
 export const BOTTOM_RAIL_TYPES = ['D30', 'Oval'];
 
 // Bottom rail colors
-export const BOTTOM_RAIL_COLOURS = ['Anodised', 'Black', 'Bone', 'Dune'];
+export const BOTTOM_RAIL_COLOURS = ['White', 'Black', 'Dune', 'Bone', 'Anodised'];
 
 // Control sides (existing)
 export const CONTROL_SIDES = ['Left', 'Right'];
@@ -56,9 +57,10 @@ export function isWinderMotor(motor: string): boolean {
 
 /**
  * Check if TBS winder + Extended bracket combination (invalid)
+ * TBS winder-32mm does not have an Extended Bracket set.
  */
 export function isTBSExtendedInvalid(motor: string, bracketType: string): boolean {
-    return motor === 'TBS winder-32mm' && bracketType === 'Single Extension';
+    return motor === 'TBS winder-32mm' && (bracketType === 'Single Extension' || bracketType === 'Extended');
 }
 
 /**

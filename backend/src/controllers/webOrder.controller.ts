@@ -31,6 +31,103 @@ function getMotorDeduction(motorType: string | undefined): number {
     return MOTOR_DEDUCTIONS[motorType] || 28;
 }
 
+/**
+ * Chain length (mm) to use based on blind drop.
+ * Inventory chains: 500 / 900 / 1200 / 1500 / 2000 mm
+ */
+function getChainLength(drop: number): number {
+    if (drop <= 850)  return 500;
+    if (drop <= 1200) return 900;
+    if (drop <= 1600) return 1200;
+    if (drop <= 2200) return 1500;
+    return 2000;
+}
+
+/**
+ * Map order-form bracketType (e.g. "Single Extension", "Dual Left") to inventory item names.
+ * Acmeda/TBS name structure: "Brand {Mapped} Bracket set {Side}"
+ * Motor name structure: "{MappedType} Bracket set" or "{Side} Bracket set"
+ */
+function getBracketItemName(brand: 'ACMEDA' | 'TBS' | 'MOTOR', bracketType: string): string {
+    // Normalise form value → inventory suffix
+    const map: Record<string, string> = {
+        'Single':            'Single Bracket set',
+        'Single Extension':  'Extended Bracket set',
+        'Dual Left':         'Dual Bracket set Left',
+        'Dual Right':        'Dual Bracket set Right',
+    };
+    const suffix = map[bracketType] ?? `${bracketType} Bracket set`;
+
+    if (brand === 'ACMEDA') return `Acmeda ${suffix}`;
+    if (brand === 'TBS')    return `TBS ${suffix}`;
+
+    // MOTOR: seed names are "Single Bracket set", "Extended Bracket set",
+    // "Dual Left Bracket set", "Dual Right Bracket set"
+    const motorMap: Record<string, string> = {
+        'Single':           'Single Bracket set',
+        'Single Extension': 'Extended Bracket set',
+        'Dual Left':        'Dual Left Bracket set',
+        'Dual Right':       'Dual Right Bracket set',
+    };
+    return motorMap[bracketType] ?? `${bracketType} Bracket set`;
+}
+
+/**
+ * Build per-blind hardware deduction entries.
+ * Returns raw {category, itemName, colorVariant?, qty} items (not yet aggregated).
+ * Category typed as string to remain compatible before/after Prisma client regeneration.
+ */
+function buildPerBlindHardware(item: any): { category: string; itemName: string; colorVariant?: string; qty: number }[] {
+    const { chainOrMotor, bracketType, bracketColour, drop } = item;
+    if (!chainOrMotor) return [];
+
+    const results: { category: string; itemName: string; colorVariant?: string; qty: number }[] = [];
+
+    if (chainOrMotor === 'Acmeda winder-29mm') {
+        // Acmeda: winder + idler + clutch + bracket + chain + 2 clips + stop bolt + safety lock
+        results.push({ category: 'ACMEDA', itemName: 'Acmeda winder-29mm', qty: 1 });
+        results.push({ category: 'ACMEDA', itemName: 'Acmeda Idler',       qty: 1 });
+        results.push({ category: 'ACMEDA', itemName: 'Acmeda Clutch',      qty: 1 });
+        if (bracketType && bracketColour) {
+            results.push({ category: 'ACMEDA', itemName: getBracketItemName('ACMEDA', bracketType), colorVariant: bracketColour, qty: 1 });
+        }
+        results.push({ category: 'CHAIN',           itemName: `Chain ${getChainLength(drop)}mm`, qty: 1 });
+        results.push({ category: 'BOTTOM_BAR_CLIP', itemName: 'Left Clip',                       qty: 1 });
+        results.push({ category: 'BOTTOM_BAR_CLIP', itemName: 'Right Clip',                      qty: 1 });
+        results.push({ category: 'ACCESSORY',        itemName: 'Stop bolt',                       qty: 1 });
+        results.push({ category: 'ACCESSORY',        itemName: 'Safety lock',                     qty: 1 });
+
+    } else if (chainOrMotor === 'TBS winder-32mm') {
+        // TBS: winder + bracket + chain + 2 clips + stop bolt + safety lock
+        // Exceptional: Dual Left/Right → also deduct Acmeda Idler + Clutch
+        results.push({ category: 'TBS', itemName: 'TBS winder-32mm', qty: 1 });
+        if (bracketType === 'Dual Left' || bracketType === 'Dual Right') {
+            results.push({ category: 'ACMEDA', itemName: 'Acmeda Idler',  qty: 1 });
+            results.push({ category: 'ACMEDA', itemName: 'Acmeda Clutch', qty: 1 });
+        }
+        if (bracketType && bracketColour) {
+            results.push({ category: 'TBS', itemName: getBracketItemName('TBS', bracketType), colorVariant: bracketColour, qty: 1 });
+        }
+        results.push({ category: 'CHAIN',           itemName: `Chain ${getChainLength(drop)}mm`, qty: 1 });
+        results.push({ category: 'BOTTOM_BAR_CLIP', itemName: 'Left Clip',                       qty: 1 });
+        results.push({ category: 'BOTTOM_BAR_CLIP', itemName: 'Right Clip',                      qty: 1 });
+        results.push({ category: 'ACCESSORY',        itemName: 'Stop bolt',                       qty: 1 });
+        results.push({ category: 'ACCESSORY',        itemName: 'Safety lock',                     qty: 1 });
+
+    } else {
+        // Automate / Alpha motor: motor + Acmeda idler + bracket + 2 clips
+        results.push({ category: 'MOTOR',  itemName: chainOrMotor,      qty: 1 });
+        results.push({ category: 'ACMEDA', itemName: 'Acmeda Idler',    qty: 1 });
+        if (bracketType && bracketColour) {
+            results.push({ category: 'MOTOR', itemName: getBracketItemName('MOTOR', bracketType), colorVariant: bracketColour, qty: 1 });
+        }
+        results.push({ category: 'BOTTOM_BAR_CLIP', itemName: 'Left Clip',  qty: 1 });
+        results.push({ category: 'BOTTOM_BAR_CLIP', itemName: 'Right Clip', qty: 1 });
+    }
+
+    return results;
+}
+
 const prisma = new PrismaClient();
 
 // Validation schemas
@@ -655,8 +752,8 @@ async function runOptimization(order: any) {
         },
     });
 
-    // 5. Check inventory availability
-    const inventoryRequirements = buildInventoryRequirements(fabricCutData, tubeCutData);
+    // 5. Check inventory availability (fabric + bottom bars + per-blind hardware)
+    const inventoryRequirements = buildInventoryRequirements(fabricCutData, tubeCutData, items);
 
     const inventoryCheck = await InventoryService.checkAvailability(inventoryRequirements);
 
@@ -703,31 +800,44 @@ function parseFabricKey(fabricKey: string): { itemName: string; colorVariant: st
 }
 
 /**
- * Build inventory requirements from optimization data
+ * Build inventory requirements from optimization data + per-blind hardware.
  */
-function buildInventoryRequirements(fabricCutData: Record<string, any>, tubeCutData: any) {
-    const requirements: { category: InventoryCategory; itemName: string; colorVariant?: string; quantityNeeded: number }[] = [];
+function buildInventoryRequirements(
+    fabricCutData: Record<string, any>,
+    tubeCutData: any,
+    orderItems: any[] = []
+) {
+    type Req = { category: InventoryCategory; itemName: string; colorVariant?: string; quantityNeeded: number };
+    const map = new Map<string, Req>();
 
+    const add = (category: InventoryCategory, itemName: string, colorVariant: string | undefined, qty: number) => {
+        const key = `${category}:${itemName}:${colorVariant || ''}`;
+        if (map.has(key)) {
+            map.get(key)!.quantityNeeded += qty;
+        } else {
+            map.set(key, { category, itemName, colorVariant, quantityNeeded: qty });
+        }
+    };
+
+    // Fabric requirements
     for (const [fabricKey, groupData] of Object.entries(fabricCutData)) {
         const { itemName, colorVariant } = parseFabricKey(fabricKey);
-        requirements.push({
-            category: 'FABRIC',
-            itemName,
-            colorVariant,
-            quantityNeeded: groupData.optimization.statistics.totalFabricNeeded,
-        });
+        add('FABRIC', itemName, colorVariant, groupData.optimization.statistics.totalFabricNeeded);
     }
 
+    // Bottom bar requirements
     for (const group of tubeCutData.groups) {
-        requirements.push({
-            category: 'BOTTOM_BAR',
-            itemName: group.bottomRailType,
-            colorVariant: group.bottomRailColour,
-            quantityNeeded: group.piecesToDeduct,
-        });
+        add('BOTTOM_BAR', group.bottomRailType, group.bottomRailColour, group.piecesToDeduct);
     }
 
-    return requirements;
+    // Per-blind hardware requirements
+    for (const item of orderItems) {
+        for (const hw of buildPerBlindHardware(item)) {
+            add(hw.category as InventoryCategory, hw.itemName, hw.colorVariant, hw.qty);
+        }
+    }
+
+    return Array.from(map.values());
 }
 
 /**
@@ -747,11 +857,16 @@ export const getWorksheetPreview = async (
             throw new AppError(404, 'No worksheet data found. Send order to production first.');
         }
 
-        // Also check inventory availability
+        // Also check inventory availability (including per-blind hardware)
         const fabricCutData = worksheetData.fabricCutData as Record<string, any>;
         const tubeCutData = worksheetData.tubeCutData as any;
 
-        const inventoryRequirements = buildInventoryRequirements(fabricCutData, tubeCutData);
+        const order = await prisma.order.findUnique({
+            where: { id: req.params.id as string },
+            include: { items: { orderBy: { itemNumber: 'asc' } } },
+        });
+
+        const inventoryRequirements = buildInventoryRequirements(fabricCutData, tubeCutData, order?.items || []);
         const inventoryCheck = await InventoryService.checkAvailability(inventoryRequirements);
 
         res.json({
@@ -797,32 +912,66 @@ export const acceptWorksheets = async (
             throw new AppError(404, 'Order not found');
         }
 
+        // Load order items for hardware deduction
+        const orderWithItems = await prisma.order.findUnique({
+            where: { id: req.params.id as string },
+            include: { items: { orderBy: { itemNumber: 'asc' } } },
+        });
+        const orderItems = orderWithItems?.items || [];
+
         // Build deduction list
-        const deductions: { category: InventoryCategory; itemName: string; colorVariant?: string; quantity: number; notes: string }[] = [];
+        type Deduction = { category: InventoryCategory; itemName: string; colorVariant?: string; quantity: number; notes: string };
+        const deductionMap = new Map<string, Deduction>();
+
+        const addDeduction = (
+            category: InventoryCategory,
+            itemName: string,
+            colorVariant: string | undefined,
+            quantity: number,
+            notes: string
+        ) => {
+            const key = `${category}:${itemName}:${colorVariant || ''}`;
+            if (deductionMap.has(key)) {
+                deductionMap.get(key)!.quantity += quantity;
+            } else {
+                deductionMap.set(key, { category, itemName, colorVariant, quantity, notes });
+            }
+        };
 
         const fabricCutData = worksheetData.fabricCutData as Record<string, any>;
         const tubeCutData = worksheetData.tubeCutData as any;
 
+        // Fabric deductions
         for (const [fabricKey, groupData] of Object.entries(fabricCutData)) {
             const { itemName, colorVariant } = parseFabricKey(fabricKey);
-            deductions.push({
-                category: 'FABRIC',
-                itemName,
-                colorVariant,
-                quantity: groupData.optimization.statistics.totalFabricNeeded,
-                notes: `Order ${order.orderNumber} - ${groupData.optimization.statistics.usedStockSheets} sheets, ${groupData.optimization.statistics.efficiency}% efficiency`,
-            });
+            addDeduction(
+                'FABRIC', itemName, colorVariant,
+                groupData.optimization.statistics.totalFabricNeeded,
+                `Order ${order.orderNumber} - ${groupData.optimization.statistics.usedStockSheets} sheets, ${groupData.optimization.statistics.efficiency}% efficiency`
+            );
         }
 
+        // Bottom bar deductions
         for (const group of tubeCutData.groups) {
-            deductions.push({
-                category: 'BOTTOM_BAR',
-                itemName: group.bottomRailType,
-                colorVariant: group.bottomRailColour,
-                quantity: group.piecesToDeduct,
-                notes: `Order ${order.orderNumber} - ${group.totalWidth}mm total, ${group.piecesToDeduct} pieces`,
-            });
+            addDeduction(
+                'BOTTOM_BAR', group.bottomRailType, group.bottomRailColour,
+                group.piecesToDeduct,
+                `Order ${order.orderNumber} - ${group.totalWidth}mm total, ${group.piecesToDeduct} pieces`
+            );
         }
+
+        // Per-blind hardware deductions (chains, brackets, clips, accessories, motors/winders)
+        for (const item of orderItems) {
+            for (const hw of buildPerBlindHardware(item)) {
+                addDeduction(
+                    hw.category as InventoryCategory, hw.itemName, hw.colorVariant,
+                    hw.qty,
+                    `Order ${order.orderNumber} - blind #${item.itemNumber} (${item.location})`
+                );
+            }
+        }
+
+        const deductions = Array.from(deductionMap.values());
 
         // Deduct inventory
         const deductionResults = await InventoryService.deductForOrder(order.id, deductions);
