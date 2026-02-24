@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
     Search, Filter, Plus, AlertTriangle,
@@ -22,15 +22,15 @@ interface TabDef {
 }
 
 const TABS: TabDef[] = [
-    { id: 'ALL',            label: 'All Items',      icon: Package,    description: '',                              badgeColor: 'bg-gray-100 text-gray-700'   },
-    { id: 'FABRIC',         label: 'Fabrics',        icon: Layers,     description: 'Fabric rolls by material/type', badgeColor: 'bg-blue-100 text-blue-700'   },
-    { id: 'BOTTOM_BAR',     label: 'Bottom Bars',    icon: Link2,      description: 'D30 & Oval rails',             badgeColor: 'bg-amber-100 text-amber-700' },
-    { id: 'BOTTOM_BAR_CLIP',label: 'BB Clips',       icon: Link2,      description: 'Left / Right clips',           badgeColor: 'bg-orange-100 text-orange-700'},
-    { id: 'CHAIN',          label: 'Chains',         icon: Link2,      description: '500–2000 mm lengths',          badgeColor: 'bg-teal-100 text-teal-700'   },
-    { id: 'ACMEDA',         label: 'Acmeda',         icon: Settings,   description: 'Winder, idler, clutch, brackets', badgeColor: 'bg-purple-100 text-purple-700'},
-    { id: 'TBS',            label: 'TBS',            icon: Settings,   description: 'Winder + brackets',            badgeColor: 'bg-indigo-100 text-indigo-700'},
-    { id: 'MOTOR',          label: 'Motors',         icon: Settings,   description: 'Automate & Alpha motors + brackets', badgeColor: 'bg-green-100 text-green-700'},
-    { id: 'ACCESSORY',      label: 'Accessories',    icon: ShieldCheck,description: 'Stop bolt, safety lock',       badgeColor: 'bg-red-100 text-red-700'     },
+    { id: 'ALL',             label: 'All Items',   icon: Package,    description: '',                              badgeColor: 'bg-gray-100 text-gray-700'    },
+    { id: 'FABRIC',          label: 'Fabrics',     icon: Layers,     description: 'Fabric rolls by material/type', badgeColor: 'bg-blue-100 text-blue-700'    },
+    { id: 'BOTTOM_BAR',      label: 'Bottom Bars', icon: Link2,      description: 'D30 & Oval rails',              badgeColor: 'bg-amber-100 text-amber-700'  },
+    { id: 'BOTTOM_BAR_CLIP', label: 'BB Clips',    icon: Link2,      description: 'Left / Right clips',            badgeColor: 'bg-orange-100 text-orange-700'},
+    { id: 'CHAIN',           label: 'Chains',      icon: Link2,      description: '500–2000 mm lengths',           badgeColor: 'bg-teal-100 text-teal-700'    },
+    { id: 'ACMEDA',          label: 'Acmeda',      icon: Settings,   description: 'Winder, idler, clutch, brackets', badgeColor: 'bg-purple-100 text-purple-700'},
+    { id: 'TBS',             label: 'TBS',         icon: Settings,   description: 'Winder + brackets',             badgeColor: 'bg-indigo-100 text-indigo-700'},
+    { id: 'MOTOR',           label: 'Motors',      icon: Settings,   description: 'Automate & Alpha motors',       badgeColor: 'bg-green-100 text-green-700'  },
+    { id: 'ACCESSORY',       label: 'Accessories', icon: ShieldCheck,description: 'Stop bolt, safety lock',        badgeColor: 'bg-red-100 text-red-700'      },
 ]
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -55,6 +55,12 @@ const BADGE_COLORS: Record<string, string> = {
     ACCESSORY:       'bg-red-100 text-red-700',
 }
 
+interface ItemGroup {
+    name: string
+    category: InventoryCategory
+    variants: InventoryItem[]
+}
+
 export default function InventoryDashboard() {
     const [search, setSearch] = useState('')
     const [activeTab, setActiveTab] = useState<TabId>('ALL')
@@ -65,6 +71,9 @@ export default function InventoryDashboard() {
     const [adjustModalOpen, setAdjustModalOpen] = useState(false)
     const [historyModalOpen, setHistoryModalOpen] = useState(false)
 
+    // Track which colour variant is selected per item group (key = itemName)
+    const [selectedVariantIds, setSelectedVariantIds] = useState<Record<string, string>>({})
+
     const { data: items = [], isLoading } = useQuery({
         queryKey: ['inventory', activeTab, search],
         queryFn: () => inventoryApi.getInventory({
@@ -73,10 +82,36 @@ export default function InventoryDashboard() {
         }),
     })
 
-    const filteredItems = items.filter(item => {
-        if (showLowStock && !item.isLowStock) return false
-        return true
-    })
+    const filteredItems = useMemo(() =>
+        items.filter(item => !showLowStock || item.isLowStock),
+        [items, showLowStock]
+    )
+
+    // Group items by (category + itemName) so colour variants collapse into one row
+    const groupedItems = useMemo<ItemGroup[]>(() => {
+        const groups: Record<string, ItemGroup> = {}
+        for (const item of filteredItems) {
+            const key = `${item.category}::${item.itemName}`
+            if (!groups[key]) {
+                groups[key] = { name: item.itemName, category: item.category, variants: [] }
+            }
+            groups[key].variants.push(item)
+        }
+        return Object.values(groups)
+    }, [filteredItems])
+
+    // Get the currently selected InventoryItem for a group
+    function getSelected(group: ItemGroup): InventoryItem {
+        const selectedId = selectedVariantIds[`${group.category}::${group.name}`]
+        return group.variants.find(v => v.id === selectedId) ?? group.variants[0]
+    }
+
+    function setVariant(group: ItemGroup, itemId: string) {
+        setSelectedVariantIds(prev => ({
+            ...prev,
+            [`${group.category}::${group.name}`]: itemId,
+        }))
+    }
 
     const lowStockCount = items.filter(i => i.isLowStock).length
 
@@ -157,13 +192,11 @@ export default function InventoryDashboard() {
 
                 {/* Toolbar */}
                 <div className="p-4 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center gap-3">
-                    {/* Active tab description */}
                     {activeTabDef.description && (
                         <p className="text-sm text-gray-500 hidden sm:block">{activeTabDef.description}</p>
                     )}
                     <div className="flex-1" />
 
-                    {/* Search */}
                     <div className="relative flex-1 max-w-xs">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                         <input
@@ -175,7 +208,6 @@ export default function InventoryDashboard() {
                         />
                     </div>
 
-                    {/* Low stock filter */}
                     <button
                         onClick={() => setShowLowStock(!showLowStock)}
                         className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
@@ -201,7 +233,7 @@ export default function InventoryDashboard() {
                                 {activeTab === 'ALL' && (
                                     <th className="text-left py-3 px-4 font-medium text-gray-600 text-sm">Category</th>
                                 )}
-                                <th className="text-left py-3 px-4 font-medium text-gray-600 text-sm">Color / Variant</th>
+                                <th className="text-left py-3 px-4 font-medium text-gray-600 text-sm">Colour</th>
                                 <th className="text-right py-3 px-4 font-medium text-gray-600 text-sm">Stock</th>
                                 <th className="text-right py-3 px-4 font-medium text-gray-600 text-sm">Min Alert</th>
                                 <th className="text-center py-3 px-4 font-medium text-gray-600 text-sm">Status</th>
@@ -216,95 +248,126 @@ export default function InventoryDashboard() {
                                         <p className="text-gray-500 text-sm">Loading inventory...</p>
                                     </td>
                                 </tr>
-                            ) : filteredItems.length === 0 ? (
+                            ) : groupedItems.length === 0 ? (
                                 <tr>
                                     <td colSpan={7} className="text-center py-12 text-gray-400 text-sm">
                                         {showLowStock ? 'No low-stock items in this category' : 'No items found'}
                                     </td>
                                 </tr>
                             ) : (
-                                filteredItems.map(item => (
-                                    <tr key={item.id} className="hover:bg-gray-50 group transition-colors">
-                                        {/* Item name */}
-                                        <td className="py-3 px-4">
-                                            <p className="font-medium text-gray-900 text-sm">{item.itemName}</p>
-                                        </td>
+                                groupedItems.map(group => {
+                                    const selected = getSelected(group)
+                                    const hasVariants = group.variants.length > 1
+                                    const hasAnyLowStock = group.variants.some(v => v.isLowStock)
 
-                                        {/* Category badge (ALL tab only) */}
-                                        {activeTab === 'ALL' && (
+                                    return (
+                                        <tr
+                                            key={`${group.category}::${group.name}`}
+                                            className={`hover:bg-gray-50 group transition-colors ${hasAnyLowStock ? 'bg-yellow-50/40' : ''}`}
+                                        >
+                                            {/* Item name */}
                                             <td className="py-3 px-4">
-                                                <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${BADGE_COLORS[item.category] || 'bg-gray-100 text-gray-600'}`}>
-                                                    {CATEGORY_LABELS[item.category] || item.category}
+                                                <p className="font-medium text-gray-900 text-sm">{group.name}</p>
+                                            </td>
+
+                                            {/* Category badge (ALL tab only) */}
+                                            {activeTab === 'ALL' && (
+                                                <td className="py-3 px-4">
+                                                    <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${BADGE_COLORS[group.category] || 'bg-gray-100 text-gray-600'}`}>
+                                                        {CATEGORY_LABELS[group.category] || group.category}
+                                                    </span>
+                                                </td>
+                                            )}
+
+                                            {/* Colour — dropdown if multiple variants, plain text if single */}
+                                            <td className="py-3 px-4">
+                                                {hasVariants ? (
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span
+                                                            className="w-3 h-3 rounded-full border border-gray-300 shrink-0"
+                                                            style={{ backgroundColor: getColorHex(selected.colorVariant || '') }}
+                                                        />
+                                                        <select
+                                                            value={selected.id}
+                                                            onChange={e => setVariant(group, e.target.value)}
+                                                            className="text-sm border border-gray-200 rounded px-2 py-0.5 bg-white text-gray-700 focus:outline-none focus:ring-1 focus:ring-brand-navy"
+                                                        >
+                                                            {group.variants.map(v => (
+                                                                <option key={v.id} value={v.id}>
+                                                                    {v.colorVariant || '—'}
+                                                                </option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                ) : selected.colorVariant ? (
+                                                    <span className="inline-flex items-center gap-1.5 text-sm text-gray-700">
+                                                        <span
+                                                            className="w-3 h-3 rounded-full border border-gray-300"
+                                                            style={{ backgroundColor: getColorHex(selected.colorVariant) }}
+                                                        />
+                                                        {selected.colorVariant}
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-gray-300 text-sm">—</span>
+                                                )}
+                                            </td>
+
+                                            {/* Stock quantity */}
+                                            <td className="py-3 px-4 text-right">
+                                                <span className={`font-mono font-semibold text-sm ${selected.isLowStock ? 'text-red-600' : 'text-gray-900'}`}>
+                                                    {Number(selected.quantity).toLocaleString()}
+                                                </span>
+                                                <span className="text-xs text-gray-400 ml-1 uppercase">
+                                                    {selected.unitType === 'MM' ? 'mm' : 'pcs'}
                                                 </span>
                                             </td>
-                                        )}
 
-                                        {/* Color variant */}
-                                        <td className="py-3 px-4">
-                                            {item.colorVariant ? (
-                                                <span className="inline-flex items-center gap-1.5 text-sm text-gray-700">
-                                                    <span className="w-3 h-3 rounded-full border border-gray-300 inline-block"
-                                                        style={{ backgroundColor: getColorHex(item.colorVariant) }} />
-                                                    {item.colorVariant}
-                                                </span>
-                                            ) : (
-                                                <span className="text-gray-300 text-sm">—</span>
-                                            )}
-                                        </td>
+                                            {/* Min stock alert */}
+                                            <td className="py-3 px-4 text-right text-sm text-gray-500">
+                                                {selected.minStockAlert != null
+                                                    ? `≥ ${Number(selected.minStockAlert).toLocaleString()}`
+                                                    : <span className="text-gray-300">—</span>}
+                                            </td>
 
-                                        {/* Stock quantity */}
-                                        <td className="py-3 px-4 text-right">
-                                            <span className={`font-mono font-semibold text-sm ${item.isLowStock ? 'text-red-600' : 'text-gray-900'}`}>
-                                                {Number(item.quantity).toLocaleString()}
-                                            </span>
-                                            <span className="text-xs text-gray-400 ml-1 uppercase">{item.unitType === 'MM' ? 'm' : 'pcs'}</span>
-                                        </td>
+                                            {/* Status badge */}
+                                            <td className="py-3 px-4 text-center">
+                                                {selected.quantity === 0 ? (
+                                                    <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-500">
+                                                        Out of Stock
+                                                    </span>
+                                                ) : selected.isLowStock ? (
+                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-700">
+                                                        <AlertTriangle className="h-3 w-3" /> Low Stock
+                                                    </span>
+                                                ) : (
+                                                    <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700">
+                                                        In Stock
+                                                    </span>
+                                                )}
+                                            </td>
 
-                                        {/* Min stock alert */}
-                                        <td className="py-3 px-4 text-right text-sm text-gray-500">
-                                            {item.minStockAlert != null
-                                                ? `≥ ${Number(item.minStockAlert).toLocaleString()}`
-                                                : <span className="text-gray-300">—</span>}
-                                        </td>
-
-                                        {/* Status badge */}
-                                        <td className="py-3 px-4 text-center">
-                                            {item.quantity === 0 ? (
-                                                <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-500">
-                                                    Out of Stock
-                                                </span>
-                                            ) : item.isLowStock ? (
-                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-700">
-                                                    <AlertTriangle className="h-3 w-3" /> Low Stock
-                                                </span>
-                                            ) : (
-                                                <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700">
-                                                    In Stock
-                                                </span>
-                                            )}
-                                        </td>
-
-                                        {/* Actions */}
-                                        <td className="py-3 px-4">
-                                            <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <button
-                                                    onClick={() => handleAdjust(item)}
-                                                    className="p-1.5 text-gray-400 hover:text-brand-navy hover:bg-gray-100 rounded-lg transition-colors"
-                                                    title="Adjust Quantity"
-                                                >
-                                                    <Edit2 className="h-4 w-4" />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleHistory(item)}
-                                                    className="p-1.5 text-gray-400 hover:text-brand-navy hover:bg-gray-100 rounded-lg transition-colors"
-                                                    title="View History"
-                                                >
-                                                    <History className="h-4 w-4" />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
+                                            {/* Actions */}
+                                            <td className="py-3 px-4">
+                                                <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <button
+                                                        onClick={() => handleAdjust(selected)}
+                                                        className="p-1.5 text-gray-400 hover:text-brand-navy hover:bg-gray-100 rounded-lg transition-colors"
+                                                        title="Adjust Quantity"
+                                                    >
+                                                        <Edit2 className="h-4 w-4" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleHistory(selected)}
+                                                        className="p-1.5 text-gray-400 hover:text-brand-navy hover:bg-gray-100 rounded-lg transition-colors"
+                                                        title="View History"
+                                                    >
+                                                        <History className="h-4 w-4" />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    )
+                                })
                             )}
                         </tbody>
                     </table>
@@ -313,13 +376,13 @@ export default function InventoryDashboard() {
                 {/* Footer */}
                 <div className="px-4 py-3 border-t border-gray-100 bg-gray-50 text-sm text-gray-500 flex justify-between items-center">
                     <span>
-                        {filteredItems.length} item{filteredItems.length !== 1 ? 's' : ''}
+                        {groupedItems.length} item{groupedItems.length !== 1 ? 's' : ''}
                         {showLowStock && ' (low stock only)'}
                     </span>
                     {lowStockCount > 0 && (
                         <span className="flex items-center gap-1 text-yellow-600 font-medium">
                             <AlertTriangle className="h-4 w-4" />
-                            {lowStockCount} item{lowStockCount !== 1 ? 's' : ''} need restocking
+                            {lowStockCount} variant{lowStockCount !== 1 ? 's' : ''} need restocking
                         </span>
                     )}
                 </div>
@@ -346,9 +409,6 @@ export default function InventoryDashboard() {
     )
 }
 
-/**
- * Map common colour names to approximate hex values for the colour swatch.
- */
 function getColorHex(colour: string): string {
     const map: Record<string, string> = {
         white:      '#ffffff',

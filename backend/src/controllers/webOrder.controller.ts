@@ -48,28 +48,16 @@ function getChainLength(drop: number): number {
  * Acmeda/TBS name structure: "Brand {Mapped} Bracket set {Side}"
  * Motor name structure: "{MappedType} Bracket set" or "{Side} Bracket set"
  */
-function getBracketItemName(brand: 'ACMEDA' | 'TBS' | 'MOTOR', bracketType: string): string {
+function getBracketItemName(brand: 'ACMEDA' | 'TBS', bracketType: string): string {
     // Normalise form value → inventory suffix
     const map: Record<string, string> = {
-        'Single':            'Single Bracket set',
-        'Single Extension':  'Extended Bracket set',
-        'Dual Left':         'Dual Bracket set Left',
-        'Dual Right':        'Dual Bracket set Right',
-    };
-    const suffix = map[bracketType] ?? `${bracketType} Bracket set`;
-
-    if (brand === 'ACMEDA') return `Acmeda ${suffix}`;
-    if (brand === 'TBS')    return `TBS ${suffix}`;
-
-    // MOTOR: seed names are "Single Bracket set", "Extended Bracket set",
-    // "Dual Left Bracket set", "Dual Right Bracket set"
-    const motorMap: Record<string, string> = {
         'Single':           'Single Bracket set',
         'Single Extension': 'Extended Bracket set',
-        'Dual Left':        'Dual Left Bracket set',
-        'Dual Right':       'Dual Right Bracket set',
+        'Dual Left':        'Dual Bracket set Left',
+        'Dual Right':       'Dual Bracket set Right',
     };
-    return motorMap[bracketType] ?? `${bracketType} Bracket set`;
+    const suffix = map[bracketType] ?? `${bracketType} Bracket set`;
+    return brand === 'ACMEDA' ? `Acmeda ${suffix}` : `TBS ${suffix}`;
 }
 
 /**
@@ -115,12 +103,9 @@ function buildPerBlindHardware(item: any): { category: string; itemName: string;
         results.push({ category: 'ACCESSORY',        itemName: 'Safety lock',                     qty: 1 });
 
     } else {
-        // Automate / Alpha motor: motor + Acmeda idler + bracket + 2 clips
+        // Automate / Alpha motor: motor + Acmeda idler + 2 clips (brackets not tracked for motors)
         results.push({ category: 'MOTOR',  itemName: chainOrMotor,      qty: 1 });
         results.push({ category: 'ACMEDA', itemName: 'Acmeda Idler',    qty: 1 });
-        if (bracketType && bracketColour) {
-            results.push({ category: 'MOTOR', itemName: getBracketItemName('MOTOR', bracketType), colorVariant: bracketColour, qty: 1 });
-        }
         results.push({ category: 'BOTTOM_BAR_CLIP', itemName: 'Left Clip',  qty: 1 });
         results.push({ category: 'BOTTOM_BAR_CLIP', itemName: 'Right Clip', qty: 1 });
     }

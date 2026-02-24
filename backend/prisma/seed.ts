@@ -137,20 +137,6 @@ async function main() {
     await seedItem(InventoryCategory.MOTOR, m.name, null, m.qty, 5, m.price);
   }
 
-  // Brackets used with Automate/Alpha motors (White/Black only)
-  const motorBrackets = [
-    'Single Bracket set',
-    'Extended Bracket set',
-    'Dual Left Bracket set',
-    'Dual Right Bracket set',
-  ];
-  for (const type of motorBrackets) {
-    for (const colour of bracketColours) {
-      const price = type.includes('Extended') ? 22.00 : type.includes('Dual') ? 28.00 : 18.00;
-      await seedItem(InventoryCategory.MOTOR, type, colour, 30, 10, price);
-    }
-  }
-
   // ============================================================================
   // ACCESSORIES  (Stop bolt, Safety lock)
   // ============================================================================
