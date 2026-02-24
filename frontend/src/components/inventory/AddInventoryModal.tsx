@@ -164,7 +164,10 @@ export default function AddInventoryModal({ isOpen, onClose }: AddInventoryModal
                         <X className="h-6 w-6" />
                     </button>
 
-                    <h2 className="text-xl font-bold text-brand-navy mb-4">Add Inventory Item</h2>
+                    <h2 className="text-xl font-bold text-brand-navy mb-1">Add / Restock Item</h2>
+                    <p className="text-xs text-gray-400 mb-4">
+                        Select an existing item to top-up its stock, or fill in new details to create a new entry.
+                    </p>
 
                     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                         {/* Category */}

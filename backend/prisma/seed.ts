@@ -1,29 +1,37 @@
 import { PrismaClient, InventoryCategory, UnitType } from '@prisma/client';
+import * as fs from 'fs';
+import * as path from 'path';
 
 const prisma = new PrismaClient();
 
-// Helper: create an inventory item + initial ADDITION transaction
+// Load fabric data from project root JSON
+const FABRIC_JSON: Record<string, Record<string, { group: string; colors: string[] }>> =
+    JSON.parse(fs.readFileSync(path.join(__dirname, '../fabrics_filtered_with_groups.json'), 'utf-8'));
+
+// Helper: create an inventory item + initial ADDITION transaction (for qty > 0)
 async function seedItem(
   category: InventoryCategory,
   itemName: string,
   colorVariant: string | null,
   quantity: number,
-  minStockAlert: number,
+  minStockAlert: number | null,
   price: number,
   unitType: UnitType = UnitType.UNITS
 ) {
   const item = await prisma.inventoryItem.create({
     data: { category, itemName, colorVariant, quantity, unitType, minStockAlert, price },
   });
-  await prisma.inventoryTransaction.create({
-    data: {
-      inventoryItemId: item.id,
-      transactionType: 'ADDITION',
-      quantityChange: quantity,
-      newBalance: quantity,
-      notes: 'Initial stock - Database seed',
-    },
-  });
+  if (quantity > 0) {
+    await prisma.inventoryTransaction.create({
+      data: {
+        inventoryItemId: item.id,
+        transactionType: 'ADDITION',
+        quantityChange: quantity,
+        newBalance: quantity,
+        notes: 'Initial stock - Database seed',
+      },
+    });
+  }
   const label = colorVariant ? `${itemName} (${colorVariant})` : itemName;
   console.log(`  ✓ ${label}: ${quantity} ${unitType === 'MM' ? 'mm' : 'units'}`);
 }
@@ -31,30 +39,54 @@ async function seedItem(
 async function main() {
   console.log('🌱 Starting database seed...\n');
 
-  // Clear existing non-fabric inventory (fabric rows managed separately)
-  console.log('🗑️  Clearing existing non-fabric inventory...');
-  const nonFabricItems = await prisma.inventoryItem.findMany({
-    where: { category: { not: InventoryCategory.FABRIC } },
-    select: { id: true },
-  });
-  if (nonFabricItems.length > 0) {
-    await prisma.inventoryTransaction.deleteMany({
-      where: { inventoryItemId: { in: nonFabricItems.map(i => i.id) } },
-    });
-    await prisma.inventoryItem.deleteMany({
-      where: { category: { not: InventoryCategory.FABRIC } },
-    });
-  }
+  // Clear ALL inventory and transactions
+  console.log('🗑️  Clearing all inventory...');
+  await prisma.inventoryTransaction.deleteMany({});
+  await prisma.inventoryItem.deleteMany({});
   console.log('✅ Cleared\n');
 
   // ============================================================================
+  // FABRICS — batch seeded from fabrics_filtered_with_groups.json, qty = 0
+  // Admin sets actual stock levels after deployment using Adjust Stock
+  // itemName = "Brand - FabricType",  colorVariant = "Colour"
+  // ============================================================================
+  console.log('📦 Seeding Fabrics (all variants, qty=0)...');
+  const fabricRows: {
+    category: InventoryCategory;
+    itemName: string;
+    colorVariant: string;
+    quantity: number;
+    unitType: UnitType;
+    minStockAlert: null;
+    price: number;
+  }[] = [];
+
+  for (const [brand, types] of Object.entries(FABRIC_JSON)) {
+    for (const [type, { colors }] of Object.entries(types)) {
+      const itemName = `${brand} - ${type}`;
+      for (const colour of colors) {
+        fabricRows.push({
+          category: InventoryCategory.FABRIC,
+          itemName,
+          colorVariant: colour,
+          quantity: 0,
+          unitType: UnitType.MM,
+          minStockAlert: null,
+          price: 0,
+        });
+      }
+    }
+  }
+
+  const { count: fabricCount } = await prisma.inventoryItem.createMany({ data: fabricRows });
+  console.log(`  ✓ ${fabricCount} fabric variants seeded (qty=0)\n`);
+
+  // ============================================================================
   // BOTTOM BARS  (D30 / Oval  ×  White / Black / Dune / Bone / Anodised)
-  // itemName = rail type,  colorVariant = colour
   // ============================================================================
   console.log('📦 Seeding Bottom Bars...');
-  const barTypes   = ['D30', 'Oval'];
   const barColours = ['White', 'Black', 'Dune', 'Bone', 'Anodised'];
-  for (const type of barTypes) {
+  for (const type of ['D30', 'Oval']) {
     for (const colour of barColours) {
       await seedItem(InventoryCategory.BOTTOM_BAR, type, colour, 50, 10, 12.00);
     }
@@ -82,6 +114,7 @@ async function main() {
   // ACMEDA  (winder + idler + clutch + 4 bracket types × White/Black)
   // ============================================================================
   console.log('\n📦 Seeding Acmeda...');
+  const bracketColours = ['White', 'Black'];
   await seedItem(InventoryCategory.ACMEDA, 'Acmeda winder-29mm', null, 20, 5,  45.00);
   await seedItem(InventoryCategory.ACMEDA, 'Acmeda Idler',        null, 100, 20, 8.00);
   await seedItem(InventoryCategory.ACMEDA, 'Acmeda Clutch',       null, 100, 20, 8.00);
@@ -92,7 +125,6 @@ async function main() {
     'Acmeda Dual Bracket set Left',
     'Acmeda Dual Bracket set Right',
   ];
-  const bracketColours = ['White', 'Black'];
   for (const type of acmedaBrackets) {
     for (const colour of bracketColours) {
       const price = type.includes('Extended') ? 22.00 : type.includes('Dual') ? 28.00 : 18.00;
@@ -119,7 +151,7 @@ async function main() {
   }
 
   // ============================================================================
-  // MOTORS  (Automate / Alpha motors + generic brackets for these motors)
+  // MOTORS  (Automate / Alpha — no brackets)
   // ============================================================================
   console.log('\n📦 Seeding Motors...');
   const motors = [
@@ -145,14 +177,8 @@ async function main() {
   await seedItem(InventoryCategory.ACCESSORY, 'Safety lock', null, 200, 30, 2.00);
 
   // ============================================================================
-  // SUMMARY
+  // PRICING MATRIX
   // ============================================================================
-  console.log('\n✨ Inventory seed completed!\n');
-
-  const totalItems = await prisma.inventoryItem.count();
-  const totalTransactions = await prisma.inventoryTransaction.count();
-
-  // ─── PRICING MATRIX SEED ───────────────────────────────────
   console.log('\n💰 Seeding Pricing Matrix...');
 
   const PRICING_DATA: Record<number, Record<number, Record<number, number>>> = {
@@ -219,17 +245,16 @@ async function main() {
       }
     }
   }
-  console.log(`✅ Pricing Matrix seeded: ${pricingCount} entries (3 groups × 13 widths × 10 drops)`);
+  console.log(`✅ Pricing Matrix: ${pricingCount} entries (3 groups × 13 widths × 10 drops)`);
 
-  // Count by category
-  const categoryCount = await prisma.inventoryItem.groupBy({
-    by: ['category'],
-    _count: true,
-  });
+  // ============================================================================
+  // SUMMARY
+  // ============================================================================
+  const totalItems = await prisma.inventoryItem.count();
+  const categoryCount = await prisma.inventoryItem.groupBy({ by: ['category'], _count: true });
 
-  console.log('📊 Summary:');
+  console.log('\n✨ Seed completed!');
   console.log(`   Total Items: ${totalItems}`);
-  console.log(`   Total Transactions: ${totalTransactions}`);
   console.log('\n   By Category:');
   categoryCount.forEach(cat => {
     console.log(`     ${cat.category}: ${cat._count} items`);

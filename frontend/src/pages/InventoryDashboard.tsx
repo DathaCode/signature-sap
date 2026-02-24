@@ -1,9 +1,9 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
     Search, Filter, Plus, AlertTriangle,
     Package, Layers, Link2, Settings,
-    History, Edit2, ShieldCheck
+    History, Edit2, ShieldCheck, X
 } from 'lucide-react'
 import { inventoryApi } from '../services/api'
 import AddInventoryModal from '../components/inventory/AddInventoryModal'
@@ -34,25 +34,15 @@ const TABS: TabDef[] = [
 ]
 
 const CATEGORY_LABELS: Record<string, string> = {
-    FABRIC:          'Fabric',
-    BOTTOM_BAR:      'Bottom Bar',
-    BOTTOM_BAR_CLIP: 'BB Clip',
-    CHAIN:           'Chain',
-    ACMEDA:          'Acmeda',
-    TBS:             'TBS',
-    MOTOR:           'Motor',
-    ACCESSORY:       'Accessory',
+    FABRIC: 'Fabric', BOTTOM_BAR: 'Bottom Bar', BOTTOM_BAR_CLIP: 'BB Clip',
+    CHAIN: 'Chain', ACMEDA: 'Acmeda', TBS: 'TBS', MOTOR: 'Motor', ACCESSORY: 'Accessory',
 }
 
 const BADGE_COLORS: Record<string, string> = {
-    FABRIC:          'bg-blue-100 text-blue-700',
-    BOTTOM_BAR:      'bg-amber-100 text-amber-700',
-    BOTTOM_BAR_CLIP: 'bg-orange-100 text-orange-700',
-    CHAIN:           'bg-teal-100 text-teal-700',
-    ACMEDA:          'bg-purple-100 text-purple-700',
-    TBS:             'bg-indigo-100 text-indigo-700',
-    MOTOR:           'bg-green-100 text-green-700',
-    ACCESSORY:       'bg-red-100 text-red-700',
+    FABRIC: 'bg-blue-100 text-blue-700', BOTTOM_BAR: 'bg-amber-100 text-amber-700',
+    BOTTOM_BAR_CLIP: 'bg-orange-100 text-orange-700', CHAIN: 'bg-teal-100 text-teal-700',
+    ACMEDA: 'bg-purple-100 text-purple-700', TBS: 'bg-indigo-100 text-indigo-700',
+    MOTOR: 'bg-green-100 text-green-700', ACCESSORY: 'bg-red-100 text-red-700',
 }
 
 interface ItemGroup {
@@ -71,8 +61,21 @@ export default function InventoryDashboard() {
     const [adjustModalOpen, setAdjustModalOpen] = useState(false)
     const [historyModalOpen, setHistoryModalOpen] = useState(false)
 
-    // Track which colour variant is selected per item group (key = itemName)
+    // Colour variant selected per group (key = "category::itemName")
     const [selectedVariantIds, setSelectedVariantIds] = useState<Record<string, string>>({})
+
+    // Filters
+    const [filterBrand, setFilterBrand]   = useState('')
+    const [filterType,  setFilterType]    = useState('')
+    const [filterColour, setFilterColour] = useState('')
+
+    // Reset filters when tab changes
+    useEffect(() => {
+        setFilterBrand('')
+        setFilterType('')
+        setFilterColour('')
+        setSearch('')
+    }, [activeTab])
 
     const { data: items = [], isLoading } = useQuery({
         queryKey: ['inventory', activeTab, search],
@@ -82,26 +85,75 @@ export default function InventoryDashboard() {
         }),
     })
 
-    const filteredItems = useMemo(() =>
-        items.filter(item => !showLowStock || item.isLowStock),
-        [items, showLowStock]
-    )
+    // ── Compute filter options from fetched items ──────────────────────────────
 
-    // Group items by (category + itemName) so colour variants collapse into one row
+    const brandOptions = useMemo(() => {
+        if (activeTab !== 'FABRIC') return []
+        return [...new Set(items.map(i => i.itemName.split(' - ')[0]).filter(Boolean))].sort()
+    }, [items, activeTab])
+
+    const typeOptions = useMemo(() => {
+        if (activeTab === 'FABRIC') {
+            const src = filterBrand
+                ? items.filter(i => i.itemName.startsWith(filterBrand + ' - '))
+                : items
+            return [...new Set(src.map(i => i.itemName.split(' - ').slice(1).join(' - ')).filter(Boolean))].sort()
+        }
+        if (activeTab === 'ALL') return []
+        return [...new Set(items.map(i => i.itemName))].sort()
+    }, [items, activeTab, filterBrand])
+
+    const colourOptions = useMemo(() => {
+        let src = items
+        if (activeTab === 'FABRIC') {
+            if (filterBrand) src = src.filter(i => i.itemName.startsWith(filterBrand + ' - '))
+            if (filterType)  src = src.filter(i => i.itemName === `${filterBrand} - ${filterType}` ||
+                (!filterBrand && i.itemName.split(' - ').slice(1).join(' - ') === filterType))
+        } else if (filterType) {
+            src = src.filter(i => i.itemName === filterType)
+        }
+        return [...new Set(src.map(i => i.colorVariant).filter(Boolean) as string[])].sort()
+    }, [items, activeTab, filterBrand, filterType])
+
+    const hasFilters = !!(filterBrand || filterType || filterColour)
+
+    // ── Build grouped items ────────────────────────────────────────────────────
+
     const groupedItems = useMemo<ItemGroup[]>(() => {
+        const src = showLowStock ? items.filter(i => i.isLowStock) : items
         const groups: Record<string, ItemGroup> = {}
-        for (const item of filteredItems) {
+        for (const item of src) {
             const key = `${item.category}::${item.itemName}`
-            if (!groups[key]) {
-                groups[key] = { name: item.itemName, category: item.category, variants: [] }
-            }
+            if (!groups[key]) groups[key] = { name: item.itemName, category: item.category, variants: [] }
             groups[key].variants.push(item)
         }
         return Object.values(groups)
-    }, [filteredItems])
+    }, [items, showLowStock])
 
-    // Get the currently selected InventoryItem for a group
+    // Apply filters to grouped items
+    const filteredGroups = useMemo(() => {
+        return groupedItems.filter(group => {
+            if (activeTab === 'FABRIC') {
+                const parts = group.name.split(' - ')
+                const brand = parts[0]
+                const type  = parts.slice(1).join(' - ')
+                if (filterBrand && brand !== filterBrand) return false
+                if (filterType  && type  !== filterType)  return false
+            } else {
+                if (filterType && group.name !== filterType) return false
+            }
+            if (filterColour && !group.variants.some(v => v.colorVariant === filterColour)) return false
+            return true
+        })
+    }, [groupedItems, filterBrand, filterType, filterColour, activeTab])
+
+    // ── Get selected variant for a group ──────────────────────────────────────
     function getSelected(group: ItemGroup): InventoryItem {
+        // Colour filter overrides manual selection
+        if (filterColour) {
+            const match = group.variants.find(v => v.colorVariant === filterColour)
+            if (match) return match
+        }
         const selectedId = selectedVariantIds[`${group.category}::${group.name}`]
         return group.variants.find(v => v.id === selectedId) ?? group.variants[0]
     }
@@ -115,17 +167,11 @@ export default function InventoryDashboard() {
 
     const lowStockCount = items.filter(i => i.isLowStock).length
 
-    const handleAdjust = (item: InventoryItem) => {
-        setSelectedItem(item)
-        setAdjustModalOpen(true)
-    }
-
-    const handleHistory = (item: InventoryItem) => {
-        setSelectedItem(item)
-        setHistoryModalOpen(true)
-    }
+    const handleAdjust  = (item: InventoryItem) => { setSelectedItem(item); setAdjustModalOpen(true) }
+    const handleHistory = (item: InventoryItem) => { setSelectedItem(item); setHistoryModalOpen(true) }
 
     const activeTabDef = TABS.find(t => t.id === activeTab)!
+    const showFilterBar = activeTab !== 'ALL' && (brandOptions.length > 0 || typeOptions.length > 1 || colourOptions.length > 1)
 
     return (
         <div className="space-y-6">
@@ -160,7 +206,8 @@ export default function InventoryDashboard() {
                     <div className="bg-brand-gold bg-opacity-10 p-3 rounded-full mb-2">
                         <Plus className="h-6 w-6 text-brand-gold" />
                     </div>
-                    <span className="font-medium text-brand-navy">Add New Item</span>
+                    <span className="font-medium text-brand-navy">Add / Restock Item</span>
+                    <span className="text-xs text-gray-400 mt-0.5">New item or top-up existing stock</span>
                 </div>
             </div>
 
@@ -224,6 +271,84 @@ export default function InventoryDashboard() {
                     </button>
                 </div>
 
+                {/* ── Filter Bar ── */}
+                {showFilterBar && (
+                    <div className="px-4 py-3 border-b border-gray-100 bg-blue-50/40 flex flex-wrap gap-2 items-center">
+                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide mr-1">Filter:</span>
+
+                        {/* Brand filter (FABRIC only) */}
+                        {activeTab === 'FABRIC' && brandOptions.length > 0 && (
+                            <select
+                                value={filterBrand}
+                                onChange={e => { setFilterBrand(e.target.value); setFilterType(''); setFilterColour('') }}
+                                className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-brand-navy"
+                            >
+                                <option value="">All Brands</option>
+                                {brandOptions.map(b => <option key={b} value={b}>{b}</option>)}
+                            </select>
+                        )}
+
+                        {/* Type filter */}
+                        {typeOptions.length > 1 && (
+                            <select
+                                value={filterType}
+                                onChange={e => { setFilterType(e.target.value); setFilterColour('') }}
+                                className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-brand-navy"
+                            >
+                                <option value="">
+                                    {activeTab === 'FABRIC' ? 'All Types' : 'All Items'}
+                                </option>
+                                {typeOptions.map(t => <option key={t} value={t}>{t}</option>)}
+                            </select>
+                        )}
+
+                        {/* Colour filter */}
+                        {colourOptions.length > 0 && (
+                            <select
+                                value={filterColour}
+                                onChange={e => setFilterColour(e.target.value)}
+                                className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-brand-navy"
+                            >
+                                <option value="">All Colours</option>
+                                {colourOptions.map(c => (
+                                    <option key={c} value={c}>{c}</option>
+                                ))}
+                            </select>
+                        )}
+
+                        {/* Active filter chips */}
+                        {hasFilters && (
+                            <div className="flex items-center gap-1.5 ml-1 flex-wrap">
+                                {filterBrand && (
+                                    <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-700 text-xs rounded-full px-2.5 py-1">
+                                        {filterBrand}
+                                        <button onClick={() => { setFilterBrand(''); setFilterType(''); setFilterColour('') }}><X className="h-3 w-3" /></button>
+                                    </span>
+                                )}
+                                {filterType && (
+                                    <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-700 text-xs rounded-full px-2.5 py-1">
+                                        {filterType}
+                                        <button onClick={() => { setFilterType(''); setFilterColour('') }}><X className="h-3 w-3" /></button>
+                                    </span>
+                                )}
+                                {filterColour && (
+                                    <span className="inline-flex items-center gap-1.5 bg-blue-100 text-blue-700 text-xs rounded-full px-2.5 py-1">
+                                        <span className="w-2.5 h-2.5 rounded-full border border-blue-300" style={{ backgroundColor: getColorHex(filterColour) }} />
+                                        {filterColour}
+                                        <button onClick={() => setFilterColour('')}><X className="h-3 w-3" /></button>
+                                    </span>
+                                )}
+                                <button
+                                    onClick={() => { setFilterBrand(''); setFilterType(''); setFilterColour('') }}
+                                    className="text-xs text-gray-400 hover:text-gray-600 ml-1"
+                                >
+                                    Clear all
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                )}
+
                 {/* Table */}
                 <div className="overflow-x-auto">
                     <table className="table w-full">
@@ -248,22 +373,23 @@ export default function InventoryDashboard() {
                                         <p className="text-gray-500 text-sm">Loading inventory...</p>
                                     </td>
                                 </tr>
-                            ) : groupedItems.length === 0 ? (
+                            ) : filteredGroups.length === 0 ? (
                                 <tr>
                                     <td colSpan={7} className="text-center py-12 text-gray-400 text-sm">
-                                        {showLowStock ? 'No low-stock items in this category' : 'No items found'}
+                                        {hasFilters ? 'No items match the selected filters' :
+                                         showLowStock ? 'No low-stock items' : 'No items found'}
                                     </td>
                                 </tr>
                             ) : (
-                                groupedItems.map(group => {
-                                    const selected = getSelected(group)
-                                    const hasVariants = group.variants.length > 1
-                                    const hasAnyLowStock = group.variants.some(v => v.isLowStock)
+                                filteredGroups.map(group => {
+                                    const selected     = getSelected(group)
+                                    const hasVariants  = group.variants.length > 1
+                                    const anyLowStock  = group.variants.some(v => v.isLowStock)
 
                                     return (
                                         <tr
                                             key={`${group.category}::${group.name}`}
-                                            className={`hover:bg-gray-50 group transition-colors ${hasAnyLowStock ? 'bg-yellow-50/40' : ''}`}
+                                            className={`hover:bg-gray-50 group transition-colors ${anyLowStock ? 'bg-yellow-50/30' : ''}`}
                                         >
                                             {/* Item name */}
                                             <td className="py-3 px-4">
@@ -279,7 +405,7 @@ export default function InventoryDashboard() {
                                                 </td>
                                             )}
 
-                                            {/* Colour — dropdown if multiple variants, plain text if single */}
+                                            {/* Colour — dropdown if multiple variants */}
                                             <td className="py-3 px-4">
                                                 {hasVariants ? (
                                                     <div className="flex items-center gap-1.5">
@@ -295,6 +421,7 @@ export default function InventoryDashboard() {
                                                             {group.variants.map(v => (
                                                                 <option key={v.id} value={v.id}>
                                                                     {v.colorVariant || '—'}
+                                                                    {v.isLowStock ? ' ⚠' : ''}
                                                                 </option>
                                                             ))}
                                                         </select>
@@ -314,7 +441,7 @@ export default function InventoryDashboard() {
 
                                             {/* Stock quantity */}
                                             <td className="py-3 px-4 text-right">
-                                                <span className={`font-mono font-semibold text-sm ${selected.isLowStock ? 'text-red-600' : 'text-gray-900'}`}>
+                                                <span className={`font-mono font-semibold text-sm ${selected.isLowStock ? 'text-red-600' : selected.quantity === 0 ? 'text-gray-400' : 'text-gray-900'}`}>
                                                     {Number(selected.quantity).toLocaleString()}
                                                 </span>
                                                 <span className="text-xs text-gray-400 ml-1 uppercase">
@@ -333,7 +460,7 @@ export default function InventoryDashboard() {
                                             <td className="py-3 px-4 text-center">
                                                 {selected.quantity === 0 ? (
                                                     <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-500">
-                                                        Out of Stock
+                                                        No Stock
                                                     </span>
                                                 ) : selected.isLowStock ? (
                                                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-700">
@@ -376,8 +503,9 @@ export default function InventoryDashboard() {
                 {/* Footer */}
                 <div className="px-4 py-3 border-t border-gray-100 bg-gray-50 text-sm text-gray-500 flex justify-between items-center">
                     <span>
-                        {groupedItems.length} item{groupedItems.length !== 1 ? 's' : ''}
-                        {showLowStock && ' (low stock only)'}
+                        {filteredGroups.length} item{filteredGroups.length !== 1 ? 's' : ''}
+                        {hasFilters && ` (filtered)`}
+                        {showLowStock && ' · low stock only'}
                     </span>
                     {lowStockCount > 0 && (
                         <span className="flex items-center gap-1 text-yellow-600 font-medium">
@@ -411,14 +539,8 @@ export default function InventoryDashboard() {
 
 function getColorHex(colour: string): string {
     const map: Record<string, string> = {
-        white:      '#ffffff',
-        black:      '#1a1a1a',
-        dune:       '#c2a97b',
-        bone:       '#e8dcc8',
-        anodised:   '#b0b8c0',
-        sandstone:  '#d4b48a',
-        silver:     '#c0c0c0',
-        grey:       '#808080',
+        white: '#ffffff', black: '#1a1a1a', dune: '#c2a97b', bone: '#e8dcc8',
+        anodised: '#b0b8c0', sandstone: '#d4b48a', silver: '#c0c0c0', grey: '#808080',
     }
     return map[colour.toLowerCase()] || '#e5e7eb'
 }

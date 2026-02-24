@@ -100,7 +100,9 @@ export class InventoryService {
     }
 
     /**
-     * Add new inventory item
+     * Add inventory item.
+     * If item already exists (same category + itemName + colorVariant), adds to its quantity.
+     * If new, creates the item.
      */
     static async addInventoryItem(data: {
         category: InventoryCategory;
@@ -110,7 +112,6 @@ export class InventoryService {
         unitType: UnitType;
         minStockAlert?: number;
     }) {
-        // Check for duplicate
         const existing = await prisma.inventoryItem.findFirst({
             where: {
                 category: data.category,
@@ -120,9 +121,29 @@ export class InventoryService {
         });
 
         if (existing) {
-            throw new AppError(400, 'Inventory item already exists with this name and color variant');
+            // Item exists — add to its quantity (e.g. restocking a pre-seeded fabric)
+            const newBalance = existing.quantity.toNumber() + data.quantity;
+            await prisma.inventoryItem.update({
+                where: { id: existing.id },
+                data: {
+                    quantity: newBalance,
+                    ...(data.minStockAlert !== undefined && { minStockAlert: data.minStockAlert }),
+                },
+            });
+            await prisma.inventoryTransaction.create({
+                data: {
+                    inventoryItemId: existing.id,
+                    transactionType: 'ADDITION',
+                    quantityChange: data.quantity,
+                    newBalance,
+                    notes: 'Stock added via inventory form',
+                },
+            });
+            logger.info(`Inventory item restocked: ${existing.id} (+${data.quantity})`);
+            return prisma.inventoryItem.findUnique({ where: { id: existing.id } });
         }
 
+        // New item
         const item = await prisma.inventoryItem.create({
             data: {
                 category: data.category,
@@ -134,7 +155,6 @@ export class InventoryService {
             },
         });
 
-        // Create transaction record
         await prisma.inventoryTransaction.create({
             data: {
                 inventoryItemId: item.id,
