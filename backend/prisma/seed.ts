@@ -4,9 +4,13 @@ import * as path from 'path';
 
 const prisma = new PrismaClient();
 
-// Load fabric data from JSON (copied into backend/ for Docker access)
+// Load fabric data from JSON (lives at backend/fabrics_filtered_with_groups.json)
+// In dev (tsx): __dirname = /app/prisma  →  ../ = /app
+// In prod (compiled): __dirname = /app/dist/prisma  →  need ../../
+// Use process.cwd() which is always /app inside Docker
+const FABRIC_JSON_PATH = path.join(process.cwd(), 'fabrics_filtered_with_groups.json');
 const FABRIC_JSON: Record<string, Record<string, { group: string; colors: string[] }>> =
-    JSON.parse(fs.readFileSync(path.join(__dirname, '../fabrics_filtered_with_groups.json'), 'utf-8'));
+    JSON.parse(fs.readFileSync(FABRIC_JSON_PATH, 'utf-8'));
 
 // Helper: create an inventory item + initial ADDITION transaction (only if qty > 0)
 async function seedItem(
