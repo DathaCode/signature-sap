@@ -25,11 +25,11 @@ const TABS: TabDef[] = [
     { id: 'ALL',             label: 'All Items',   icon: Package,    description: '',                              badgeColor: 'bg-gray-100 text-gray-700'    },
     { id: 'FABRIC',          label: 'Fabrics',     icon: Layers,     description: 'Fabric rolls by material/type', badgeColor: 'bg-blue-100 text-blue-700'    },
     { id: 'BOTTOM_BAR',      label: 'Bottom Bars', icon: Link2,      description: 'D30 & Oval rails',              badgeColor: 'bg-amber-100 text-amber-700'  },
-    { id: 'BOTTOM_BAR_CLIP', label: 'BB Clips',    icon: Link2,      description: 'Left / Right clips',            badgeColor: 'bg-orange-100 text-orange-700'},
-    { id: 'CHAIN',           label: 'Chains',      icon: Link2,      description: '500–2000 mm lengths',           badgeColor: 'bg-teal-100 text-teal-700'    },
+    { id: 'BOTTOM_BAR_CLIP', label: 'BB Clips',    icon: Link2,      description: 'D30/Oval × Left/Right × 5 colours', badgeColor: 'bg-orange-100 text-orange-700'},
+    { id: 'CHAIN',           label: 'Chains',      icon: Link2,      description: '500–2000mm × Stainless/Plastic', badgeColor: 'bg-teal-100 text-teal-700'    },
     { id: 'ACMEDA',          label: 'Acmeda',      icon: Settings,   description: 'Winder, idler, clutch, brackets', badgeColor: 'bg-purple-100 text-purple-700'},
     { id: 'TBS',             label: 'TBS',         icon: Settings,   description: 'Winder + brackets',             badgeColor: 'bg-indigo-100 text-indigo-700'},
-    { id: 'MOTOR',           label: 'Motors',      icon: Settings,   description: 'Automate & Alpha motors',       badgeColor: 'bg-green-100 text-green-700'  },
+    { id: 'MOTOR',           label: 'Motors',      icon: Settings,   description: 'Automate & Alpha motors + brackets', badgeColor: 'bg-green-100 text-green-700'  },
     { id: 'ACCESSORY',       label: 'Accessories', icon: ShieldCheck,description: 'Stop bolt, safety lock',        badgeColor: 'bg-red-100 text-red-700'      },
 ]
 

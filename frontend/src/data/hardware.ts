@@ -30,8 +30,8 @@ export const FIXING_TYPES = ['Face', 'Recess'];
 // Bracket types
 export const BRACKET_TYPES = ['Single', 'Single Extension', 'Dual Left', 'Dual Right'];
 
-// Bracket colors
-export const BRACKET_COLOURS = ['White', 'Black', 'Bone', 'Dune'];
+// Bracket colors (Acmeda/TBS have 5 colours; motors use White/Black only)
+export const BRACKET_COLOURS = ['White', 'Black', 'Dune', 'Bone', 'Anodised'];
 
 // Chain types (conditional - only for winders)
 export const CHAIN_TYPES = ['Stainless Steel', 'Plastic Pure White'];

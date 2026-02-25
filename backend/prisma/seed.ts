@@ -4,11 +4,11 @@ import * as path from 'path';
 
 const prisma = new PrismaClient();
 
-// Load fabric data from project root JSON
+// Load fabric data from JSON (copied into backend/ for Docker access)
 const FABRIC_JSON: Record<string, Record<string, { group: string; colors: string[] }>> =
     JSON.parse(fs.readFileSync(path.join(__dirname, '../fabrics_filtered_with_groups.json'), 'utf-8'));
 
-// Helper: create an inventory item + initial ADDITION transaction (for qty > 0)
+// Helper: create an inventory item + initial ADDITION transaction (only if qty > 0)
 async function seedItem(
   category: InventoryCategory,
   itemName: string,
@@ -39,26 +39,20 @@ async function seedItem(
 async function main() {
   console.log('🌱 Starting database seed...\n');
 
-  // Clear ALL inventory and transactions
+  // Clear ALL inventory
   console.log('🗑️  Clearing all inventory...');
   await prisma.inventoryTransaction.deleteMany({});
   await prisma.inventoryItem.deleteMany({});
   console.log('✅ Cleared\n');
 
   // ============================================================================
-  // FABRICS — batch seeded from fabrics_filtered_with_groups.json, qty = 0
-  // Admin sets actual stock levels after deployment using Adjust Stock
+  // FABRICS — from fabrics_filtered_with_groups.json (qty=0, admin sets stock)
   // itemName = "Brand - FabricType",  colorVariant = "Colour"
   // ============================================================================
   console.log('📦 Seeding Fabrics (all variants, qty=0)...');
   const fabricRows: {
-    category: InventoryCategory;
-    itemName: string;
-    colorVariant: string;
-    quantity: number;
-    unitType: UnitType;
-    minStockAlert: null;
-    price: number;
+    category: InventoryCategory; itemName: string; colorVariant: string;
+    quantity: number; unitType: UnitType; minStockAlert: null; price: number;
   }[] = [];
 
   for (const [brand, types] of Object.entries(FABRIC_JSON)) {
@@ -66,18 +60,12 @@ async function main() {
       const itemName = `${brand} - ${type}`;
       for (const colour of colors) {
         fabricRows.push({
-          category: InventoryCategory.FABRIC,
-          itemName,
-          colorVariant: colour,
-          quantity: 0,
-          unitType: UnitType.MM,
-          minStockAlert: null,
-          price: 0,
+          category: InventoryCategory.FABRIC, itemName, colorVariant: colour,
+          quantity: 0, unitType: UnitType.MM, minStockAlert: null, price: 0,
         });
       }
     }
   }
-
   const { count: fabricCount } = await prisma.inventoryItem.createMany({ data: fabricRows });
   console.log(`  ✓ ${fabricCount} fabric variants seeded (qty=0)\n`);
 
@@ -85,36 +73,52 @@ async function main() {
   // BOTTOM BARS  (D30 / Oval  ×  White / Black / Dune / Bone / Anodised)
   // ============================================================================
   console.log('📦 Seeding Bottom Bars...');
-  const barColours = ['White', 'Black', 'Dune', 'Bone', 'Anodised'];
+  const BAR_COLOURS = ['White', 'Black', 'Dune', 'Bone', 'Anodised'];
   for (const type of ['D30', 'Oval']) {
-    for (const colour of barColours) {
+    for (const colour of BAR_COLOURS) {
       await seedItem(InventoryCategory.BOTTOM_BAR, type, colour, 50, 10, 12.00);
     }
   }
 
   // ============================================================================
-  // BOTTOM BAR CLIPS  (Left / Right – no colour split)
+  // BOTTOM BAR CLIPS  (D30/Oval × Left/Right × 5 colours)
+  // Deduction picks clip matching order's bottomRailType + bottomRailColour
   // ============================================================================
   console.log('\n📦 Seeding Bottom Bar Clips...');
-  await seedItem(InventoryCategory.BOTTOM_BAR_CLIP, 'Left Clip',  null, 200, 30, 3.50);
-  await seedItem(InventoryCategory.BOTTOM_BAR_CLIP, 'Right Clip', null, 200, 30, 3.50);
-
-  // ============================================================================
-  // CHAINS  (5 lengths selected by blind drop)
-  // Drop ≤850 → 500  |  ≤1200 → 900  |  ≤1600 → 1200  |  ≤2200 → 1500  |  >2200 → 2000
-  // ============================================================================
-  console.log('\n📦 Seeding Chains...');
-  const chainLengths = [500, 900, 1200, 1500, 2000];
-  for (const length of chainLengths) {
-    const price = length <= 900 ? 8.00 : length <= 1500 ? 10.00 : 12.00;
-    await seedItem(InventoryCategory.CHAIN, `Chain ${length}mm`, null, 100, 20, price);
+  for (const railType of ['D30', 'Oval']) {
+    for (const side of ['Left', 'Right']) {
+      for (const colour of BAR_COLOURS) {
+        await seedItem(
+          InventoryCategory.BOTTOM_BAR_CLIP,
+          `${railType} ${side} Clip`,
+          colour, 200, 30, 3.50
+        );
+      }
+    }
   }
 
   // ============================================================================
-  // ACMEDA  (winder + idler + clutch + 4 bracket types × White/Black)
+  // CHAINS  (5 lengths × 2 material types)
+  // Chain type: "Stainless Steel" | "Plastic Pure White"
+  // Length determined by blind drop
+  // ============================================================================
+  console.log('\n📦 Seeding Chains...');
+  const CHAIN_LENGTHS = [500, 900, 1200, 1500, 2000];
+  const CHAIN_TYPES   = ['Stainless Steel', 'Plastic Pure White'];
+  for (const length of CHAIN_LENGTHS) {
+    const price = length <= 900 ? 8.00 : length <= 1500 ? 10.00 : 12.00;
+    for (const type of CHAIN_TYPES) {
+      await seedItem(InventoryCategory.CHAIN, `Chain ${length}mm`, type, 100, 20, price);
+    }
+  }
+
+  // ============================================================================
+  // ACMEDA  (winder + idler + clutch + 4 bracket types × 5 colours)
+  // Bracket colours: White / Black / Dune / Bone / Anodised
   // ============================================================================
   console.log('\n📦 Seeding Acmeda...');
-  const bracketColours = ['White', 'Black'];
+  const BRACKET_COLOURS_5 = ['White', 'Black', 'Dune', 'Bone', 'Anodised'];
+
   await seedItem(InventoryCategory.ACMEDA, 'Acmeda winder-29mm', null, 20, 5,  45.00);
   await seedItem(InventoryCategory.ACMEDA, 'Acmeda Idler',        null, 100, 20, 8.00);
   await seedItem(InventoryCategory.ACMEDA, 'Acmeda Clutch',       null, 100, 20, 8.00);
@@ -126,14 +130,14 @@ async function main() {
     'Acmeda Dual Bracket set Right',
   ];
   for (const type of acmedaBrackets) {
-    for (const colour of bracketColours) {
+    for (const colour of BRACKET_COLOURS_5) {
       const price = type.includes('Extended') ? 22.00 : type.includes('Dual') ? 28.00 : 18.00;
       await seedItem(InventoryCategory.ACMEDA, type, colour, 30, 10, price);
     }
   }
 
   // ============================================================================
-  // TBS  (winder + 3 bracket types × White/Black – Extended not compatible)
+  // TBS  (winder + 3 bracket types × 5 colours — no Extended)
   // ============================================================================
   console.log('\n📦 Seeding TBS...');
   await seedItem(InventoryCategory.TBS, 'TBS winder-32mm', null, 15, 5, 48.00);
@@ -144,16 +148,19 @@ async function main() {
     'TBS Dual Bracket set Right',
   ];
   for (const type of tbsBrackets) {
-    for (const colour of bracketColours) {
+    for (const colour of BRACKET_COLOURS_5) {
       const price = type.includes('Dual') ? 28.00 : 18.00;
       await seedItem(InventoryCategory.TBS, type, colour, 30, 10, price);
     }
   }
 
   // ============================================================================
-  // MOTORS  (Automate / Alpha — no brackets)
+  // MOTORS  (9 Automate/Alpha motors + 4 bracket types × White/Black)
+  // Motor brackets only White/Black (unlike Acmeda/TBS which have 5 colours)
   // ============================================================================
   console.log('\n📦 Seeding Motors...');
+  const BRACKET_COLOURS_2 = ['White', 'Black'];
+
   const motors = [
     { name: 'Automate 1.1NM Li-Ion Quiet Motor', qty: 20, price: 120.00 },
     { name: 'Automate 0.7NM Li-Ion Quiet Motor', qty: 15, price: 110.00 },
@@ -167,6 +174,19 @@ async function main() {
   ];
   for (const m of motors) {
     await seedItem(InventoryCategory.MOTOR, m.name, null, m.qty, 5, m.price);
+  }
+
+  const motorBrackets = [
+    'Single Bracket set',
+    'Extended Bracket set',
+    'Dual Left Bracket set',
+    'Dual Right Bracket set',
+  ];
+  for (const type of motorBrackets) {
+    for (const colour of BRACKET_COLOURS_2) {
+      const price = type.includes('Extended') ? 22.00 : type.includes('Dual') ? 28.00 : 18.00;
+      await seedItem(InventoryCategory.MOTOR, type, colour, 30, 10, price);
+    }
   }
 
   // ============================================================================
@@ -245,28 +265,20 @@ async function main() {
       }
     }
   }
-  console.log(`✅ Pricing Matrix: ${pricingCount} entries (3 groups × 13 widths × 10 drops)`);
+  console.log(`✅ Pricing Matrix: ${pricingCount} entries\n`);
 
   // ============================================================================
   // SUMMARY
   // ============================================================================
   const totalItems = await prisma.inventoryItem.count();
   const categoryCount = await prisma.inventoryItem.groupBy({ by: ['category'], _count: true });
-
-  console.log('\n✨ Seed completed!');
+  console.log('✨ Seed completed!');
   console.log(`   Total Items: ${totalItems}`);
   console.log('\n   By Category:');
-  categoryCount.forEach(cat => {
-    console.log(`     ${cat.category}: ${cat._count} items`);
-  });
+  categoryCount.forEach(cat => console.log(`     ${cat.category}: ${cat._count} items`));
   console.log('');
 }
 
 main()
-  .catch((e) => {
-    console.error('❌ Seed failed:', e);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+  .catch((e) => { console.error('❌ Seed failed:', e); process.exit(1); })
+  .finally(async () => { await prisma.$disconnect(); });
