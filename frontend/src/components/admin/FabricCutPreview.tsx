@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Sheet, PlacedPanel } from '../../types/order';
+import { Sheet } from '../../types/order';
 
 interface FabricCutPreviewProps {
     fabricKey: string;
