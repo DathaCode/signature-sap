@@ -36,7 +36,7 @@ const DROP_ADDITION = 150;
  * Inventory chains: 500 / 900 / 1200 / 1500 / 2000 mm
  */
 function getChainSize(calcDrop: number): number {
-    if (calcDrop <= 850)  return 500;
+    if (calcDrop <= 850) return 500;
     if (calcDrop <= 1200) return 900;
     if (calcDrop <= 1600) return 1200;
     if (calcDrop <= 2200) return 1500;
@@ -324,7 +324,7 @@ export class WorksheetExportService {
                 doc.text(`Panels: ${sheet.panels.length}`, sX, sY + 16);
                 doc.text(`Efficiency: ${(sheet.efficiency ?? 0).toFixed(1)}%`, sX, sY + 28);
                 doc.text(`Used: ${(sheet.usedArea / 1_000_000).toFixed(2)} m²`, sX, sY + 40);
-                doc.text(`Waste: ${((sheet.wastedArea ?? sheet.wasteArea ?? 0) / 1_000_000).toFixed(2)} m²`, sX, sY + 52);
+                doc.text(`Waste: ${((sheet.wastedArea ?? (sheet as any).wasteArea ?? 0) / 1_000_000).toFixed(2)} m²`, sX, sY + 52);
 
                 // — Legend —
                 const legendY = MARGIN_TOP + drawH + 10;

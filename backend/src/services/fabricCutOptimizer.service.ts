@@ -136,7 +136,7 @@ export class FabricCutOptimizerService {
     private preparePanels(orderItems: any[]): Panel[] {
         const panels: Panel[] = [];
 
-        orderItems.forEach((item, index) => {
+        orderItems.forEach((item) => {
             // Apply width deduction based on motor type
             const widthDeduction = this.getWidthDeduction(item.chainOrMotor || '');
             const fabricCutWidth = item.width - widthDeduction;

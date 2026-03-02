@@ -6,7 +6,7 @@ import { logger } from '../config/logger';
 import { z } from 'zod';
 import pricingService from '../services/pricing.service';
 import comprehensivePricingService from '../services/comprehensivePricing.service';
-import { CutlistOptimizer, PanelInput } from '../services/cutlistOptimizer.service';
+
 import { FabricCutOptimizerService } from '../services/fabricCutOptimizer.service';
 import { TubeCutOptimizer, TubeBlindInput } from '../services/tubeCutOptimizer.service';
 import { InventoryService } from '../services/inventory.service';
@@ -37,7 +37,7 @@ function getMotorDeduction(motorType: string | undefined): number {
  * Inventory chains: 500 / 900 / 1200 / 1500 / 2000 mm
  */
 function getChainLength(drop: number): number {
-    if (drop <= 850)  return 500;
+    if (drop <= 850) return 500;
     if (drop <= 1200) return 900;
     if (drop <= 1600) return 1200;
     if (drop <= 2200) return 1500;
@@ -50,20 +50,20 @@ function getChainLength(drop: number): number {
  */
 function getBracketItemName(brand: 'ACMEDA' | 'TBS' | 'MOTOR', bracketType: string): string {
     const map: Record<string, string> = {
-        'Single':           'Single Bracket set',
+        'Single': 'Single Bracket set',
         'Single Extension': 'Extended Bracket set',
-        'Dual Left':        'Dual Bracket set Left',
-        'Dual Right':       'Dual Bracket set Right',
+        'Dual Left': 'Dual Bracket set Left',
+        'Dual Right': 'Dual Bracket set Right',
     };
     const suffix = map[bracketType] ?? `${bracketType} Bracket set`;
     if (brand === 'ACMEDA') return `Acmeda ${suffix}`;
-    if (brand === 'TBS')    return `TBS ${suffix}`;
+    if (brand === 'TBS') return `TBS ${suffix}`;
     // MOTOR brackets: "Single Bracket set", "Extended Bracket set", "Dual Left Bracket set", "Dual Right Bracket set"
     const motorMap: Record<string, string> = {
-        'Single':           'Single Bracket set',
+        'Single': 'Single Bracket set',
         'Single Extension': 'Extended Bracket set',
-        'Dual Left':        'Dual Left Bracket set',
-        'Dual Right':       'Dual Right Bracket set',
+        'Dual Left': 'Dual Left Bracket set',
+        'Dual Right': 'Dual Right Bracket set',
     };
     return motorMap[bracketType] ?? `${bracketType} Bracket set`;
 }
@@ -84,15 +84,15 @@ function buildPerBlindHardware(item: any): { category: string; itemName: string;
     if (chainOrMotor === 'Acmeda winder-29mm') {
         // Acmeda winder + Idler + Clutch + bracket(5 colours) + chain(type) + 2 clips(rail type+colour) + stop bolt + safety lock
         results.push({ category: 'ACMEDA', itemName: 'Acmeda winder-29mm', qty: 1 });
-        results.push({ category: 'ACMEDA', itemName: 'Acmeda Idler',       qty: 1 });
-        results.push({ category: 'ACMEDA', itemName: 'Acmeda Clutch',      qty: 1 });
+        results.push({ category: 'ACMEDA', itemName: 'Acmeda Idler', qty: 1 });
+        results.push({ category: 'ACMEDA', itemName: 'Acmeda Clutch', qty: 1 });
         if (bracketType && bracketColour) {
             results.push({ category: 'ACMEDA', itemName: getBracketItemName('ACMEDA', bracketType), colorVariant: bracketColour, qty: 1 });
         }
         results.push({ category: 'CHAIN', itemName: `Chain ${getChainLength(drop)}mm`, colorVariant: chainType || undefined, qty: 1 });
-        results.push({ category: 'BOTTOM_BAR_CLIP', itemName: `${railType} Left Clip`,  colorVariant: railColour, qty: 1 });
+        results.push({ category: 'BOTTOM_BAR_CLIP', itemName: `${railType} Left Clip`, colorVariant: railColour, qty: 1 });
         results.push({ category: 'BOTTOM_BAR_CLIP', itemName: `${railType} Right Clip`, colorVariant: railColour, qty: 1 });
-        results.push({ category: 'ACCESSORY', itemName: 'Stop bolt',   qty: 1 });
+        results.push({ category: 'ACCESSORY', itemName: 'Stop bolt', qty: 1 });
         results.push({ category: 'ACCESSORY', itemName: 'Safety lock', qty: 1 });
 
     } else if (chainOrMotor === 'TBS winder-32mm') {
@@ -100,26 +100,26 @@ function buildPerBlindHardware(item: any): { category: string; itemName: string;
         // Exceptional: Dual Left/Right → also Acmeda Idler + Clutch
         results.push({ category: 'TBS', itemName: 'TBS winder-32mm', qty: 1 });
         if (bracketType === 'Dual Left' || bracketType === 'Dual Right') {
-            results.push({ category: 'ACMEDA', itemName: 'Acmeda Idler',  qty: 1 });
+            results.push({ category: 'ACMEDA', itemName: 'Acmeda Idler', qty: 1 });
             results.push({ category: 'ACMEDA', itemName: 'Acmeda Clutch', qty: 1 });
         }
         if (bracketType && bracketColour) {
             results.push({ category: 'TBS', itemName: getBracketItemName('TBS', bracketType), colorVariant: bracketColour, qty: 1 });
         }
         results.push({ category: 'CHAIN', itemName: `Chain ${getChainLength(drop)}mm`, colorVariant: chainType || undefined, qty: 1 });
-        results.push({ category: 'BOTTOM_BAR_CLIP', itemName: `${railType} Left Clip`,  colorVariant: railColour, qty: 1 });
+        results.push({ category: 'BOTTOM_BAR_CLIP', itemName: `${railType} Left Clip`, colorVariant: railColour, qty: 1 });
         results.push({ category: 'BOTTOM_BAR_CLIP', itemName: `${railType} Right Clip`, colorVariant: railColour, qty: 1 });
-        results.push({ category: 'ACCESSORY', itemName: 'Stop bolt',   qty: 1 });
+        results.push({ category: 'ACCESSORY', itemName: 'Stop bolt', qty: 1 });
         results.push({ category: 'ACCESSORY', itemName: 'Safety lock', qty: 1 });
 
     } else {
         // Automate / Alpha motor + Acmeda Idler + bracket(White/Black) + 2 clips(rail type+colour)
-        results.push({ category: 'MOTOR',  itemName: chainOrMotor,      qty: 1 });
-        results.push({ category: 'ACMEDA', itemName: 'Acmeda Idler',    qty: 1 });
+        results.push({ category: 'MOTOR', itemName: chainOrMotor, qty: 1 });
+        results.push({ category: 'ACMEDA', itemName: 'Acmeda Idler', qty: 1 });
         if (bracketType && bracketColour) {
             results.push({ category: 'MOTOR', itemName: getBracketItemName('MOTOR', bracketType), colorVariant: bracketColour, qty: 1 });
         }
-        results.push({ category: 'BOTTOM_BAR_CLIP', itemName: `${railType} Left Clip`,  colorVariant: railColour, qty: 1 });
+        results.push({ category: 'BOTTOM_BAR_CLIP', itemName: `${railType} Left Clip`, colorVariant: railColour, qty: 1 });
         results.push({ category: 'BOTTOM_BAR_CLIP', itemName: `${railType} Right Clip`, colorVariant: railColour, qty: 1 });
     }
 
