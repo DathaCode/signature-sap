@@ -15,6 +15,7 @@ import webOrderRoutes from './routes/webOrderRoutes';
 import pricingRoutes from './routes/pricingRoutes';
 import userRoutes from './routes/userRoutes';
 import quoteRoutes from './routes/quoteRoutes';
+import adminWorksheetRoutes from './routes/adminWorksheetRoutes';
 
 // Load environment variables
 dotenv.config();
@@ -72,6 +73,7 @@ app.use('/api/web-orders', webOrderRoutes);
 app.use('/api/pricing', pricingRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/quotes', quoteRoutes);
+app.use('/api/admin/worksheets', adminWorksheetRoutes);
 
 // ============================================================================
 // ERROR HANDLING

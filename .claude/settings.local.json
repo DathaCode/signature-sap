@@ -21,7 +21,8 @@
       "Bash(test:*)",
       "Bash(docker ps:*)",
       "Bash(docker.exe ps:*)",
-      "Bash(powershell:*)"
+      "Bash(powershell:*)",
+      "Bash(npx jest:*)"
     ]
   }
 }

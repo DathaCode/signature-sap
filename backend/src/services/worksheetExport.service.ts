@@ -173,9 +173,13 @@ export class WorksheetExportService {
     }
 
     /**
-     * Generate Fabric Cut PDF with Cutting Layout Visualization
-     * - Page 1: Visual layout (bigger scale, panel numbers, fixed label overlap)
-     * - Page 2+: Detailed table (new columns: Panel No, BR Colour, Chain Size)
+     * Generate Fabric Cut PDF with CutLogic-2D-style Cutting Layout
+     *
+     * Layout pages: coloured panels with dimensions, panel numbers, rotation
+     *               indicators (* suffix), cutting marks (red lines), waste
+     *               areas (diagonal stripes) — one page per sheet.
+     * Detail page:  12-column worksheet table.
+     * Stats page:   summary table per fabric group.
      */
     static generateFabricCutPDF(
         orderInfo: OrderInfo,
@@ -183,174 +187,209 @@ export class WorksheetExportService {
     ): any {
         const doc = new PDFDocument({ size: 'A4', layout: 'landscape', margin: 30 });
 
-        // ============================================================================
-        // PAGE 1: CUTTING LAYOUT VISUALIZATION
-        // ============================================================================
-        doc.fontSize(18).font('Helvetica-Bold').text('Fabric Cut Optimization Layout', { align: 'center' });
-        doc.fontSize(10).font('Helvetica')
-            .text(`Order: ${orderInfo.orderNumber}  |  Customer: ${orderInfo.customerName}  |  Date: ${orderInfo.orderDate.toISOString().split('T')[0]}`, { align: 'center' });
-        doc.moveDown(0.5);
+        // Pastel colours cycled per panel (matches CutLogic 2D palette)
+        const PANEL_COLORS = [
+            '#BAE1FF', '#FFB3BA', '#BAFFC9', '#FFFFBA',
+            '#FFD4BA', '#E0BBE4', '#FFDFD3', '#C7CEEA',
+        ];
 
-        const fabricColors = ['#E6F3FF', '#FFE6E6', '#E6FFE6', '#FFFFE6', '#FFE6FF', '#E6FFF3'];
-        let fabricIndex = 0;
-        let globalPanelNo = 0;
+        // ====================================================================
+        // LAYOUT PAGES — one per sheet, CutLogic 2D style
+        // ====================================================================
+        let isFirstPage = true;
 
         for (const [fabricKey, groupData] of Object.entries(fabricCutData)) {
-            const color = fabricColors[fabricIndex % fabricColors.length];
-            fabricIndex++;
+            const stats = groupData.optimization.statistics;
+            let localPanelNo = 0;
 
-            // Fabric group title
-            doc.fontSize(12).font('Helvetica-Bold')
-                .fillColor('#000000')
-                .text(`Fabric: ${fabricKey}`, { underline: true });
-            doc.moveDown(0.5);
-
-            // Draw each sheet
             for (const sheet of groupData.optimization.sheets) {
-                // Check if we need a new page
-                if (doc.y > 350) {
-                    doc.addPage();
-                    doc.fontSize(12).font('Helvetica-Bold').text(`Fabric: ${fabricKey} (continued)`, { underline: true });
-                    doc.moveDown(0.5);
+                if (!isFirstPage) doc.addPage();
+                isFirstPage = false;
+
+                // — Header bar —
+                doc.fontSize(14).font('Helvetica-Bold').fillColor('#1B2B3A')
+                    .text('Fabric Cut Optimization Layout', 30, 25, { align: 'center' });
+                doc.fontSize(9).font('Helvetica').fillColor('#555')
+                    .text(
+                        `Order: ${orderInfo.orderNumber}  |  Customer: ${orderInfo.customerName}  |  ` +
+                        `Date: ${orderInfo.orderDate.toISOString().split('T')[0]}`,
+                        30, 42, { align: 'center' }
+                    );
+
+                // — Fabric & sheet title —
+                doc.fontSize(11).font('Helvetica-Bold').fillColor('#000')
+                    .text(`Fabric: ${fabricKey}`, 30, 60);
+
+                const actualLen = sheet.length || (sheet as any).actualUsedLength ||
+                    Math.max(...sheet.panels.map((p: any) => p.y + p.length), 1);
+
+                doc.fontSize(9).font('Helvetica').fillColor('#333')
+                    .text(
+                        `Layout ${sheet.id}  -  ${sheet.width.toLocaleString()} mm × ${Math.round(actualLen).toLocaleString()} mm  |  ` +
+                        `${sheet.panels.length} panels  |  ${(sheet.efficiency ?? 0).toFixed(1)}% yield`,
+                        30, 74
+                    );
+
+                // — Scaling to fit on page —
+                const MARGIN_LEFT = 50;
+                const MARGIN_TOP = 92;
+                const AVAIL_W = 740;   // landscape A4 usable width
+                const AVAIL_H = 420;   // usable height
+                const scaleX = AVAIL_W / sheet.width;
+                const scaleY = AVAIL_H / actualLen;
+                const sc = Math.min(scaleX, scaleY); // uniform scale
+
+                const drawW = sheet.width * sc;
+                const drawH = actualLen * sc;
+
+                // — Sheet border —
+                doc.lineWidth(2).strokeColor('#333')
+                    .rect(MARGIN_LEFT, MARGIN_TOP, drawW, drawH).stroke();
+
+                // — Waste stripes (diagonal hatch for empty area at the bottom) —
+                const panelMaxY = Math.max(
+                    ...sheet.panels.map((p: any) => p.y + (p.rotated ? p.width : p.length)),
+                    0
+                );
+                if (panelMaxY < actualLen) {
+                    const wasteTop = MARGIN_TOP + panelMaxY * sc;
+                    const wasteH = (actualLen - panelMaxY) * sc;
+                    doc.save();
+                    doc.rect(MARGIN_LEFT, wasteTop, drawW, wasteH).clip();
+                    doc.lineWidth(0.5).strokeColor('#999');
+                    for (let d = -Math.ceil(wasteH); d < drawW + Math.ceil(wasteH); d += 8) {
+                        doc.moveTo(MARGIN_LEFT + d, wasteTop)
+                            .lineTo(MARGIN_LEFT + d + wasteH, wasteTop + wasteH)
+                            .stroke();
+                    }
+                    doc.restore();
                 }
 
-                const startY = doc.y;
+                // — Draw panels —
+                sheet.panels.forEach((panel: any, idx: number) => {
+                    localPanelNo++;
+                    const pw = (panel.rotated ? panel.length : panel.width) * sc;
+                    const ph = (panel.rotated ? panel.width : panel.length) * sc;
+                    const px = MARGIN_LEFT + panel.x * sc;
+                    const py = MARGIN_TOP + panel.y * sc;
 
-                // Scale: Stock sheet is 3000mm wide × 10000mm long
-                // Increased scale: 0.05 instead of 0.02 for better visibility
-                const scale = 0.05;
-                const sheetWidth = 3000 * scale;    // 150mm on paper
-                const sheetLength = 10000 * scale;  // 500mm → capped for page
-                const maxSheetHeight = Math.min(sheetLength, 250); // cap at 250pt to fit on page
-                const displayScale = maxSheetHeight / (10000); // actual scale for drawing
-                const marginLeft = 50;
+                    const color = PANEL_COLORS[idx % PANEL_COLORS.length];
 
-                // Sheet label — positioned above, with enough gap
-                doc.fontSize(10).font('Helvetica-Bold')
-                    .fillColor('#000000')
-                    .text(`Sheet ${sheet.id}`, marginLeft, startY);
-                const sheetStartY = startY + 16;
+                    // Filled rectangle
+                    doc.lineWidth(1).fillColor(color).strokeColor('#000')
+                        .rect(px, py, pw, ph).fillAndStroke();
 
-                // Draw sheet border
-                doc.rect(marginLeft, sheetStartY, sheetWidth, maxSheetHeight)
-                    .stroke('#333333');
+                    // Panel number (centred, large)
+                    const numStr = `${localPanelNo}${panel.rotated ? '*' : ''}`;
+                    doc.fontSize(pw > 40 && ph > 30 ? 14 : 9)
+                        .font('Helvetica-Bold').fillColor('#000');
+                    const tw = doc.widthOfString(numStr);
+                    const th = doc.currentLineHeight();
+                    doc.text(numStr, px + (pw - tw) / 2, py + (ph - th) / 2, { lineBreak: false });
 
-                // Draw each panel
-                for (const panel of sheet.panels) {
-                    globalPanelNo++;
-                    const panelX = marginLeft + (panel.x * displayScale);
-                    const panelY = sheetStartY + (panel.y * displayScale);
-                    const panelW = panel.width * displayScale;
-                    const panelH = panel.length * displayScale;
+                    // — Red cutting-mark dimension labels along outer edges —
+                    doc.lineWidth(1.5).strokeColor('#CC0000');
 
-                    // Draw panel rectangle with fill
-                    doc.rect(panelX, panelY, panelW, panelH)
-                        .fillAndStroke(color, '#666666');
-
-                    // Panel number label (always shown)
-                    doc.fontSize(8).font('Helvetica-Bold')
-                        .fillColor('#000000')
-                        .text(
-                            `#${globalPanelNo}`,
-                            panelX + 2,
-                            panelY + 2,
-                            { width: Math.max(panelW - 4, 20) }
-                        );
-
-                    // Dimensions label
-                    if (panelW > 20 && panelH > 18) {
-                        doc.fontSize(6).font('Helvetica')
-                            .fillColor('#333333')
-                            .text(
-                                `${panel.width}×${panel.length}`,
-                                panelX + 2,
-                                panelY + 12,
-                                { width: Math.max(panelW - 4, 20) }
-                            );
+                    // Top edge: width dimension
+                    if (panel.y === 0) {
+                        doc.moveTo(px, py).lineTo(px + pw, py).stroke();
+                        const dimW = panel.rotated ? panel.length : panel.width;
+                        const wLabel = `${dimW.toLocaleString()} mm`;
+                        doc.fontSize(7).font('Helvetica-Bold').fillColor('#CC0000');
+                        const wLabelW = doc.widthOfString(wLabel);
+                        doc.text(wLabel, px + (pw - wLabelW) / 2, py - 10, { lineBreak: false });
                     }
 
-                    // Location label
-                    if (panelH > 28 && panelW > 20) {
-                        doc.fontSize(5).font('Helvetica')
-                            .fillColor('#555555')
-                            .text(
-                                panel.label || '',
-                                panelX + 2,
-                                panelY + 20,
-                                { width: Math.max(panelW - 4, 20) }
-                            );
+                    // Left edge: height dimension
+                    if (panel.x === 0) {
+                        doc.moveTo(px, py).lineTo(px, py + ph).stroke();
+                        const dimH = panel.rotated ? panel.width : panel.length;
+                        const hLabel = `${dimH.toLocaleString()} mm`;
+                        doc.save();
+                        doc.fontSize(7).font('Helvetica-Bold').fillColor('#CC0000');
+                        doc.translate(px - 3, py + ph / 2);
+                        doc.rotate(-90);
+                        const hLabelW = doc.widthOfString(hLabel);
+                        doc.text(hLabel, -hLabelW / 2, 0, { lineBreak: false });
+                        doc.restore();
                     }
-                }
+                });
 
-                // Sheet statistics (to the right of the sheet)
-                const statsX = marginLeft + sheetWidth + 15;
-                doc.fontSize(9).font('Helvetica')
-                    .fillColor('#000000')
-                    .text(`Panels: ${sheet.panels.length}`, statsX, sheetStartY + 5)
-                    .text(`Efficiency: ${sheet.efficiency.toFixed(1)}%`, statsX, sheetStartY + 18)
-                    .text(`Used: ${(sheet.usedArea / 1000000).toFixed(2)}m²`, statsX, sheetStartY + 31)
-                    .text(`Waste: ${(sheet.wastedArea / 1000000).toFixed(2)}m²`, statsX, sheetStartY + 44);
+                // — Stats block (right side) —
+                const sX = MARGIN_LEFT + drawW + 12;
+                const sY = MARGIN_TOP;
+                doc.fontSize(9).font('Helvetica-Bold').fillColor('#000')
+                    .text(`Sheet ${sheet.id}`, sX, sY);
+                doc.fontSize(8).font('Helvetica').fillColor('#333');
+                doc.text(`Panels: ${sheet.panels.length}`, sX, sY + 16);
+                doc.text(`Efficiency: ${(sheet.efficiency ?? 0).toFixed(1)}%`, sX, sY + 28);
+                doc.text(`Used: ${(sheet.usedArea / 1_000_000).toFixed(2)} m²`, sX, sY + 40);
+                doc.text(`Waste: ${((sheet.wastedArea ?? sheet.wasteArea ?? 0) / 1_000_000).toFixed(2)} m²`, sX, sY + 52);
 
-                // Move down for next sheet
-                doc.y = sheetStartY + maxSheetHeight + 20;
+                // — Legend —
+                const legendY = MARGIN_TOP + drawH + 10;
+                doc.fontSize(7).font('Helvetica').fillColor('#666')
+                    .text('* = Rotated 90°   |   Diagonal stripes = Waste area   |   Red lines = Cutting marks with dimensions', MARGIN_LEFT, legendY);
+
+                // — Footer —
+                doc.fontSize(7).fillColor('#aaa')
+                    .text('Generated by Signature Shades SAP', MARGIN_LEFT, 550, { align: 'left' });
             }
 
-            // Overall fabric group statistics
-            const stats = groupData.optimization.statistics;
-            doc.fontSize(9).font('Helvetica-Bold')
-                .fillColor('#000000')
-                .text(
-                    `Total: ${stats.usedStockSheets} sheets  |  Efficiency: ${stats.efficiency.toFixed(1)}%  |  ` +
-                    `Fabric needed: ${(stats.totalFabricNeeded / 1000).toFixed(2)}m  |  Waste: ${stats.wastePercentage.toFixed(1)}%`
-                );
-            doc.moveDown(1);
+            // Per-fabric summary line (on last sheet page of that fabric)
+            doc.fontSize(8).font('Helvetica-Bold').fillColor('#000');
+            doc.text(
+                `Summary — ${stats.usedStockSheets} sheet(s)  |  ${stats.efficiency.toFixed(1)}% efficiency  |  ` +
+                `${(stats.totalFabricNeeded / 1000).toFixed(2)} m fabric  |  ${stats.wastePercentage.toFixed(1)}% waste`,
+                30, 535
+            );
         }
 
-        // ============================================================================
-        // NEW PAGE: DETAILED WORKSHEET TABLE
-        // Columns: Panel No, Location, Fab Cut W, Calc D, Ctrl, Ctrl Col,
-        //          Chain/Motor, Roll, Fabric, Colour, BR Colour, Chain Size
-        // ============================================================================
+        // ====================================================================
+        // DETAIL TABLE PAGE(S)
+        // ====================================================================
         doc.addPage();
-        doc.fontSize(16).font('Helvetica-Bold').text('Fabric Cut Worksheet - Details', { align: 'center' });
-        doc.fontSize(10).font('Helvetica')
-            .text(`Order: ${orderInfo.orderNumber}  |  Customer: ${orderInfo.customerName}  |  Date: ${orderInfo.orderDate.toISOString().split('T')[0]}`, { align: 'center' });
+        doc.fontSize(16).font('Helvetica-Bold').fillColor('#1B2B3A')
+            .text('Fabric Cut Worksheet — Detail Table', { align: 'center' });
+        doc.fontSize(9).font('Helvetica').fillColor('#555')
+            .text(
+                `Order: ${orderInfo.orderNumber}  |  Customer: ${orderInfo.customerName}  |  Date: ${orderInfo.orderDate.toISOString().split('T')[0]}`,
+                { align: 'center' }
+            );
         doc.moveDown();
 
-        const colWidths = [40, 70, 55, 50, 40, 50, 75, 35, 70, 55, 55, 50];
+        const colWidths = [38, 68, 52, 48, 38, 48, 72, 32, 68, 52, 52, 48];
         const headers = ['Panel', 'Location', 'Fab Cut W', 'Calc D', 'Ctrl', 'Ctrl Col', 'Chain/Motor', 'Roll', 'Fabric', 'Colour', 'BR Colour', 'Chain'];
 
-        // Reset panel number for table
         let tablePanelNo = 0;
 
         for (const [fabricKey, groupData] of Object.entries(fabricCutData)) {
-            doc.fontSize(11).font('Helvetica-Bold').text(`Fabric: ${fabricKey}`, { underline: true });
+            if (doc.y > 490) doc.addPage();
+
+            doc.fontSize(10).font('Helvetica-Bold').fillColor('#1B2B3A')
+                .text(`Fabric: ${fabricKey}`, { underline: true });
             doc.moveDown(0.3);
 
-            // Table header
-            let x = 30;
-            const y = doc.y;
-            doc.fontSize(7).font('Helvetica-Bold');
+            // Column headers
+            let hdrX = 30;
+            const hdrY = doc.y;
+            doc.fontSize(7).font('Helvetica-Bold').fillColor('#333');
             headers.forEach((h, i) => {
-                doc.text(h, x, y, { width: colWidths[i], align: 'left' });
-                x += colWidths[i];
+                doc.text(h, hdrX, hdrY, { width: colWidths[i], align: 'left' });
+                hdrX += colWidths[i];
             });
             doc.moveDown(0.5);
-
-            // Draw line
-            doc.moveTo(30, doc.y).lineTo(810, doc.y).stroke();
+            doc.strokeColor('#999').lineWidth(0.5)
+                .moveTo(30, doc.y).lineTo(30 + colWidths.reduce((a, b) => a + b, 0), doc.y).stroke();
             doc.moveDown(0.2);
 
-            doc.fontSize(7).font('Helvetica');
+            doc.fontSize(7).font('Helvetica').fillColor('#000');
             for (const sheet of groupData.optimization.sheets) {
                 for (const panel of sheet.panels) {
                     tablePanelNo++;
+                    if (doc.y > 530) doc.addPage();
+
                     const item = groupData.items.find((it: any) => it.id === panel.orderItemId);
-
-                    if (doc.y > 530) {
-                        doc.addPage();
-                    }
-
                     const motorType = item?.chainOrMotor || '';
                     const fabricCutWidth = item ? this.calculateFabricCutWidth(item.width, motorType) : '';
                     const calculatedDrop = item ? this.calculateDrop(item.drop) : 0;
@@ -372,7 +411,6 @@ export class WorksheetExportService {
                         item?.bottomRailColour || '-',
                         chainSize ? `${chainSize}mm` : '-',
                     ];
-
                     values.forEach((val, i) => {
                         doc.text(val, rx, rowY, { width: colWidths[i], align: 'left' });
                         rx += colWidths[i];
@@ -381,13 +419,80 @@ export class WorksheetExportService {
                 }
             }
 
-            // Statistics
             const stats = groupData.optimization.statistics;
             doc.moveDown(0.3);
-            doc.fontSize(8).font('Helvetica-Bold')
-                .text(`Sheets: ${stats.usedStockSheets}  |  Efficiency: ${stats.efficiency}%  |  Fabric Needed: ${stats.totalFabricNeeded}mm`);
+            doc.fontSize(8).font('Helvetica-Bold').fillColor('#333')
+                .text(`Sheets: ${stats.usedStockSheets}  |  Efficiency: ${stats.efficiency}%  |  Fabric Needed: ${(stats.totalFabricNeeded / 1000).toFixed(2)}m`);
             doc.moveDown();
         }
+
+        // ====================================================================
+        // STATISTICS SUMMARY PAGE
+        // ====================================================================
+        doc.addPage();
+        doc.fontSize(16).font('Helvetica-Bold').fillColor('#1B2B3A')
+            .text('Optimization Statistics', { align: 'center' });
+        doc.moveDown(2);
+
+        // Table
+        const sColW = [40, 240, 60, 70, 90, 70];
+        const sHeaders = ['#', 'Fabric', 'Sheets', 'Efficiency', 'Fabric Needed', 'Waste'];
+
+        let sx = 60;
+        doc.fontSize(9).font('Helvetica-Bold').fillColor('#333');
+        sHeaders.forEach((h, i) => {
+            doc.text(h, sx, doc.y, { width: sColW[i], align: i === 1 ? 'left' : 'center', continued: i < sHeaders.length - 1 });
+            sx += sColW[i];
+        });
+        doc.text(''); // end continued
+        doc.moveDown(0.5);
+        doc.strokeColor('#ccc').lineWidth(0.5)
+            .moveTo(60, doc.y).lineTo(60 + sColW.reduce((a, b) => a + b, 0), doc.y).stroke();
+        doc.moveDown(0.3);
+
+        let rowIdx = 0;
+        let sumFabric = 0;
+        let sumEfficiency = 0;
+        const fabricEntries = Object.entries(fabricCutData);
+
+        for (const [fabricKey, groupData] of fabricEntries) {
+            rowIdx++;
+            const s = groupData.optimization.statistics;
+            sumFabric += s.totalFabricNeeded;
+            sumEfficiency += s.efficiency;
+
+            const row = [
+                String(rowIdx),
+                fabricKey,
+                String(s.usedStockSheets),
+                `${s.efficiency.toFixed(1)}%`,
+                `${(s.totalFabricNeeded / 1000).toFixed(2)} m`,
+                `${s.wastePercentage.toFixed(1)}%`,
+            ];
+
+            sx = 60;
+            doc.fontSize(8).font('Helvetica').fillColor('#000');
+            row.forEach((val, i) => {
+                doc.text(val, sx, doc.y, { width: sColW[i], align: i === 1 ? 'left' : 'center', continued: i < row.length - 1 });
+                sx += sColW[i];
+            });
+            doc.text('');
+            doc.moveDown(0.2);
+        }
+
+        // Totals row
+        doc.moveDown(0.4);
+        doc.strokeColor('#ccc').lineWidth(0.5)
+            .moveTo(60, doc.y).lineTo(60 + sColW.reduce((a, b) => a + b, 0), doc.y).stroke();
+        doc.moveDown(0.3);
+        doc.fontSize(9).font('Helvetica-Bold').fillColor('#000');
+        doc.text(
+            `TOTAL: ${(sumFabric / 1000).toFixed(2)} m fabric needed  |  Avg Efficiency: ${(sumEfficiency / fabricEntries.length).toFixed(1)}%`,
+            60
+        );
+
+        doc.fontSize(7).fillColor('#aaa')
+            .text('Generated by Signature Shades SAP', 30, 550, { align: 'left' });
 
         doc.end();
         return doc;

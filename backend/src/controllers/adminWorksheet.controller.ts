@@ -2,6 +2,10 @@ import { Request, Response, NextFunction } from 'express';
 import { WorksheetService } from '../services/worksheet.service';
 import { AppError } from '../middleware/errorHandler';
 import { logger } from '../config/logger';
+import { fabricCutOptimizer } from '../services/fabricCutOptimizer.service';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 export class AdminWorksheetController {
     /**
@@ -216,5 +220,168 @@ export class AdminWorksheetController {
         }
 
         return Buffer.from(doc.output('arraybuffer'));
+    }
+
+    /**
+     * POST /api/admin/worksheets/:orderId/generate
+     * Generate optimized worksheet with MaxRects algorithm
+     */
+    static async generateWorksheet(req: Request, res: Response, next: NextFunction) {
+        try {
+            const { orderId } = req.params as { orderId: string };
+
+            logger.info(`🔄 Generating worksheet for order: ${orderId}`);
+
+            // Get order with items
+            const order = await prisma.order.findUnique({
+                where: { id: orderId },
+                include: { items: true },
+            });
+
+            if (!order) {
+                throw new AppError(404, 'Order not found');
+            }
+
+            if (order.items.length === 0) {
+                throw new AppError(400, 'Order has no items to optimize');
+            }
+
+            // Run fabric cut optimization
+            logger.info(`🎯 Running fabric cut optimization for ${order.items.length} items...`);
+            const startTime = Date.now();
+
+            const optimizationResults = await fabricCutOptimizer.optimizeOrder(order.items);
+
+            const optimizationTime = Date.now() - startTime;
+            logger.info(`✅ Optimization complete in ${optimizationTime}ms`);
+
+            // Check inventory sufficiency
+            const inventoryCheck = await fabricCutOptimizer.checkInventorySufficiency(optimizationResults);
+
+            // Convert Map to JSON-serializable object
+            const resultsObject = Object.fromEntries(optimizationResults);
+
+            // Store optimization results in order
+            await prisma.order.update({
+                where: { id: orderId },
+                data: {
+                    fabricCutOptimization: resultsObject as any,
+                    worksheetGeneratedAt: new Date(),
+                },
+            });
+
+            res.status(200).json({
+                status: 'success',
+                message: 'Worksheet generated successfully',
+                data: {
+                    optimizationResults: resultsObject,
+                    inventoryCheck,
+                    optimizationTime: `${optimizationTime}ms`,
+                },
+            });
+
+        } catch (error) {
+            logger.error('❌ Worksheet generation error:', error);
+            next(error);
+        }
+    }
+
+    /**
+     * POST /api/admin/worksheets/:orderId/recalculate
+     * Recalculate optimization with fresh results
+     */
+    static async recalculateOptimization(req: Request, res: Response, next: NextFunction) {
+        try {
+            const { orderId } = req.params as { orderId: string };
+
+            logger.info(`🔄 Recalculating optimization for order: ${orderId}`);
+
+            // Get order with items
+            const order = await prisma.order.findUnique({
+                where: { id: orderId },
+                include: { items: true },
+            });
+
+            if (!order) {
+                throw new AppError(404, 'Order not found');
+            }
+
+            if (order.items.length === 0) {
+                throw new AppError(400, 'Order has no items to optimize');
+            }
+
+            // Re-run optimization from scratch
+            const startTime = Date.now();
+            const optimizationResults = await fabricCutOptimizer.optimizeOrder(order.items);
+            const optimizationTime = Date.now() - startTime;
+
+            // Check inventory sufficiency
+            const inventoryCheck = await fabricCutOptimizer.checkInventorySufficiency(optimizationResults);
+
+            // Convert Map to JSON-serializable object
+            const resultsObject = Object.fromEntries(optimizationResults);
+
+            // Update stored optimization results
+            await prisma.order.update({
+                where: { id: orderId },
+                data: {
+                    fabricCutOptimization: resultsObject as any,
+                    worksheetGeneratedAt: new Date(),
+                },
+            });
+
+            logger.info(`✅ Recalculation complete in ${optimizationTime}ms`);
+
+            res.status(200).json({
+                status: 'success',
+                message: 'Optimization recalculated successfully',
+                data: {
+                    optimizationResults: resultsObject,
+                    inventoryCheck,
+                    optimizationTime: `${optimizationTime}ms`,
+                },
+            });
+
+        } catch (error) {
+            logger.error('❌ Recalculation error:', error);
+            next(error);
+        }
+    }
+
+    /**
+     * GET /api/admin/worksheets/:orderId/optimization
+     * Get stored optimization results
+     */
+    static async getOptimizationResults(req: Request, res: Response, next: NextFunction) {
+        try {
+            const { orderId } = req.params as { orderId: string };
+
+            const order = await prisma.order.findUnique({
+                where: { id: orderId },
+                select: {
+                    fabricCutOptimization: true,
+                    worksheetGeneratedAt: true,
+                },
+            });
+
+            if (!order) {
+                throw new AppError(404, 'Order not found');
+            }
+
+            if (!order.fabricCutOptimization) {
+                throw new AppError(404, 'No optimization results found. Generate worksheet first.');
+            }
+
+            res.status(200).json({
+                status: 'success',
+                data: {
+                    optimizationResults: order.fabricCutOptimization,
+                    generatedAt: order.worksheetGeneratedAt,
+                },
+            });
+
+        } catch (error) {
+            next(error);
+        }
     }
 }

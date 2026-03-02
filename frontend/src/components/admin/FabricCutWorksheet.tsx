@@ -1,4 +1,7 @@
+import { useState } from 'react';
 import { FabricGroupData } from '../../types/order';
+import FabricCutPreview from './FabricCutPreview';
+import { LayoutGrid, Table } from 'lucide-react';
 
 /**
  * Determine chain size (mm) from total drop (Calc D = original drop + 150)
@@ -16,10 +19,58 @@ interface Props {
 }
 
 export default function FabricCutWorksheet({ fabricCutData }: Props) {
+    const [viewMode, setViewMode] = useState<'visual' | 'table'>('visual');
     let globalPanelNo = 0; // sequential panel/blind number across all groups
 
     return (
         <div className="space-y-6">
+            {/* View Mode Toggle */}
+            <div className="flex items-center justify-between">
+                <div className="flex gap-2 bg-gray-100 p-1 rounded-lg">
+                    <button
+                        onClick={() => setViewMode('visual')}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-md font-medium transition-colors ${
+                            viewMode === 'visual'
+                                ? 'bg-white text-blue-600 shadow-sm'
+                                : 'text-gray-600 hover:text-gray-800'
+                        }`}
+                    >
+                        <LayoutGrid className="h-4 w-4" />
+                        Visual Layout
+                    </button>
+                    <button
+                        onClick={() => setViewMode('table')}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-md font-medium transition-colors ${
+                            viewMode === 'table'
+                                ? 'bg-white text-blue-600 shadow-sm'
+                                : 'text-gray-600 hover:text-gray-800'
+                        }`}
+                    >
+                        <Table className="h-4 w-4" />
+                        Table View
+                    </button>
+                </div>
+            </div>
+
+            {/* Visual Layout View */}
+            {viewMode === 'visual' && (
+                <div className="space-y-8">
+                    {Object.entries(fabricCutData).map(([fabricKey, groupData]) => (
+                        <FabricCutPreview
+                            key={fabricKey}
+                            fabricKey={fabricKey}
+                            sheets={groupData.optimization.sheets}
+                            efficiency={groupData.optimization.statistics.efficiency}
+                            totalFabricNeeded={groupData.optimization.statistics.totalFabricNeeded}
+                            wastePercentage={groupData.optimization.statistics.wastePercentage}
+                        />
+                    ))}
+                </div>
+            )}
+
+            {/* Table View */}
+            {viewMode === 'table' && (
+                <div className="space-y-6">
             {Object.entries(fabricCutData).map(([fabricKey, groupData]) => {
                 return (
                     <div key={fabricKey} className="border rounded-lg overflow-hidden">
@@ -91,6 +142,8 @@ export default function FabricCutWorksheet({ fabricCutData }: Props) {
                     </div>
                 );
             })}
+                </div>
+            )}
         </div>
     );
 }

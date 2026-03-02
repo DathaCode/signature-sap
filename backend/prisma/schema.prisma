@@ -142,6 +142,10 @@ model Order {
   adminNotes          String?           @map("admin_notes") @db.Text
   customerReference   String?           @map("customer_reference") @db.VarChar(255)
 
+  // Fabric Cut Optimization (MaxRects algorithm results)
+  fabricCutOptimization Json?           @map("fabric_cut_optimization")
+  worksheetGeneratedAt  DateTime?       @map("worksheet_generated_at") @db.Timestamp(6)
+
   // Soft delete (Trash)
   deletedAt           DateTime?         @map("deleted_at") @db.Timestamp(6)
 
