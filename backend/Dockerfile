@@ -39,7 +39,7 @@ RUN apk add --no-cache openssl libc6-compat
 COPY package*.json ./
 COPY tsconfig.json ./
 
-RUN npm ci
+RUN npm install
 
 COPY prisma ./prisma
 RUN npx prisma generate
