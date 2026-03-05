@@ -43,6 +43,10 @@ uploads/*
 # OS
 Thumbs.db
 
+# Windows reserved device names (Git on Windows bug)
+nul
+*/nul
+
 # Docker
 docker-compose.override.yml
 
