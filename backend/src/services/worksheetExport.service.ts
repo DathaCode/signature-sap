@@ -287,22 +287,19 @@ export class WorksheetExportService {
                     const th = doc.currentLineHeight();
                     doc.text(numStr, px + (pw - tw) / 2, py + (ph - th) / 2, { lineBreak: false });
 
-                    // — Red cutting-mark dimension labels along outer edges —
-                    doc.lineWidth(1.5).strokeColor('#CC0000');
+                        // — Dimension labels for outer-edge panels —
+                    doc.fontSize(7).font('Helvetica-Bold').fillColor('#CC0000');
 
                     // Top edge: width dimension
                     if (panel.y === 0) {
-                        doc.moveTo(px, py).lineTo(px + pw, py).stroke();
                         const dimW = panel.rotated ? panel.length : panel.width;
                         const wLabel = `${dimW.toLocaleString()} mm`;
-                        doc.fontSize(7).font('Helvetica-Bold').fillColor('#CC0000');
                         const wLabelW = doc.widthOfString(wLabel);
                         doc.text(wLabel, px + (pw - wLabelW) / 2, py - 10, { lineBreak: false });
                     }
 
                     // Left edge: height dimension
                     if (panel.x === 0) {
-                        doc.moveTo(px, py).lineTo(px, py + ph).stroke();
                         const dimH = panel.rotated ? panel.width : panel.length;
                         const hLabel = `${dimH.toLocaleString()} mm`;
                         doc.save();
@@ -314,6 +311,34 @@ export class WorksheetExportService {
                         doc.restore();
                     }
                 });
+
+                // — Guillotine cut lines (red dashed) —
+                const cutSequence = (sheet as any).cutSequence;
+                if (cutSequence && Array.isArray(cutSequence)) {
+                    cutSequence.forEach((cut: any) => {
+                        doc.save();
+                        doc.lineWidth(1.5).strokeColor('#CC0000').dash(5, { space: 3 });
+
+                        if (cut.type === 'horizontal') {
+                            const cy = MARGIN_TOP + cut.y1 * sc;
+                            doc.moveTo(MARGIN_LEFT, cy)
+                                .lineTo(MARGIN_LEFT + drawW, cy)
+                                .stroke();
+                            // Dimension label
+                            doc.fillColor('#CC0000').fontSize(7).font('Helvetica-Bold');
+                            doc.text(cut.label, MARGIN_LEFT + drawW - 50, cy - 10, { lineBreak: false });
+                        } else {
+                            const cx = MARGIN_LEFT + cut.x1 * sc;
+                            doc.moveTo(cx, MARGIN_TOP)
+                                .lineTo(cx, MARGIN_TOP + drawH)
+                                .stroke();
+                            doc.fillColor('#CC0000').fontSize(7).font('Helvetica-Bold');
+                            doc.text(cut.label, cx + 3, MARGIN_TOP + 3, { lineBreak: false });
+                        }
+
+                        doc.restore();
+                    });
+                }
 
                 // — Stats block (right side) —
                 const sX = MARGIN_LEFT + drawW + 12;

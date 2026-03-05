@@ -646,7 +646,7 @@ export const sendToProduction = async (
 
 /**
  * Run optimization for an order (shared by sendToProduction and recalculate)
- * Uses MaxRects algorithm for 75-85% efficiency (replaces old Guillotine at 40-50%)
+ * Uses Guillotine algorithm for physically valid cuts with continuous stock optimization
  */
 async function runOptimization(order: any) {
     const items = order.items;
@@ -659,7 +659,7 @@ async function runOptimization(order: any) {
         fabricGroups.get(key)!.push(item);
     }
 
-    // 2. Run MaxRects fabric cut optimization per fabric group
+    // 2. Run Guillotine fabric cut optimization per fabric group
     const fabricCutData: Record<string, any> = {};
     let totalFabricMm = 0;
 
@@ -677,7 +677,7 @@ async function runOptimization(order: any) {
         const sheets = result.sheets.map((sheet: any) => ({
             id: sheet.id,
             width: sheet.width,
-            length: sheet.length,
+            length: sheet.actualUsedLength || sheet.length,
             panels: sheet.panels.map((p: any) => ({
                 id: p.id,
                 x: p.x,
@@ -695,6 +695,7 @@ async function runOptimization(order: any) {
             usedArea: sheet.usedArea,
             wastedArea: sheet.wasteArea,
             efficiency: sheet.efficiency,
+            cutSequence: sheet.cutSequence || [],
         }));
 
         const totalPanels = sheets.reduce((sum: number, s: any) => sum + s.panels.length, 0);
@@ -703,7 +704,7 @@ async function runOptimization(order: any) {
             sheets,
             statistics: {
                 usedStockSheets: result.statistics.totalSheets,
-                stockDimensions: `3000x10000`,
+                stockDimensions: `3000×continuous`,
                 totalUsedArea: result.statistics.totalUsedArea,
                 totalWastedArea: result.statistics.totalWasteArea,
                 wastePercentage: result.wastePercentage,

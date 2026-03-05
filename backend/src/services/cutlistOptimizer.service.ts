@@ -32,6 +32,16 @@ interface FreeRectangle {
     length: number;
 }
 
+export interface CutLine {
+    type: 'horizontal' | 'vertical';
+    x1: number;
+    y1: number;
+    x2: number;
+    y2: number;
+    position: number;
+    label: string;
+}
+
 export interface Sheet {
     id: number;
     width: number;
@@ -41,6 +51,7 @@ export interface Sheet {
     usedArea: number;
     wastedArea: number;
     efficiency: number;
+    cutSequence?: CutLine[];
 }
 
 export interface OptimizationStatistics {
