@@ -118,14 +118,14 @@ describe('FabricCutOptimizerService', () => {
             expect([p7.width, p7.length]).toContain(915);
         });
 
-        test('adds 150 mm to drop', async () => {
+        test('adds 200 mm to drop', async () => {
             const results = await optimizer.optimizeOrder(sevenBlinds);
             const r = results.get('Textstyle - Focus - White')!;
             const allPanels = r.sheets.flatMap(s => s.panels);
 
-            // Item 1 drop 2250 + 150 = 2400
+            // Item 1 drop 2250 + 200 = 2450
             const p1 = allPanels.find(p => p.blindNumber === 1)!;
-            expect([p1.width, p1.length]).toContain(2400);
+            expect([p1.width, p1.length]).toContain(2450);
         });
 
         test('generates cut sequence for each sheet', async () => {

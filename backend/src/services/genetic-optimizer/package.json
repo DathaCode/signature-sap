@@ -1,0 +1,8 @@
+{
+    "name": "fabric-cut-optimizer",
+    "version": "1.0.0",
+    "description": "Genetic algorithm guillotine bin packing for fabric cutting",
+    "main": "index.js",
+    "types": "index.d.ts",
+    "type": "commonjs"
+}

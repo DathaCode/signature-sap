@@ -224,7 +224,7 @@ export class AdminWorksheetController {
 
     /**
      * POST /api/admin/worksheets/:orderId/generate
-     * Generate optimized worksheet with MaxRects algorithm
+     * Generate optimized worksheet with Genetic Algorithm
      */
     static async generateWorksheet(req: Request, res: Response, next: NextFunction) {
         try {

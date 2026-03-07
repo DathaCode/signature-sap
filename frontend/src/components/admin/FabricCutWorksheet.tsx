@@ -4,7 +4,7 @@ import FabricCutPreview from './FabricCutPreview';
 import { LayoutGrid, Table } from 'lucide-react';
 
 /**
- * Determine chain size (mm) from total drop (Calc D = original drop + 150)
+ * Determine chain size (mm) from total drop (Calc D = original drop + 200)
  */
 function getChainSize(calcDrop: number): number {
     if (calcDrop <= 850) return 500;
@@ -63,6 +63,10 @@ export default function FabricCutWorksheet({ fabricCutData }: Props) {
                             efficiency={groupData.optimization.statistics.efficiency}
                             totalFabricNeeded={groupData.optimization.statistics.totalFabricNeeded}
                             wastePercentage={groupData.optimization.statistics.wastePercentage}
+                            generationStats={groupData.optimization.generationStats}
+                            validation={groupData.optimization.validation}
+                            isGuillotineValid={groupData.optimization.isGuillotineValid}
+                            strategy={groupData.optimization.strategy}
                         />
                     ))}
                 </div>
@@ -109,8 +113,8 @@ export default function FabricCutWorksheet({ fabricCutData }: Props) {
                                             const item = groupData.items.find(
                                                 (it: any) => it.id === panel.orderItemId
                                             );
-                                            const fabricCutW = item ? item.width - 35 : '-';
-                                            const calcD = item ? item.drop + 150 : 0;
+                                            const fabricCutW = item?.fabricCutWidth ?? (item ? item.width - 28 : '-');
+                                            const calcD = item ? item.drop + 200 : 0;
                                             const chainSize = calcD > 0 ? getChainSize(calcD) : '-';
                                             return (
                                                 <tr key={`${sheet.id}-${idx}`} className="border-b hover:bg-gray-50">

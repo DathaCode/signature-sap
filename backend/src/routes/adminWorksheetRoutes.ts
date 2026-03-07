@@ -15,7 +15,7 @@ router.get('/:orderId', authenticateToken, requireAdmin, AdminWorksheetControlle
 // Download worksheet (CSV or PDF)
 router.get('/:orderId/download', authenticateToken, requireAdmin, AdminWorksheetController.downloadWorksheet);
 
-// Generate optimized worksheet (MaxRects algorithm)
+// Generate optimized worksheet (Genetic Algorithm)
 router.post('/:orderId/generate', authenticateToken, requireAdmin, AdminWorksheetController.generateWorksheet);
 
 // Recalculate optimization

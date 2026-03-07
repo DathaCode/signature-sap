@@ -101,10 +101,30 @@ export interface OptimizationStatistics {
     totalFabricNeeded: number;
 }
 
+export interface GenerationStats {
+    totalGenerations: number;
+    bestGeneration: number;
+    convergenceTime: number;
+    populationSize: number;
+    seedsTested: number;
+}
+
+export interface GeneticValidation {
+    overlaps: number;
+    outOfBounds: number;
+    isGuillotineValid: boolean;
+    guillotineStages: number;
+}
+
 export interface FabricGroupData {
     optimization: {
         sheets: Sheet[];
         statistics: OptimizationStatistics;
+        // Genetic algorithm metadata
+        generationStats?: GenerationStats;
+        validation?: GeneticValidation;
+        isGuillotineValid?: boolean;
+        strategy?: string;
     };
     items: BlindItem[];
 }

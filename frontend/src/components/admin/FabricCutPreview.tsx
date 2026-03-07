@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Sheet } from '../../types/order';
+import { Sheet, GenerationStats, GeneticValidation } from '../../types/order';
 
 interface FabricCutPreviewProps {
     fabricKey: string;
@@ -7,6 +7,11 @@ interface FabricCutPreviewProps {
     efficiency: number;
     totalFabricNeeded: number;
     wastePercentage: number;
+    // Genetic algorithm metadata
+    generationStats?: GenerationStats;
+    validation?: GeneticValidation;
+    isGuillotineValid?: boolean;
+    strategy?: string;
 }
 
 // Color palette for panels (NO RED — red is reserved for cutting marks)
@@ -25,15 +30,20 @@ const MAX_PREVIEW_WIDTH = 800; // px
 const MAX_PREVIEW_HEIGHT = 600; // px
 
 /**
- * Visual cutting layout preview with SVG rendering
- * Uses auto-scaling to fit within container, shows guillotine cut lines
+ * Visual cutting layout preview with SVG rendering.
+ * Displays genetic algorithm optimization results with auto-scaling,
+ * toggleable cutting marks, and GA metadata.
  */
 export default function FabricCutPreview({
     fabricKey,
     sheets,
     efficiency,
     totalFabricNeeded,
-    wastePercentage
+    wastePercentage,
+    generationStats,
+    validation,
+    isGuillotineValid,
+    strategy,
 }: FabricCutPreviewProps) {
     const [showCuttingMarks, setShowCuttingMarks] = useState(false);
 
@@ -53,14 +63,23 @@ export default function FabricCutPreview({
                                 {sheets.length} Sheet{sheets.length !== 1 ? 's' : ''}
                             </span>
                             <span className="px-3 py-1 bg-green-50 text-green-700 rounded-md font-medium">
-                                {efficiency.toFixed(2)}% Efficiency
+                                {efficiency.toFixed(1)}% Efficiency
                             </span>
                             <span className="px-3 py-1 bg-purple-50 text-purple-700 rounded-md font-medium">
                                 {(totalFabricNeeded / 1000).toFixed(2)}m Fabric
                             </span>
                             <span className="px-3 py-1 bg-amber-50 text-amber-700 rounded-md font-medium">
-                                {wastePercentage.toFixed(2)}% Waste
+                                {wastePercentage.toFixed(1)}% Waste
                             </span>
+                            {isGuillotineValid !== undefined && (
+                                <span className={`px-3 py-1 rounded-md font-medium ${
+                                    isGuillotineValid
+                                        ? 'bg-emerald-50 text-emerald-700'
+                                        : 'bg-red-50 text-red-700'
+                                }`}>
+                                    {isGuillotineValid ? 'Guillotine Valid' : 'Non-guillotine'}
+                                </span>
+                            )}
                         </div>
                     </div>
 
@@ -266,7 +285,7 @@ export default function FabricCutPreview({
                 })}
             </div>
 
-            {/* Legend */}
+            {/* Legend + GA Strategy Info */}
             <div className="mt-4 p-3 bg-gray-50 rounded-md text-sm text-gray-600 flex flex-wrap gap-4 items-center">
                 <span className="font-semibold">Legend:</span>
                 <span>Panel numbers inside rectangles</span>
@@ -289,6 +308,23 @@ export default function FabricCutPreview({
                     = Cutting marks
                 </span>
             </div>
+
+            {/* Genetic Algorithm metadata */}
+            {(strategy || generationStats) && (
+                <div className="mt-2 px-3 py-2 bg-gray-50 rounded-md text-xs text-gray-500 flex flex-wrap gap-4 items-center">
+                    {strategy && <span>{strategy}</span>}
+                    {generationStats && (
+                        <>
+                            <span>Seeds: {generationStats.seedsTested}</span>
+                            <span>Best gen: {generationStats.bestGeneration}/{generationStats.totalGenerations}</span>
+                            <span>{generationStats.convergenceTime}ms</span>
+                        </>
+                    )}
+                    {validation && validation.guillotineStages > 0 && (
+                        <span>Guillotine stages: {validation.guillotineStages}</span>
+                    )}
+                </div>
+            )}
         </div>
     );
 }

@@ -303,7 +303,7 @@ export const createOrder = async (
                 itemNumber: i + 1,
                 ...item,
                 calculatedWidth: item.width - 28,
-                calculatedDrop: item.drop + 150,
+                calculatedDrop: item.drop + 200,
                 fabricCutWidth: item.width - motorDeduction,
                 fabricGroup,
                 discountPercent,
@@ -646,7 +646,7 @@ export const sendToProduction = async (
 
 /**
  * Run optimization for an order (shared by sendToProduction and recalculate)
- * Uses Guillotine algorithm for physically valid cuts with continuous stock optimization
+ * Uses Genetic Algorithm for physically valid guillotine cuts with continuous stock optimization
  */
 async function runOptimization(order: any) {
     const items = order.items;
@@ -659,7 +659,7 @@ async function runOptimization(order: any) {
         fabricGroups.get(key)!.push(item);
     }
 
-    // 2. Run Guillotine fabric cut optimization per fabric group
+    // 2. Run Genetic Algorithm fabric cut optimization per fabric group
     const fabricCutData: Record<string, any> = {};
     let totalFabricMm = 0;
 
@@ -714,6 +714,11 @@ async function runOptimization(order: any) {
                 totalFabricNeeded: result.totalFabricNeeded,
             },
             cuts: [],
+            // Genetic algorithm metadata
+            generationStats: result.generationStats,
+            validation: result.validation,
+            isGuillotineValid: result.isGuillotineValid,
+            strategy: result.strategy,
         };
 
         totalFabricMm += result.totalFabricNeeded;

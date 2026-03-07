@@ -29,7 +29,7 @@ const MOTOR_DEDUCTIONS: Record<string, number> = {
 /**
  * Drop addition constant (fabric roll allowance)
  */
-const DROP_ADDITION = 150;
+const DROP_ADDITION = 200;
 
 /**
  * Chain length (mm) based on blind drop.
@@ -351,6 +351,31 @@ export class WorksheetExportService {
                 doc.text(`Used: ${(sheet.usedArea / 1_000_000).toFixed(2)} m²`, sX, sY + 40);
                 doc.text(`Waste: ${((sheet.wastedArea ?? (sheet as any).wasteArea ?? 0) / 1_000_000).toFixed(2)} m²`, sX, sY + 52);
 
+                // — GA metadata (right side, below stats) —
+                const opt = groupData.optimization as any;
+                let gaY = sY + 72;
+
+                if (opt.isGuillotineValid !== undefined) {
+                    doc.fontSize(8).font('Helvetica-Bold')
+                        .fillColor(opt.isGuillotineValid ? '#047857' : '#DC2626')
+                        .text(opt.isGuillotineValid ? 'Guillotine Valid' : 'Non-guillotine', sX, gaY);
+                    gaY += 14;
+                }
+
+                if (opt.strategy) {
+                    doc.fontSize(7).font('Helvetica').fillColor('#555')
+                        .text(opt.strategy, sX, gaY, { width: 110 });
+                    gaY += 12;
+                }
+
+                if (opt.generationStats) {
+                    const gs = opt.generationStats;
+                    doc.fontSize(7).font('Helvetica').fillColor('#555');
+                    doc.text(`Seeds: ${gs.seedsTested}`, sX, gaY);
+                    doc.text(`Best gen: ${gs.bestGeneration}/${gs.totalGenerations}`, sX, gaY + 10);
+                    doc.text(`Time: ${gs.convergenceTime}ms`, sX, gaY + 20);
+                }
+
                 // — Legend —
                 const legendY = MARGIN_TOP + drawH + 10;
                 doc.fontSize(7).font('Helvetica').fillColor('#666')
@@ -460,10 +485,10 @@ export class WorksheetExportService {
         doc.moveDown(2);
 
         // Table
-        const sColW = [40, 240, 60, 70, 90, 70];
-        const sHeaders = ['#', 'Fabric', 'Sheets', 'Efficiency', 'Fabric Needed', 'Waste'];
+        const sColW = [30, 200, 50, 60, 80, 60, 70];
+        const sHeaders = ['#', 'Fabric', 'Sheets', 'Efficiency', 'Fabric Needed', 'Waste', 'Guillotine'];
 
-        let sx = 60;
+        let sx = 50;
         doc.fontSize(9).font('Helvetica-Bold').fillColor('#333');
         sHeaders.forEach((h, i) => {
             doc.text(h, sx, doc.y, { width: sColW[i], align: i === 1 ? 'left' : 'center', continued: i < sHeaders.length - 1 });
@@ -472,7 +497,7 @@ export class WorksheetExportService {
         doc.text(''); // end continued
         doc.moveDown(0.5);
         doc.strokeColor('#ccc').lineWidth(0.5)
-            .moveTo(60, doc.y).lineTo(60 + sColW.reduce((a, b) => a + b, 0), doc.y).stroke();
+            .moveTo(50, doc.y).lineTo(50 + sColW.reduce((a, b) => a + b, 0), doc.y).stroke();
         doc.moveDown(0.3);
 
         let rowIdx = 0;
@@ -483,6 +508,7 @@ export class WorksheetExportService {
         for (const [fabricKey, groupData] of fabricEntries) {
             rowIdx++;
             const s = groupData.optimization.statistics;
+            const optAny = groupData.optimization as any;
             sumFabric += s.totalFabricNeeded;
             sumEfficiency += s.efficiency;
 
@@ -493,9 +519,12 @@ export class WorksheetExportService {
                 `${s.efficiency.toFixed(1)}%`,
                 `${(s.totalFabricNeeded / 1000).toFixed(2)} m`,
                 `${s.wastePercentage.toFixed(1)}%`,
+                optAny.isGuillotineValid !== undefined
+                    ? (optAny.isGuillotineValid ? 'Valid' : 'No')
+                    : '-',
             ];
 
-            sx = 60;
+            sx = 50;
             doc.fontSize(8).font('Helvetica').fillColor('#000');
             row.forEach((val, i) => {
                 doc.text(val, sx, doc.y, { width: sColW[i], align: i === 1 ? 'left' : 'center', continued: i < row.length - 1 });
@@ -508,13 +537,28 @@ export class WorksheetExportService {
         // Totals row
         doc.moveDown(0.4);
         doc.strokeColor('#ccc').lineWidth(0.5)
-            .moveTo(60, doc.y).lineTo(60 + sColW.reduce((a, b) => a + b, 0), doc.y).stroke();
+            .moveTo(50, doc.y).lineTo(50 + sColW.reduce((a, b) => a + b, 0), doc.y).stroke();
         doc.moveDown(0.3);
         doc.fontSize(9).font('Helvetica-Bold').fillColor('#000');
         doc.text(
             `TOTAL: ${(sumFabric / 1000).toFixed(2)} m fabric needed  |  Avg Efficiency: ${(sumEfficiency / fabricEntries.length).toFixed(1)}%`,
-            60
+            50
         );
+
+        // GA strategy info per fabric group
+        doc.moveDown(1);
+        doc.fontSize(8).font('Helvetica').fillColor('#555');
+        for (const [fabricKey, groupData] of fabricEntries) {
+            const optAny = groupData.optimization as any;
+            if (optAny.strategy || optAny.generationStats) {
+                const gs = optAny.generationStats;
+                const parts = [`${fabricKey}:`];
+                if (optAny.strategy) parts.push(optAny.strategy);
+                if (gs) parts.push(`seeds=${gs.seedsTested}, best gen ${gs.bestGeneration}/${gs.totalGenerations}, ${gs.convergenceTime}ms`);
+                doc.text(parts.join('  '), 50);
+                doc.moveDown(0.1);
+            }
+        }
 
         doc.fontSize(7).fillColor('#aaa')
             .text('Generated by Signature Shades SAP', 30, 550, { align: 'left' });
