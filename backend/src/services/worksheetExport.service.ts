@@ -194,7 +194,12 @@ export class WorksheetExportService {
         ];
 
         // ====================================================================
-        // LAYOUT PAGES — one per sheet, CutLogic 2D style
+        // LAYOUT PAGES — LANDSCAPE orientation (fabric length horizontal,
+        // roll width 3000mm vertical) matching CutLogic 2D display.
+        // Data is in portrait format (width=3000, length=fabricLen); we
+        // rotate 90° at render: GA Y → page X, GA X → page Y.
+        // NO cutting marks in PDF — cutting marks only in frontend preview
+        // with toggle button.
         // ====================================================================
         let isFirstPage = true;
 
@@ -216,62 +221,58 @@ export class WorksheetExportService {
                         30, 42, { align: 'center' }
                     );
 
-                // — Fabric & sheet title —
+                // — Fabric & sheet title (landscape: fabricLen × rollWidth) —
                 doc.fontSize(11).font('Helvetica-Bold').fillColor('#000')
                     .text(`Fabric: ${fabricKey}`, 30, 60);
 
-                const actualLen = sheet.length || (sheet as any).actualUsedLength ||
+                const fabricLen = sheet.length || (sheet as any).actualUsedLength ||
                     Math.max(...sheet.panels.map((p: any) => p.y + p.length), 1);
+                const rollWidth = sheet.width; // 3000mm
 
                 doc.fontSize(9).font('Helvetica').fillColor('#333')
                     .text(
-                        `Layout ${sheet.id}  -  ${sheet.width.toLocaleString()} mm × ${Math.round(actualLen).toLocaleString()} mm  |  ` +
-                        `${sheet.panels.length} panels  |  ${(sheet.efficiency ?? 0).toFixed(1)}% yield`,
+                        `Layout ${sheet.id}  -  ${Math.round(fabricLen).toLocaleString()} mm × ${rollWidth.toLocaleString()} mm  |  ` +
+                        `${sheet.panels.length} panels  |  ${(sheet.efficiency ?? 0).toFixed(1)}% yield  |  1×`,
                         30, 74
                     );
 
-                // — Scaling to fit on page —
-                const MARGIN_LEFT = 50;
+                // — Scaling to fit on page (landscape A4) —
+                const MARGIN_LEFT = 30;
                 const MARGIN_TOP = 92;
-                const AVAIL_W = 740;   // landscape A4 usable width
-                const AVAIL_H = 420;   // usable height
-                const scaleX = AVAIL_W / sheet.width;
-                const scaleY = AVAIL_H / actualLen;
+                const AVAIL_W = 780;   // landscape A4 usable width
+                const AVAIL_H = 380;   // usable height (leave room for stats below)
+                // Landscape: fabricLen → horizontal, rollWidth (3000) → vertical
+                const scaleX = AVAIL_W / fabricLen;
+                const scaleY = AVAIL_H / rollWidth;
                 const sc = Math.min(scaleX, scaleY); // uniform scale
 
-                const drawW = sheet.width * sc;
-                const drawH = actualLen * sc;
+                const drawW = fabricLen * sc;   // horizontal extent on page
+                const drawH = rollWidth * sc;   // vertical extent on page
+
+                // — Waste background (diagonal hatch for entire sheet area) —
+                doc.save();
+                doc.rect(MARGIN_LEFT, MARGIN_TOP, drawW, drawH).clip();
+                doc.lineWidth(0.5).strokeColor('#999');
+                const diagLen = drawW + drawH;
+                for (let d = -Math.ceil(drawH); d < diagLen; d += 8) {
+                    doc.moveTo(MARGIN_LEFT + d, MARGIN_TOP)
+                        .lineTo(MARGIN_LEFT + d + drawH, MARGIN_TOP + drawH)
+                        .stroke();
+                }
+                doc.restore();
 
                 // — Sheet border —
                 doc.lineWidth(2).strokeColor('#333')
                     .rect(MARGIN_LEFT, MARGIN_TOP, drawW, drawH).stroke();
 
-                // — Waste stripes (diagonal hatch for empty area at the bottom) —
-                const panelMaxY = Math.max(
-                    ...sheet.panels.map((p: any) => p.y + (p.rotated ? p.width : p.length)),
-                    0
-                );
-                if (panelMaxY < actualLen) {
-                    const wasteTop = MARGIN_TOP + panelMaxY * sc;
-                    const wasteH = (actualLen - panelMaxY) * sc;
-                    doc.save();
-                    doc.rect(MARGIN_LEFT, wasteTop, drawW, wasteH).clip();
-                    doc.lineWidth(0.5).strokeColor('#999');
-                    for (let d = -Math.ceil(wasteH); d < drawW + Math.ceil(wasteH); d += 8) {
-                        doc.moveTo(MARGIN_LEFT + d, wasteTop)
-                            .lineTo(MARGIN_LEFT + d + wasteH, wasteTop + wasteH)
-                            .stroke();
-                    }
-                    doc.restore();
-                }
-
-                // — Draw panels —
+                // — Draw panels (landscape: GA Y → page X, GA X → page Y) —
                 sheet.panels.forEach((panel: any, idx: number) => {
                     localPanelNo++;
-                    const pw = (panel.rotated ? panel.length : panel.width) * sc;
-                    const ph = (panel.rotated ? panel.width : panel.length) * sc;
-                    const px = MARGIN_LEFT + panel.x * sc;
-                    const py = MARGIN_TOP + panel.y * sc;
+                    // Landscape transform: swap axes for display
+                    const pw = (panel.rotated ? panel.width : panel.length) * sc;  // GA y-span → horizontal
+                    const ph = (panel.rotated ? panel.length : panel.width) * sc;  // GA x-span → vertical
+                    const px = MARGIN_LEFT + panel.y * sc;  // GA Y → page X
+                    const py = MARGIN_TOP + panel.x * sc;   // GA X → page Y
 
                     const color = PANEL_COLORS[idx % PANEL_COLORS.length];
 
@@ -279,7 +280,7 @@ export class WorksheetExportService {
                     doc.lineWidth(1).fillColor(color).strokeColor('#000')
                         .rect(px, py, pw, ph).fillAndStroke();
 
-                    // Panel number (centred, large)
+                    // Panel number (centred)
                     const numStr = `${localPanelNo}${panel.rotated ? '*' : ''}`;
                     doc.fontSize(pw > 40 && ph > 30 ? 14 : 9)
                         .font('Helvetica-Bold').fillColor('#000');
@@ -287,20 +288,12 @@ export class WorksheetExportService {
                     const th = doc.currentLineHeight();
                     doc.text(numStr, px + (pw - tw) / 2, py + (ph - th) / 2, { lineBreak: false });
 
-                        // — Dimension labels for outer-edge panels —
+                    // — Dimension labels (top and left edges in landscape) —
                     doc.fontSize(7).font('Helvetica-Bold').fillColor('#CC0000');
 
-                    // Top edge: width dimension
+                    // Top edge: panels at GA Y=0 → display X start (leftmost)
                     if (panel.y === 0) {
-                        const dimW = panel.rotated ? panel.length : panel.width;
-                        const wLabel = `${dimW.toLocaleString()} mm`;
-                        const wLabelW = doc.widthOfString(wLabel);
-                        doc.text(wLabel, px + (pw - wLabelW) / 2, py - 10, { lineBreak: false });
-                    }
-
-                    // Left edge: height dimension
-                    if (panel.x === 0) {
-                        const dimH = panel.rotated ? panel.width : panel.length;
+                        const dimH = panel.rotated ? panel.length : panel.width;
                         const hLabel = `${dimH.toLocaleString()} mm`;
                         doc.save();
                         doc.fontSize(7).font('Helvetica-Bold').fillColor('#CC0000');
@@ -310,76 +303,49 @@ export class WorksheetExportService {
                         doc.text(hLabel, -hLabelW / 2, 0, { lineBreak: false });
                         doc.restore();
                     }
+
+                    // Left edge: panels at GA X=0 → display Y start (topmost)
+                    if (panel.x === 0) {
+                        const dimW = panel.rotated ? panel.width : panel.length;
+                        const wLabel = `${dimW.toLocaleString()} mm`;
+                        const wLabelW = doc.widthOfString(wLabel);
+                        doc.text(wLabel, px + (pw - wLabelW) / 2, py - 10, { lineBreak: false });
+                    }
                 });
 
-                // — Guillotine cut lines (red dashed) —
-                const cutSequence = (sheet as any).cutSequence;
-                if (cutSequence && Array.isArray(cutSequence)) {
-                    cutSequence.forEach((cut: any) => {
-                        doc.save();
-                        doc.lineWidth(1.5).strokeColor('#CC0000').dash(5, { space: 3 });
-
-                        if (cut.type === 'horizontal') {
-                            const cy = MARGIN_TOP + cut.y1 * sc;
-                            doc.moveTo(MARGIN_LEFT, cy)
-                                .lineTo(MARGIN_LEFT + drawW, cy)
-                                .stroke();
-                            // Dimension label
-                            doc.fillColor('#CC0000').fontSize(7).font('Helvetica-Bold');
-                            doc.text(cut.label, MARGIN_LEFT + drawW - 50, cy - 10, { lineBreak: false });
-                        } else {
-                            const cx = MARGIN_LEFT + cut.x1 * sc;
-                            doc.moveTo(cx, MARGIN_TOP)
-                                .lineTo(cx, MARGIN_TOP + drawH)
-                                .stroke();
-                            doc.fillColor('#CC0000').fontSize(7).font('Helvetica-Bold');
-                            doc.text(cut.label, cx + 3, MARGIN_TOP + 3, { lineBreak: false });
-                        }
-
-                        doc.restore();
-                    });
-                }
-
-                // — Stats block (right side) —
-                const sX = MARGIN_LEFT + drawW + 12;
-                const sY = MARGIN_TOP;
-                doc.fontSize(9).font('Helvetica-Bold').fillColor('#000')
-                    .text(`Sheet ${sheet.id}`, sX, sY);
+                // — Stats block below layout —
+                const statsY = MARGIN_TOP + drawH + 14;
                 doc.fontSize(8).font('Helvetica').fillColor('#333');
-                doc.text(`Panels: ${sheet.panels.length}`, sX, sY + 16);
-                doc.text(`Efficiency: ${(sheet.efficiency ?? 0).toFixed(1)}%`, sX, sY + 28);
-                doc.text(`Used: ${(sheet.usedArea / 1_000_000).toFixed(2)} m²`, sX, sY + 40);
-                doc.text(`Waste: ${((sheet.wastedArea ?? (sheet as any).wasteArea ?? 0) / 1_000_000).toFixed(2)} m²`, sX, sY + 52);
+                doc.text(
+                    `Panels: ${sheet.panels.length}  |  Efficiency: ${(sheet.efficiency ?? 0).toFixed(1)}%  |  ` +
+                    `Used: ${(sheet.usedArea / 1_000_000).toFixed(2)} m²  |  ` +
+                    `Waste: ${((sheet.wastedArea ?? (sheet as any).wasteArea ?? 0) / 1_000_000).toFixed(2)} m²`,
+                    MARGIN_LEFT, statsY
+                );
 
-                // — GA metadata (right side, below stats) —
+                // — GA metadata —
                 const opt = groupData.optimization as any;
-                let gaY = sY + 72;
+                let gaLine = statsY + 14;
 
                 if (opt.isGuillotineValid !== undefined) {
                     doc.fontSize(8).font('Helvetica-Bold')
                         .fillColor(opt.isGuillotineValid ? '#047857' : '#DC2626')
-                        .text(opt.isGuillotineValid ? 'Guillotine Valid' : 'Non-guillotine', sX, gaY);
-                    gaY += 14;
-                }
-
-                if (opt.strategy) {
-                    doc.fontSize(7).font('Helvetica').fillColor('#555')
-                        .text(opt.strategy, sX, gaY, { width: 110 });
-                    gaY += 12;
+                        .text(opt.isGuillotineValid ? 'Guillotine Valid' : 'Non-guillotine', MARGIN_LEFT, gaLine, { continued: true });
+                    doc.fillColor('#333').font('Helvetica');
+                    if (opt.strategy) doc.text(`  |  ${opt.strategy}`, { continued: false });
+                    else doc.text('', { continued: false });
+                    gaLine += 14;
                 }
 
                 if (opt.generationStats) {
                     const gs = opt.generationStats;
-                    doc.fontSize(7).font('Helvetica').fillColor('#555');
-                    doc.text(`Seeds: ${gs.seedsTested}`, sX, gaY);
-                    doc.text(`Best gen: ${gs.bestGeneration}/${gs.totalGenerations}`, sX, gaY + 10);
-                    doc.text(`Time: ${gs.convergenceTime}ms`, sX, gaY + 20);
+                    doc.fontSize(7).font('Helvetica').fillColor('#555')
+                        .text(`Seeds: ${gs.seedsTested}  |  Best gen: ${gs.bestGeneration}/${gs.totalGenerations}  |  ${gs.convergenceTime}ms`, MARGIN_LEFT, gaLine);
                 }
 
                 // — Legend —
-                const legendY = MARGIN_TOP + drawH + 10;
                 doc.fontSize(7).font('Helvetica').fillColor('#666')
-                    .text('* = Rotated 90°   |   Diagonal stripes = Waste area   |   Red lines = Cutting marks with dimensions', MARGIN_LEFT, legendY);
+                    .text('* = Rotated 90°   |   Diagonal stripes = Waste area', MARGIN_LEFT, 540);
 
                 // — Footer —
                 doc.fontSize(7).fillColor('#aaa')
@@ -391,7 +357,7 @@ export class WorksheetExportService {
             doc.text(
                 `Summary — ${stats.usedStockSheets} sheet(s)  |  ${stats.efficiency.toFixed(1)}% efficiency  |  ` +
                 `${(stats.totalFabricNeeded / 1000).toFixed(2)} m fabric  |  ${stats.wastePercentage.toFixed(1)}% waste`,
-                30, 535
+                30, 525
             );
         }
 

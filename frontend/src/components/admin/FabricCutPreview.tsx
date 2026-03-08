@@ -26,13 +26,13 @@ const PANEL_COLORS = [
     '#FFB6C1', // pink
 ];
 
-const MAX_PREVIEW_WIDTH = 800; // px
-const MAX_PREVIEW_HEIGHT = 600; // px
-
 /**
  * Visual cutting layout preview with SVG rendering.
- * Displays genetic algorithm optimization results with auto-scaling,
- * toggleable cutting marks, and GA metadata.
+ * Displays in LANDSCAPE orientation (fabric length horizontal, roll width vertical)
+ * matching CutLogic's display format.
+ *
+ * Data arrives in portrait format (width=3000, length=fabricLength).
+ * We rotate 90° at render time: GA Y → display X, GA X → display Y.
  */
 export default function FabricCutPreview({
     fabricKey,
@@ -47,9 +47,7 @@ export default function FabricCutPreview({
 }: FabricCutPreviewProps) {
     const [showCuttingMarks, setShowCuttingMarks] = useState(false);
 
-    const getColor = (index: number) => {
-        return PANEL_COLORS[index % PANEL_COLORS.length];
-    };
+    const getColor = (index: number) => PANEL_COLORS[index % PANEL_COLORS.length];
 
     return (
         <div className="fabric-cut-preview mb-8">
@@ -97,37 +95,42 @@ export default function FabricCutPreview({
                 </div>
             </div>
 
-            {/* Sheets visualization — HORIZONTAL LAYOUT */}
-            <div className="flex gap-8 overflow-x-auto pb-4 p-5 bg-gray-50 rounded-lg">
+            {/* Sheets visualization — LANDSCAPE LAYOUT */}
+            <div className="space-y-6 p-5 bg-gray-50 rounded-lg overflow-x-auto">
                 {sheets.map((sheet, sheetIndex) => {
-                    // Auto-scale: fit within MAX_PREVIEW_WIDTH x MAX_PREVIEW_HEIGHT
-                    const sheetLength = sheet.length || 1;
-                    const scaleX = MAX_PREVIEW_WIDTH / sheet.width;
-                    const scaleY = MAX_PREVIEW_HEIGHT / sheetLength;
-                    const scale = Math.min(scaleX, scaleY);
+                    // Landscape: fabric length → horizontal, roll width (3000mm) → vertical
+                    // Data is portrait (width=3000, length=fabricLength), we rotate for display
+                    const fabricLength = sheet.length || 1;
+                    const rollWidth = sheet.width; // 3000mm
 
-                    const svgWidth = sheet.width * scale;
-                    const svgHeight = sheetLength * scale;
+                    // Scale: fit to container width (~800px), ensure minimum height (200px)
+                    const CONTAINER_WIDTH = 800;
+                    const MIN_HEIGHT = 200;
+                    const MAX_HEIGHT = 400;
 
-                    // Calculate waste rectangle
-                    const maxUsedHeight = sheet.panels.length > 0
-                        ? Math.max(...sheet.panels.map(p =>
-                            p.y + (p.rotated ? p.width : p.length)
-                        ))
-                        : 0;
+                    const scaleFromWidth = CONTAINER_WIDTH / fabricLength;
+                    const minScale = MIN_HEIGHT / rollWidth;
+                    const maxScale = MAX_HEIGHT / rollWidth;
+                    const scale = Math.min(Math.max(scaleFromWidth, minScale), maxScale);
+
+                    const svgWidth = fabricLength * scale;
+                    const svgHeight = rollWidth * scale;
 
                     return (
-                        <div key={sheet.id} className="flex-shrink-0 bg-white p-4 rounded-lg shadow-md">
+                        <div key={sheet.id} className="bg-white p-4 rounded-lg shadow-md">
+                            {/* Sheet header */}
                             <div className="text-center mb-3">
-                                <h4 className="font-bold text-gray-800">Sheet {sheet.id}</h4>
+                                <h4 className="font-bold text-gray-800">
+                                    Layout {sheet.id} &mdash; {fabricLength.toLocaleString()} mm &times; {rollWidth.toLocaleString()} mm
+                                </h4>
                                 <p className="text-xs text-gray-600">
-                                    {sheet.width} &times; {sheetLength}mm &nbsp;|&nbsp;
                                     {sheet.panels.length} panels &nbsp;|&nbsp;
-                                    {sheet.efficiency.toFixed(1)}% eff.
+                                    {sheet.efficiency.toFixed(1)}% eff. &nbsp;|&nbsp;
+                                    1 &times;
                                 </p>
                             </div>
 
-                            {/* SVG Canvas */}
+                            {/* SVG Canvas — landscape */}
                             <svg
                                 width={svgWidth}
                                 height={svgHeight}
@@ -143,55 +146,51 @@ export default function FabricCutPreview({
                                         patternTransform="rotate(45)"
                                     >
                                         <line
-                                            x1="0"
-                                            y1="0"
-                                            x2="0"
-                                            y2="8"
-                                            stroke="#999"
-                                            strokeWidth="1.5"
+                                            x1="0" y1="0" x2="0" y2="8"
+                                            stroke="#999" strokeWidth="1.5"
                                         />
                                     </pattern>
                                 </defs>
 
-                                {/* Waste area (stripe pattern at bottom) */}
-                                {maxUsedHeight < sheetLength && (
-                                    <rect
-                                        x={0}
-                                        y={maxUsedHeight * scale}
-                                        width={sheet.width * scale}
-                                        height={(sheetLength - maxUsedHeight) * scale}
-                                        fill={`url(#stripe-${sheetIndex})`}
-                                        opacity="0.4"
-                                    />
-                                )}
+                                {/* Full sheet background with stripe pattern (waste visible in gaps) */}
+                                <rect
+                                    x={0} y={0}
+                                    width={svgWidth} height={svgHeight}
+                                    fill={`url(#stripe-${sheetIndex})`}
+                                    opacity="0.3"
+                                />
 
-                                {/* Panels */}
+                                {/* Panels — rotated 90° from portrait data:
+                                    display X = panel.y (GA's fabric-length axis)
+                                    display Y = panel.x (GA's roll-width axis)
+                                    display W = GA's y-span (rotated ? panel.width : panel.length)
+                                    display H = GA's x-span (rotated ? panel.length : panel.width)
+                                */}
                                 {sheet.panels.map((panel, panelIndex) => {
-                                    const panelWidth = (panel.rotated ? panel.length : panel.width) * scale;
-                                    const panelHeight = (panel.rotated ? panel.width : panel.length) * scale;
-                                    const px = panel.x * scale;
-                                    const py = panel.y * scale;
+                                    // Landscape transform: swap axes
+                                    const displayW = (panel.rotated ? panel.width : panel.length) * scale;
+                                    const displayH = (panel.rotated ? panel.length : panel.width) * scale;
+                                    const px = panel.y * scale;
+                                    const py = panel.x * scale;
 
                                     return (
                                         <g key={panel.id}>
                                             {/* Panel rectangle */}
                                             <rect
-                                                x={px}
-                                                y={py}
-                                                width={panelWidth}
-                                                height={panelHeight}
+                                                x={px} y={py}
+                                                width={displayW} height={displayH}
                                                 fill={getColor(panelIndex)}
                                                 stroke="#000"
                                                 strokeWidth="1.5"
                                             />
 
-                                            {/* Panel number and rotation indicator */}
+                                            {/* Panel number + rotation indicator */}
                                             <text
-                                                x={px + panelWidth / 2}
-                                                y={py + panelHeight / 2}
+                                                x={px + displayW / 2}
+                                                y={py + displayH / 2}
                                                 textAnchor="middle"
                                                 dominantBaseline="middle"
-                                                fontSize={Math.min(16, panelWidth * 0.4, panelHeight * 0.3)}
+                                                fontSize={Math.min(16, displayW * 0.3, displayH * 0.3)}
                                                 fontWeight="bold"
                                                 fill="#000"
                                             >
@@ -199,68 +198,84 @@ export default function FabricCutPreview({
                                             </text>
 
                                             {/* Dimension labels inside panels (when large enough) */}
-                                            {panelWidth > 50 && panelHeight > 40 && (
+                                            {displayW > 50 && displayH > 40 && (
                                                 <text
-                                                    x={px + panelWidth / 2}
-                                                    y={py + panelHeight / 2 + 14}
+                                                    x={px + displayW / 2}
+                                                    y={py + displayH / 2 + 14}
                                                     textAnchor="middle"
                                                     dominantBaseline="middle"
                                                     fontSize="8"
                                                     fill="#333"
                                                 >
-                                                    {panel.rotated ? panel.length : panel.width}&times;{panel.rotated ? panel.width : panel.length}
+                                                    {panel.width}&times;{panel.length}
+                                                </text>
+                                            )}
+
+                                            {/* Edge dimension labels (top edge: horizontal extent) */}
+                                            {panel.y === 0 && (
+                                                <text
+                                                    x={px + displayW / 2}
+                                                    y={py - 4}
+                                                    textAnchor="middle"
+                                                    fontSize="7"
+                                                    fontWeight="bold"
+                                                    fill="#CC0000"
+                                                >
+                                                    {Math.round(panel.rotated ? panel.width : panel.length).toLocaleString()} mm
+                                                </text>
+                                            )}
+
+                                            {/* Left edge: vertical extent */}
+                                            {panel.x === 0 && (
+                                                <text
+                                                    x={px - 4}
+                                                    y={py + displayH / 2}
+                                                    textAnchor="end"
+                                                    dominantBaseline="middle"
+                                                    fontSize="7"
+                                                    fontWeight="bold"
+                                                    fill="#CC0000"
+                                                    transform={`rotate(-90, ${px - 4}, ${py + displayH / 2})`}
+                                                >
+                                                    {Math.round(panel.rotated ? panel.length : panel.width).toLocaleString()} mm
                                                 </text>
                                             )}
                                         </g>
                                     );
                                 })}
 
-                                {/* Guillotine cutting marks (from cutSequence) */}
+                                {/* Cutting marks (toggled via button — NOT shown by default) */}
                                 {showCuttingMarks && sheet.cutSequence && sheet.cutSequence.map((cut, cutIndex) => {
+                                    // Rotate cut lines 90°:
+                                    //   GA "horizontal" cut (y=const) → display VERTICAL line at x=cut.y1
+                                    //   GA "vertical" cut (x=const) → display HORIZONTAL line at y=cut.x1
                                     if (cut.type === 'horizontal') {
-                                        const y = cut.y1 * scale;
+                                        const x = cut.y1 * scale;
                                         return (
                                             <g key={`cut-h-${cutIndex}`}>
                                                 <line
-                                                    x1={0}
-                                                    y1={y}
-                                                    x2={svgWidth}
-                                                    y2={y}
-                                                    stroke="red"
-                                                    strokeWidth="2"
-                                                    strokeDasharray="6,3"
+                                                    x1={x} y1={0} x2={x} y2={svgHeight}
+                                                    stroke="red" strokeWidth="2" strokeDasharray="6,3"
                                                 />
                                                 <text
-                                                    x={svgWidth - 5}
-                                                    y={y - 4}
-                                                    fill="red"
-                                                    fontSize="10"
-                                                    fontWeight="bold"
-                                                    textAnchor="end"
+                                                    x={x + 4} y={12}
+                                                    fill="red" fontSize="10" fontWeight="bold"
                                                 >
                                                     {cut.label}
                                                 </text>
                                             </g>
                                         );
                                     } else {
-                                        const x = cut.x1 * scale;
+                                        const y = cut.x1 * scale;
                                         return (
                                             <g key={`cut-v-${cutIndex}`}>
                                                 <line
-                                                    x1={x}
-                                                    y1={0}
-                                                    x2={x}
-                                                    y2={svgHeight}
-                                                    stroke="red"
-                                                    strokeWidth="2"
-                                                    strokeDasharray="6,3"
+                                                    x1={0} y1={y} x2={svgWidth} y2={y}
+                                                    stroke="red" strokeWidth="2" strokeDasharray="6,3"
                                                 />
                                                 <text
-                                                    x={x + 4}
-                                                    y={12}
-                                                    fill="red"
-                                                    fontSize="10"
-                                                    fontWeight="bold"
+                                                    x={svgWidth - 5} y={y - 4}
+                                                    fill="red" fontSize="10" fontWeight="bold" textAnchor="end"
                                                 >
                                                     {cut.label}
                                                 </text>
@@ -271,15 +286,17 @@ export default function FabricCutPreview({
 
                                 {/* Sheet border */}
                                 <rect
-                                    x="0"
-                                    y="0"
-                                    width={svgWidth}
-                                    height={svgHeight}
-                                    fill="none"
-                                    stroke="#000"
-                                    strokeWidth="3"
+                                    x="0" y="0"
+                                    width={svgWidth} height={svgHeight}
+                                    fill="none" stroke="#000" strokeWidth="3"
                                 />
                             </svg>
+
+                            {/* Right-side stats (below SVG in landscape) */}
+                            <div className="flex gap-6 mt-2 text-xs text-gray-500">
+                                <span>Cut {sheetIndex + 1} of {sheets.length}</span>
+                                <span>{fabricLength.toLocaleString()} mm</span>
+                            </div>
                         </div>
                     );
                 })}
