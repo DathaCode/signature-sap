@@ -5,7 +5,7 @@
     "main": "dist/server.js",
     "scripts": {
         "dev": "tsx watch src/server.ts",
-        "build": "tsc",
+        "build": "tsc && node -e \"require('fs').cpSync('src/services/genetic-optimizer', 'dist/services/genetic-optimizer', {recursive: true})\"",
         "start": "node dist/server.js",
         "prisma:generate": "prisma generate",
         "prisma:migrate": "prisma migrate dev",
@@ -40,7 +40,6 @@
         "dotenv": "^16.4.5",
         "express": "^4.21.2",
         "express-validator": "^7.2.1",
-
         "helmet": "^8.0.0",
         "jsonwebtoken": "^9.0.3",
         "jspdf": "^2.5.2",
