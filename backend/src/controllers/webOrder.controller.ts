@@ -1119,10 +1119,11 @@ export const downloadWorksheet = async (
                 break;
             }
             case 'fabric-cut-pdf': {
-                const doc = WorksheetExportService.generateFabricCutPDF(orderInfo, fabricCutData);
                 res.setHeader('Content-Type', 'application/pdf');
                 res.setHeader('Content-Disposition', `attachment; filename="${order.orderNumber}-fabric-cut.pdf"`);
-                doc.pipe(res);
+                const fabricDoc = WorksheetExportService.generateFabricCutPDF(orderInfo, fabricCutData);
+                fabricDoc.pipe(res);
+                fabricDoc.end();
                 break;
             }
             case 'tube-cut-csv': {
@@ -1133,10 +1134,11 @@ export const downloadWorksheet = async (
                 break;
             }
             case 'tube-cut-pdf': {
-                const doc = WorksheetExportService.generateTubeCutPDF(orderInfo, tubeCutData);
                 res.setHeader('Content-Type', 'application/pdf');
                 res.setHeader('Content-Disposition', `attachment; filename="${order.orderNumber}-tube-cut.pdf"`);
-                doc.pipe(res);
+                const tubeDoc = WorksheetExportService.generateTubeCutPDF(orderInfo, tubeCutData);
+                tubeDoc.pipe(res);
+                tubeDoc.end();
                 break;
             }
             default:
