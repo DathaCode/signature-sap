@@ -5,13 +5,14 @@ import { LayoutGrid, Table } from 'lucide-react';
 
 /**
  * Determine chain size (mm) from total drop (Calc D = original drop + 200)
+ * Matches backend worksheetExport.service.ts and inventory chain lengths
  */
 function getChainSize(calcDrop: number): number {
     if (calcDrop <= 850) return 500;
-    if (calcDrop <= 1100) return 750;
-    if (calcDrop <= 1600) return 1000;
-    if (calcDrop <= 2200) return 1200;
-    return 1500;
+    if (calcDrop <= 1200) return 900;
+    if (calcDrop <= 1600) return 1200;
+    if (calcDrop <= 2200) return 1500;
+    return 2000;
 }
 
 interface Props {
@@ -108,7 +109,7 @@ export default function FabricCutWorksheet({ fabricCutData }: Props) {
                                 </thead>
                                 <tbody>
                                     {groupData.optimization.sheets.map(sheet =>
-                                        sheet.panels.map((panel, idx) => {
+                                        [...sheet.panels].sort((a, b) => (a.blindNumber ?? 0) - (b.blindNumber ?? 0)).map((panel, idx) => {
                                             const item = groupData.items.find(
                                                 (it: any) => it.id === panel.orderItemId
                                             );

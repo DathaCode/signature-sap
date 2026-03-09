@@ -11,7 +11,7 @@
  * doesn't pass through any panel.
  */
 
-const KERF = 2;
+const KERF = 0; // fabric cutting uses rotary blade — zero kerf
 const TOLERANCE = 3; // mm tolerance for edge alignment
 
 /**

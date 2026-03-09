@@ -93,7 +93,11 @@ export class WorksheetExportService {
             rows.push(`# Fabric Group: ${fabricKey}`);
 
             for (const sheet of groupData.optimization.sheets) {
-                for (const panel of sheet.panels) {
+                // Sort panels by blind number for sequential CSV rows
+                const sortedPanels = [...sheet.panels].sort(
+                    (a: any, b: any) => (a.blindNumber ?? 0) - (b.blindNumber ?? 0)
+                );
+                for (const panel of sortedPanels) {
                     const item = groupData.items.find(
                         (it: any) => it.id === panel.orderItemId
                     );
@@ -202,7 +206,8 @@ export class WorksheetExportService {
         let isFirstPage = true;
 
         for (const [fabricKey, groupData] of Object.entries(fabricCutData)) {
-            const stats = groupData.optimization.statistics;
+            // Cast to any — DB-stored statistics may have extra/different fields
+            const stats = groupData.optimization.statistics as any;
 
             for (const sheet of groupData.optimization.sheets) {
                 if (!isFirstPage) doc.addPage();
@@ -361,8 +366,10 @@ export class WorksheetExportService {
             // Per-fabric summary line (on last sheet page of that fabric)
             doc.fontSize(8).font('Helvetica-Bold').fillColor('#000');
             doc.text(
-                `Summary — ${stats.usedStockSheets} sheet(s)  |  ${stats.efficiency.toFixed(1)}% efficiency  |  ` +
-                `${(stats.totalFabricNeeded / 1000).toFixed(2)} m fabric  |  ${stats.wastePercentage.toFixed(1)}% waste`,
+                `Summary — ${stats.usedStockSheets ?? stats.totalSheets ?? 1} sheet(s)  |  ` +
+                `${(stats.efficiency ?? stats.avgEfficiency ?? 0).toFixed(1)}% efficiency  |  ` +
+                `${((stats.totalFabricNeeded ?? 0) / 1000).toFixed(2)} m fabric  |  ` +
+                `${(stats.wastePercentage ?? 0).toFixed(1)}% waste`,
                 30, 525
             );
         }
@@ -409,7 +416,11 @@ export class WorksheetExportService {
 
             doc.fontSize(8).font('Helvetica').fillColor('#000');
             for (const sheet of groupData.optimization.sheets) {
-                for (const panel of sheet.panels) {
+                // Sort panels by blind number for sequential table display
+                const sortedPanels = [...sheet.panels].sort(
+                    (a: any, b: any) => (a.blindNumber ?? 0) - (b.blindNumber ?? 0)
+                );
+                for (const panel of sortedPanels) {
                     if (doc.y > 520) doc.addPage();
 
                     const item = groupData.items.find((it: any) => it.id === panel.orderItemId);
@@ -444,11 +455,13 @@ export class WorksheetExportService {
                 }
             }
 
-            const stats = groupData.optimization.statistics;
+            const dtStats = groupData.optimization.statistics as any;
             doc.y += 6;
             doc.fontSize(9).font('Helvetica-Bold').fillColor('#333')
                 .text(
-                    `Sheets: ${stats.usedStockSheets}  |  Efficiency: ${stats.efficiency}%  |  Fabric Needed: ${(stats.totalFabricNeeded / 1000).toFixed(2)}m`,
+                    `Sheets: ${dtStats.usedStockSheets ?? dtStats.totalSheets ?? 1}  |  ` +
+                    `Efficiency: ${dtStats.efficiency ?? dtStats.avgEfficiency ?? 0}%  |  ` +
+                    `Fabric Needed: ${((dtStats.totalFabricNeeded ?? 0) / 1000).toFixed(2)}m`,
                     TABLE_LEFT, doc.y, { lineBreak: false }
                 );
             doc.y += 20;
@@ -456,27 +469,32 @@ export class WorksheetExportService {
 
         // ====================================================================
         // STATISTICS SUMMARY PAGE
+        // Uses lineBreak: false + explicit Y management (no continued)
         // ====================================================================
         doc.addPage();
         doc.fontSize(16).font('Helvetica-Bold').fillColor('#1B2B3A')
-            .text('Optimization Statistics', { align: 'center' });
-        doc.moveDown(2);
+            .text('Optimization Statistics', 30, 25, { align: 'center', lineBreak: false });
+        doc.y = 55;
 
         // Table
         const sColW = [30, 200, 50, 60, 80, 60, 70];
         const sHeaders = ['#', 'Fabric', 'Sheets', 'Efficiency', 'Fabric Needed', 'Waste', 'Guillotine'];
+        const S_TABLE_LEFT = 50;
+        const S_ROW_HEIGHT = 14;
+        const S_TABLE_WIDTH = sColW.reduce((a, b) => a + b, 0);
 
-        let sx = 50;
+        // Header row
+        const statHdrY = doc.y;
+        let sx = S_TABLE_LEFT;
         doc.fontSize(9).font('Helvetica-Bold').fillColor('#333');
         sHeaders.forEach((h, i) => {
-            doc.text(h, sx, doc.y, { width: sColW[i], align: i === 1 ? 'left' : 'center', continued: i < sHeaders.length - 1 });
+            doc.text(h, sx, statHdrY, { lineBreak: false });
             sx += sColW[i];
         });
-        doc.text(''); // end continued
-        doc.moveDown(0.5);
+        doc.y = statHdrY + S_ROW_HEIGHT + 2;
         doc.strokeColor('#ccc').lineWidth(0.5)
-            .moveTo(50, doc.y).lineTo(50 + sColW.reduce((a, b) => a + b, 0), doc.y).stroke();
-        doc.moveDown(0.3);
+            .moveTo(S_TABLE_LEFT, doc.y).lineTo(S_TABLE_LEFT + S_TABLE_WIDTH, doc.y).stroke();
+        doc.y += 5;
 
         let rowIdx = 0;
         let sumFabric = 0;
@@ -485,46 +503,49 @@ export class WorksheetExportService {
 
         for (const [fabricKey, groupData] of fabricEntries) {
             rowIdx++;
-            const s = groupData.optimization.statistics;
+            const s = groupData.optimization.statistics as any;
             const optAny = groupData.optimization as any;
-            sumFabric += s.totalFabricNeeded;
-            sumEfficiency += s.efficiency;
+            const eff = s.efficiency ?? s.avgEfficiency ?? 0;
+            const waste = s.wastePercentage ?? 0;
+            const fabricNeeded = s.totalFabricNeeded ?? 0;
+            sumFabric += fabricNeeded;
+            sumEfficiency += eff;
 
             const row = [
                 String(rowIdx),
                 fabricKey,
-                String(s.usedStockSheets),
-                `${s.efficiency.toFixed(1)}%`,
-                `${(s.totalFabricNeeded / 1000).toFixed(2)} m`,
-                `${s.wastePercentage.toFixed(1)}%`,
+                String(s.usedStockSheets ?? s.totalSheets ?? 1),
+                `${Number(eff).toFixed(1)}%`,
+                `${(fabricNeeded / 1000).toFixed(2)} m`,
+                `${Number(waste).toFixed(1)}%`,
                 optAny.isGuillotineValid !== undefined
                     ? (optAny.isGuillotineValid ? 'Valid' : 'No')
                     : '-',
             ];
 
-            sx = 50;
+            const sRowY = doc.y;
+            sx = S_TABLE_LEFT;
             doc.fontSize(8).font('Helvetica').fillColor('#000');
             row.forEach((val, i) => {
-                doc.text(val, sx, doc.y, { width: sColW[i], align: i === 1 ? 'left' : 'center', continued: i < row.length - 1 });
+                doc.text(val, sx, sRowY, { lineBreak: false });
                 sx += sColW[i];
             });
-            doc.text('');
-            doc.moveDown(0.2);
+            doc.y = sRowY + S_ROW_HEIGHT;
         }
 
         // Totals row
-        doc.moveDown(0.4);
+        doc.y += 4;
         doc.strokeColor('#ccc').lineWidth(0.5)
-            .moveTo(50, doc.y).lineTo(50 + sColW.reduce((a, b) => a + b, 0), doc.y).stroke();
-        doc.moveDown(0.3);
+            .moveTo(S_TABLE_LEFT, doc.y).lineTo(S_TABLE_LEFT + S_TABLE_WIDTH, doc.y).stroke();
+        doc.y += 6;
         doc.fontSize(9).font('Helvetica-Bold').fillColor('#000');
         doc.text(
-            `TOTAL: ${(sumFabric / 1000).toFixed(2)} m fabric needed  |  Avg Efficiency: ${(sumEfficiency / fabricEntries.length).toFixed(1)}%`,
-            50
+            `TOTAL: ${(sumFabric / 1000).toFixed(2)} m fabric needed  |  Avg Efficiency: ${(sumEfficiency / (fabricEntries.length || 1)).toFixed(1)}%`,
+            S_TABLE_LEFT, doc.y, { lineBreak: false }
         );
+        doc.y += 18;
 
         // GA strategy info per fabric group
-        doc.moveDown(1);
         doc.fontSize(8).font('Helvetica').fillColor('#555');
         for (const [fabricKey, groupData] of fabricEntries) {
             const optAny = groupData.optimization as any;
@@ -533,8 +554,8 @@ export class WorksheetExportService {
                 const parts = [`${fabricKey}:`];
                 if (optAny.strategy) parts.push(optAny.strategy);
                 if (gs) parts.push(`seeds=${gs.seedsTested}, best gen ${gs.bestGeneration}/${gs.totalGenerations}, ${gs.convergenceTime}ms`);
-                doc.text(parts.join('  '), 50);
-                doc.moveDown(0.1);
+                doc.text(parts.join('  '), S_TABLE_LEFT, doc.y, { lineBreak: false });
+                doc.y += 12;
             }
         }
 

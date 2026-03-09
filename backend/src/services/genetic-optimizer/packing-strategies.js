@@ -8,7 +8,7 @@
  * full-width or full-height cut (guillotine constraint).
  */
 
-const KERF = 1; // blade clearance in mm (fabric cutting — near-zero kerf)
+const KERF = 0; // fabric cutting uses rotary blade — zero kerf
 
 // ── Free-rectangle selection rules ──────────────────────────────────────────
 
