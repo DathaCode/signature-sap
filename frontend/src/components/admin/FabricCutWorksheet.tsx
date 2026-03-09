@@ -20,7 +20,6 @@ interface Props {
 
 export default function FabricCutWorksheet({ fabricCutData }: Props) {
     const [viewMode, setViewMode] = useState<'visual' | 'table'>('visual');
-    let globalPanelNo = 0; // sequential panel/blind number across all groups
 
     return (
         <div className="space-y-6">
@@ -92,7 +91,7 @@ export default function FabricCutWorksheet({ fabricCutData }: Props) {
                             <table className="w-full text-xs">
                                 <thead>
                                     <tr className="bg-gray-50 border-b">
-                                        <th className="px-2 py-1.5 text-left font-medium text-gray-600">Panel No</th>
+                                        <th className="px-2 py-1.5 text-left font-medium text-gray-600">Blind #</th>
                                         <th className="px-2 py-1.5 text-left font-medium text-gray-600">Location</th>
                                         <th className="px-2 py-1.5 text-right font-medium text-gray-600">Fab Cut W</th>
                                         <th className="px-2 py-1.5 text-right font-medium text-gray-600">Calc D</th>
@@ -104,12 +103,12 @@ export default function FabricCutWorksheet({ fabricCutData }: Props) {
                                         <th className="px-2 py-1.5 text-left font-medium text-gray-600">Colour</th>
                                         <th className="px-2 py-1.5 text-left font-medium text-gray-600">BR Colour</th>
                                         <th className="px-2 py-1.5 text-right font-medium text-gray-600">Chain Size</th>
+                                        <th className="px-2 py-1.5 text-center font-medium text-gray-600">Rot</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {groupData.optimization.sheets.map(sheet =>
                                         sheet.panels.map((panel, idx) => {
-                                            globalPanelNo++;
                                             const item = groupData.items.find(
                                                 (it: any) => it.id === panel.orderItemId
                                             );
@@ -118,8 +117,8 @@ export default function FabricCutWorksheet({ fabricCutData }: Props) {
                                             const chainSize = calcD > 0 ? getChainSize(calcD) : '-';
                                             return (
                                                 <tr key={`${sheet.id}-${idx}`} className="border-b hover:bg-gray-50">
-                                                    <td className="px-2 py-1.5 font-semibold">{globalPanelNo}</td>
-                                                    <td className="px-2 py-1.5 font-medium">{item?.location || panel.label}</td>
+                                                    <td className="px-2 py-1.5 font-semibold">{panel.blindNumber ?? (idx + 1)}</td>
+                                                    <td className="px-2 py-1.5 font-medium">{item?.location || panel.location || panel.label}</td>
                                                     <td className="px-2 py-1.5 text-right font-semibold text-blue-700">
                                                         {fabricCutW}
                                                     </td>
@@ -136,6 +135,7 @@ export default function FabricCutWorksheet({ fabricCutData }: Props) {
                                                     <td className="px-2 py-1.5">{item?.fabricColour || '-'}</td>
                                                     <td className="px-2 py-1.5">{item?.bottomRailColour || '-'}</td>
                                                     <td className="px-2 py-1.5 text-right">{chainSize}mm</td>
+                                                    <td className="px-2 py-1.5 text-center">{panel.rotated ? '*' : ''}</td>
                                                 </tr>
                                             );
                                         })

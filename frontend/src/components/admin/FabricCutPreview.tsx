@@ -194,7 +194,7 @@ export default function FabricCutPreview({
                                                 fontWeight="bold"
                                                 fill="#000"
                                             >
-                                                {panelIndex + 1}{panel.rotated && '*'}
+                                                {panel.blindNumber ?? (panelIndex + 1)}{panel.rotated && '*'}
                                             </text>
 
                                             {/* Dimension labels inside panels (when large enough) */}

@@ -75,9 +75,9 @@ export class WorksheetExportService {
         fabricCutData: Record<string, { optimization: OptimizationResult; items: any[] }>
     ): string {
         const headers = [
-            'Panel No', 'Location', 'Fabric Cut Width (mm)', 'Calculated Drop (mm)',
+            'Blind #', 'Location', 'Fabric Cut Width (mm)', 'Calculated Drop (mm)',
             'Control Side', 'Control Colour', 'Chain/Motor', 'Roll',
-            'Fabric Type', 'Fabric Colour', 'Bottom Rail Colour', 'Chain Size (mm)'
+            'Fabric Type', 'Fabric Colour', 'Bottom Rail Colour', 'Chain Size (mm)', 'Rotated'
         ];
 
         const rows: string[] = [];
@@ -89,14 +89,11 @@ export class WorksheetExportService {
         rows.push('');
         rows.push(headers.join(','));
 
-        let panelNo = 0;
-
         for (const [fabricKey, groupData] of Object.entries(fabricCutData)) {
             rows.push(`# Fabric Group: ${fabricKey}`);
 
             for (const sheet of groupData.optimization.sheets) {
                 for (const panel of sheet.panels) {
-                    panelNo++;
                     const item = groupData.items.find(
                         (it: any) => it.id === panel.orderItemId
                     );
@@ -107,7 +104,7 @@ export class WorksheetExportService {
                     const chainSize = calculatedDrop > 0 ? getChainSize(calculatedDrop) : '';
 
                     rows.push([
-                        panelNo,
+                        panel.blindNumber ?? '',
                         `"${item?.location || panel.label}"`,
                         fabricCutWidth,
                         calculatedDrop || '',
@@ -119,6 +116,7 @@ export class WorksheetExportService {
                         `"${item?.fabricColour || '-'}"`,
                         `"${item?.bottomRailColour || '-'}"`,
                         chainSize,
+                        panel.rotated ? '*' : '',
                     ].join(','));
                 }
             }
@@ -205,7 +203,6 @@ export class WorksheetExportService {
 
         for (const [fabricKey, groupData] of Object.entries(fabricCutData)) {
             const stats = groupData.optimization.statistics;
-            let localPanelNo = 0;
 
             for (const sheet of groupData.optimization.sheets) {
                 if (!isFirstPage) doc.addPage();
@@ -267,7 +264,6 @@ export class WorksheetExportService {
 
                 // — Draw panels (landscape: GA Y → page X, GA X → page Y) —
                 sheet.panels.forEach((panel: any, idx: number) => {
-                    localPanelNo++;
                     // Landscape transform: swap axes for display
                     const pw = (panel.rotated ? panel.width : panel.length) * sc;  // GA y-span → horizontal
                     const ph = (panel.rotated ? panel.length : panel.width) * sc;  // GA x-span → vertical
@@ -280,13 +276,23 @@ export class WorksheetExportService {
                     doc.lineWidth(1).fillColor(color).strokeColor('#000')
                         .rect(px, py, pw, ph).fillAndStroke();
 
-                    // Panel number (centred)
-                    const numStr = `${localPanelNo}${panel.rotated ? '*' : ''}`;
+                    // Panel number = blind number from order (centred)
+                    const blindNo = panel.blindNumber ?? (idx + 1);
+                    const numStr = `${blindNo}${panel.rotated ? '*' : ''}`;
                     doc.fontSize(pw > 40 && ph > 30 ? 14 : 9)
                         .font('Helvetica-Bold').fillColor('#000');
                     const tw = doc.widthOfString(numStr);
                     const th = doc.currentLineHeight();
-                    doc.text(numStr, px + (pw - tw) / 2, py + (ph - th) / 2, { lineBreak: false });
+                    doc.text(numStr, px + (pw - tw) / 2, py + (ph - th) / 2 - 5, { lineBreak: false });
+
+                    // Dimensions inside panel (below number)
+                    if (pw > 45 && ph > 35) {
+                        const dimStr = `${panel.width}×${panel.length}`;
+                        doc.fontSize(Math.min(7, pw * 0.08, ph * 0.1))
+                            .font('Helvetica').fillColor('#333');
+                        const dimW = doc.widthOfString(dimStr);
+                        doc.text(dimStr, px + (pw - dimW) / 2, py + (ph - th) / 2 + 7, { lineBreak: false });
+                    }
 
                     // — Dimension labels (top and left edges in landscape) —
                     doc.fontSize(7).font('Helvetica-Bold').fillColor('#CC0000');
@@ -374,36 +380,33 @@ export class WorksheetExportService {
             );
         doc.moveDown();
 
-        const colWidths = [38, 68, 52, 48, 38, 48, 72, 32, 68, 52, 52, 48];
-        const headers = ['Panel', 'Location', 'Fab Cut W', 'Calc D', 'Ctrl', 'Ctrl Col', 'Chain/Motor', 'Roll', 'Fabric', 'Colour', 'BR Colour', 'Chain'];
-
-        let tablePanelNo = 0;
+        const colWidths = [35, 65, 50, 46, 36, 46, 68, 30, 62, 50, 50, 44, 24];
+        const headers = ['Blind#', 'Location', 'Fab Cut W', 'Calc D', 'Ctrl', 'Ctrl Col', 'Chain/Motor', 'Roll', 'Fabric', 'Colour', 'BR Colour', 'Chain', 'Rot'];
 
         for (const [fabricKey, groupData] of Object.entries(fabricCutData)) {
-            if (doc.y > 490) doc.addPage();
+            if (doc.y > 460) doc.addPage();
 
-            doc.fontSize(10).font('Helvetica-Bold').fillColor('#1B2B3A')
+            doc.fontSize(11).font('Helvetica-Bold').fillColor('#1B2B3A')
                 .text(`Fabric: ${fabricKey}`, { underline: true });
-            doc.moveDown(0.3);
+            doc.moveDown(0.4);
 
             // Column headers
             let hdrX = 30;
             const hdrY = doc.y;
-            doc.fontSize(7).font('Helvetica-Bold').fillColor('#333');
+            doc.fontSize(8).font('Helvetica-Bold').fillColor('#333');
             headers.forEach((h, i) => {
                 doc.text(h, hdrX, hdrY, { width: colWidths[i], align: 'left' });
                 hdrX += colWidths[i];
             });
-            doc.moveDown(0.5);
+            doc.moveDown(0.6);
             doc.strokeColor('#999').lineWidth(0.5)
                 .moveTo(30, doc.y).lineTo(30 + colWidths.reduce((a, b) => a + b, 0), doc.y).stroke();
-            doc.moveDown(0.2);
+            doc.moveDown(0.3);
 
-            doc.fontSize(7).font('Helvetica').fillColor('#000');
+            doc.fontSize(8).font('Helvetica').fillColor('#000');
             for (const sheet of groupData.optimization.sheets) {
                 for (const panel of sheet.panels) {
-                    tablePanelNo++;
-                    if (doc.y > 530) doc.addPage();
+                    if (doc.y > 510) doc.addPage();
 
                     const item = groupData.items.find((it: any) => it.id === panel.orderItemId);
                     const motorType = item?.chainOrMotor || '';
@@ -414,7 +417,7 @@ export class WorksheetExportService {
                     const rowY = doc.y;
                     let rx = 30;
                     const values = [
-                        String(tablePanelNo),
+                        String(panel.blindNumber ?? ''),
                         item?.location || panel.label,
                         String(fabricCutWidth),
                         String(calculatedDrop || ''),
@@ -426,18 +429,19 @@ export class WorksheetExportService {
                         item?.fabricColour || '-',
                         item?.bottomRailColour || '-',
                         chainSize ? `${chainSize}mm` : '-',
+                        panel.rotated ? '*' : '',
                     ];
                     values.forEach((val, i) => {
                         doc.text(val, rx, rowY, { width: colWidths[i], align: 'left' });
                         rx += colWidths[i];
                     });
-                    doc.moveDown(0.3);
+                    doc.moveDown(0.4);
                 }
             }
 
             const stats = groupData.optimization.statistics;
-            doc.moveDown(0.3);
-            doc.fontSize(8).font('Helvetica-Bold').fillColor('#333')
+            doc.moveDown(0.4);
+            doc.fontSize(9).font('Helvetica-Bold').fillColor('#333')
                 .text(`Sheets: ${stats.usedStockSheets}  |  Efficiency: ${stats.efficiency}%  |  Fabric Needed: ${(stats.totalFabricNeeded / 1000).toFixed(2)}m`);
             doc.moveDown();
         }

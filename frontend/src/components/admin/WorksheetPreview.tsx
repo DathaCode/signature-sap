@@ -5,7 +5,7 @@ import { Button } from '../ui/Button';
 import FabricCutWorksheet from './FabricCutWorksheet';
 import TubeCutWorksheet from './TubeCutWorksheet';
 import { toast } from 'react-hot-toast';
-import { X, Download, Check, RefreshCw, AlertTriangle } from 'lucide-react';
+import { X, Download, Check, AlertTriangle } from 'lucide-react';
 
 interface Props {
     orderId: string;
@@ -18,8 +18,7 @@ interface Props {
 export default function WorksheetPreview({ orderId, orderNumber, data, onClose, onAccepted }: Props) {
     const [activeTab, setActiveTab] = useState<'fabric' | 'tube'>('fabric');
     const [accepting, setAccepting] = useState(false);
-    const [recalculating, setRecalculating] = useState(false);
-    const [previewData, setPreviewData] = useState(data);
+    const [previewData] = useState(data);
     const [downloading, setDownloading] = useState<string | null>(null);
 
     const isAccepted = !!previewData.worksheetData.acceptedAt;
@@ -37,20 +36,6 @@ export default function WorksheetPreview({ orderId, orderNumber, data, onClose, 
             toast.error('Failed to accept worksheets');
         } finally {
             setAccepting(false);
-        }
-    };
-
-    const handleRecalculate = async () => {
-        setRecalculating(true);
-        try {
-            const result = await adminOrderApi.recalculate(orderId);
-            setPreviewData(result);
-            toast.success('Optimization recalculated');
-        } catch (error) {
-            console.error(error);
-            toast.error('Failed to recalculate');
-        } finally {
-            setRecalculating(false);
         }
     };
 
@@ -198,24 +183,14 @@ export default function WorksheetPreview({ orderId, orderNumber, data, onClose, 
 
                     <div className="flex gap-2">
                         {!isAccepted && (
-                            <>
-                                <Button
-                                    variant="outline"
-                                    onClick={handleRecalculate}
-                                    disabled={recalculating}
-                                >
-                                    <RefreshCw className={`mr-2 h-4 w-4 ${recalculating ? 'animate-spin' : ''}`} />
-                                    {recalculating ? 'Recalculating...' : 'Recalculate'}
-                                </Button>
-                                <Button
-                                    onClick={handleAccept}
-                                    disabled={accepting || hasInsufficientStock}
-                                    className="bg-green-600 hover:bg-green-700"
-                                >
-                                    <Check className="mr-2 h-4 w-4" />
-                                    {accepting ? 'Accepting...' : 'Accept Worksheets'}
-                                </Button>
-                            </>
+                            <Button
+                                onClick={handleAccept}
+                                disabled={accepting || hasInsufficientStock}
+                                className="bg-green-600 hover:bg-green-700"
+                            >
+                                <Check className="mr-2 h-4 w-4" />
+                                {accepting ? 'Accepting...' : 'Accept Worksheets'}
+                            </Button>
                         )}
                         <Button variant="outline" onClick={onClose}>
                             Close

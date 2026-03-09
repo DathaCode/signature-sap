@@ -20,6 +20,8 @@ export interface PlacedPanel {
     rotated: boolean;
     label: string;
     originalIndex: number;
+    blindNumber?: number;
+    location?: string;
     originalWidth?: number;
     originalDrop?: number;
     orderItemId?: number;
