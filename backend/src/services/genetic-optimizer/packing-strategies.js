@@ -8,7 +8,7 @@
  * full-width or full-height cut (guillotine constraint).
  */
 
-const KERF = 2; // blade thickness in mm
+const KERF = 1; // blade clearance in mm (fabric cutting — near-zero kerf)
 
 // ── Free-rectangle selection rules ──────────────────────────────────────────
 
@@ -158,7 +158,7 @@ function guillotinePack(panels, order, rotations, stockWidth, rectChoice = 'BAF'
       y: fr.y,
       width: bestW,
       height: bestH,
-      rotated: bestW !== (rotate ? panel.height : panel.width),
+      rotated: bestW !== panel.width,
     });
 
     maxY = Math.max(maxY, fr.y + bestH);
@@ -279,7 +279,7 @@ function guillotinePackWithMerge(panels, order, rotations, stockWidth, rectChoic
     placed.push({
       id: panel.id, label: panel.label,
       x: fr.x, y: fr.y, width: bestW, height: bestH,
-      rotated: bestW !== (rotate ? panel.height : panel.width),
+      rotated: bestW !== panel.width,
     });
     maxY = Math.max(maxY, fr.y + bestH);
 

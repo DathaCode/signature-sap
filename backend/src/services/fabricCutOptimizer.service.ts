@@ -206,9 +206,9 @@ export class FabricCutOptimizerService {
         // Run genetic algorithm
         const gaResult: GeneticResult = optimizeCutLayout(gaInput, {
             stockWidth: this.STOCK_WIDTH,
-            populationSize: 100,
-            maxGenerations: 500,
-            stagnationLimit: 50,
+            populationSize: 150,
+            maxGenerations: 800,
+            stagnationLimit: 80,
             validate: true,
         });
 

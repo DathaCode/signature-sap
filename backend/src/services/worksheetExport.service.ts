@@ -368,45 +368,49 @@ export class WorksheetExportService {
         }
 
         // ====================================================================
-        // DETAIL TABLE PAGE(S)
+        // DETAIL TABLE PAGE(S) — landscape A4 with wider columns
         // ====================================================================
         doc.addPage();
         doc.fontSize(16).font('Helvetica-Bold').fillColor('#1B2B3A')
-            .text('Fabric Cut Worksheet — Detail Table', { align: 'center' });
+            .text('Fabric Cut Worksheet — Detail Table', 30, 25, { align: 'center' });
         doc.fontSize(9).font('Helvetica').fillColor('#555')
             .text(
                 `Order: ${orderInfo.orderNumber}  |  Customer: ${orderInfo.customerName}  |  Date: ${orderInfo.orderDate.toISOString().split('T')[0]}`,
-                { align: 'center' }
+                30, 42, { align: 'center' }
             );
-        doc.moveDown();
+        doc.y = 62;
 
-        const colWidths = [35, 65, 50, 46, 36, 46, 68, 30, 62, 50, 50, 44, 24];
+        // Column widths sized for landscape A4 (841pt wide). Total ~757pt from x=30.
+        const colWidths = [38, 75, 58, 55, 40, 55, 130, 35, 70, 60, 60, 50, 26];
         const headers = ['Blind#', 'Location', 'Fab Cut W', 'Calc D', 'Ctrl', 'Ctrl Col', 'Chain/Motor', 'Roll', 'Fabric', 'Colour', 'BR Colour', 'Chain', 'Rot'];
+        const TABLE_LEFT = 30;
+        const ROW_HEIGHT = 15; // Fixed row height in pt (prevents overlap)
+        const TABLE_WIDTH = colWidths.reduce((a, b) => a + b, 0);
 
         for (const [fabricKey, groupData] of Object.entries(fabricCutData)) {
             if (doc.y > 460) doc.addPage();
 
             doc.fontSize(11).font('Helvetica-Bold').fillColor('#1B2B3A')
-                .text(`Fabric: ${fabricKey}`, { underline: true });
-            doc.moveDown(0.4);
+                .text(`Fabric: ${fabricKey}`, TABLE_LEFT, doc.y, { underline: true, lineBreak: false });
+            doc.y += 18;
 
             // Column headers
-            let hdrX = 30;
+            let hdrX = TABLE_LEFT;
             const hdrY = doc.y;
             doc.fontSize(8).font('Helvetica-Bold').fillColor('#333');
             headers.forEach((h, i) => {
-                doc.text(h, hdrX, hdrY, { width: colWidths[i], align: 'left' });
+                doc.text(h, hdrX, hdrY, { lineBreak: false });
                 hdrX += colWidths[i];
             });
-            doc.moveDown(0.6);
+            doc.y = hdrY + 13;
             doc.strokeColor('#999').lineWidth(0.5)
-                .moveTo(30, doc.y).lineTo(30 + colWidths.reduce((a, b) => a + b, 0), doc.y).stroke();
-            doc.moveDown(0.3);
+                .moveTo(TABLE_LEFT, doc.y).lineTo(TABLE_LEFT + TABLE_WIDTH, doc.y).stroke();
+            doc.y += 4;
 
             doc.fontSize(8).font('Helvetica').fillColor('#000');
             for (const sheet of groupData.optimization.sheets) {
                 for (const panel of sheet.panels) {
-                    if (doc.y > 510) doc.addPage();
+                    if (doc.y > 520) doc.addPage();
 
                     const item = groupData.items.find((it: any) => it.id === panel.orderItemId);
                     const motorType = item?.chainOrMotor || '';
@@ -415,10 +419,10 @@ export class WorksheetExportService {
                     const chainSize = calculatedDrop > 0 ? getChainSize(calculatedDrop) : '';
 
                     const rowY = doc.y;
-                    let rx = 30;
+                    let rx = TABLE_LEFT;
                     const values = [
                         String(panel.blindNumber ?? ''),
-                        item?.location || panel.label,
+                        item?.location || panel.location || panel.label,
                         String(fabricCutWidth),
                         String(calculatedDrop || ''),
                         item?.controlSide || '-',
@@ -432,18 +436,22 @@ export class WorksheetExportService {
                         panel.rotated ? '*' : '',
                     ];
                     values.forEach((val, i) => {
-                        doc.text(val, rx, rowY, { width: colWidths[i], align: 'left' });
+                        doc.text(String(val), rx, rowY, { lineBreak: false });
                         rx += colWidths[i];
                     });
-                    doc.moveDown(0.4);
+                    // Fixed row advancement (prevents text-wrap overlap)
+                    doc.y = rowY + ROW_HEIGHT;
                 }
             }
 
             const stats = groupData.optimization.statistics;
-            doc.moveDown(0.4);
+            doc.y += 6;
             doc.fontSize(9).font('Helvetica-Bold').fillColor('#333')
-                .text(`Sheets: ${stats.usedStockSheets}  |  Efficiency: ${stats.efficiency}%  |  Fabric Needed: ${(stats.totalFabricNeeded / 1000).toFixed(2)}m`);
-            doc.moveDown();
+                .text(
+                    `Sheets: ${stats.usedStockSheets}  |  Efficiency: ${stats.efficiency}%  |  Fabric Needed: ${(stats.totalFabricNeeded / 1000).toFixed(2)}m`,
+                    TABLE_LEFT, doc.y, { lineBreak: false }
+                );
+            doc.y += 20;
         }
 
         // ====================================================================

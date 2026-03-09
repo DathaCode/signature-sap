@@ -686,6 +686,8 @@ async function runOptimization(order: any) {
                 length: p.length,
                 rotated: p.rotated,
                 label: p.label,
+                blindNumber: p.blindNumber,
+                location: p.location,
                 originalIndex: 0,
                 originalWidth: groupItems.find((it: any) => it.id === p.orderItemId)?.width,
                 originalDrop: groupItems.find((it: any) => it.id === p.orderItemId)?.drop,

@@ -72,7 +72,14 @@ function createSeededChromosomes(panels) {
   const byMaxDim = Array.from({ length: n }, (_, i) => i)
     .sort((a, b) => Math.max(panels[b].width, panels[b].height) - Math.max(panels[a].width, panels[a].height));
 
-  const sortOrders = [byArea, byWidth, byHeight, byPerimeter, byMaxDim];
+  // Sort by min dimension (pack narrow panels together)
+  const byMinDim = Array.from({ length: n }, (_, i) => i)
+    .sort((a, b) => Math.min(panels[b].width, panels[b].height) - Math.min(panels[a].width, panels[a].height));
+
+  // Original order (user's blind sequence)
+  const byOriginal = Array.from({ length: n }, (_, i) => i);
+
+  const sortOrders = [byArea, byWidth, byHeight, byPerimeter, byMaxDim, byMinDim, byOriginal];
 
   // Try no-rotation and smart-rotation for each sort
   for (const sortOrder of sortOrders) {
@@ -518,8 +525,8 @@ function optimize(panels, options = {}) {
     // Early termination
     if (stagnation >= stagnationLimit) break;
 
-    // Time limit (1800ms)
-    if (Date.now() - startTime > 1800) break;
+    // Time limit (3000ms)
+    if (Date.now() - startTime > 3000) break;
   }
 
   const endTime = Date.now();
