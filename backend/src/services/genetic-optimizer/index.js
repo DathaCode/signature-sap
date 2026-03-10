@@ -2,20 +2,20 @@
 
 /**
  * Fabric Cut Optimizer - Production Entry Point
- * 
- * Genetic algorithm + exhaustive heuristic sweep for guillotine bin packing.
- * Optimizes fabric cutting layouts to minimize material waste.
- * 
+ *
+ * 3.5-Stage Guillotine Packing with Genetic Algorithm optimization.
+ * Matches CutLogic "3.5 stages ver": V-H-V-H staged cutting.
+ * No nested cuts — all cuts are edge-to-edge guillotine.
+ *
  * Usage:
  *   const { optimizeCutLayout } = require('./index');
- *   const result = await optimizeCutLayout(panels, options);
- * 
+ *   const result = optimizeCutLayout(panels, options);
+ *
  * @module fabric-cut-optimizer
  */
 
 const { optimize } = require('./genetic-optimizer');
 const { validateGuillotine, checkOverlaps, checkBounds } = require('./guillotine-validator');
-const { KERF } = require('./packing-strategies');
 
 /**
  * Optimize a fabric cutting layout for a set of panels.

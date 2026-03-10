@@ -3,20 +3,20 @@
 /**
  * Genetic Algorithm Optimizer for Fabric Cut Optimization
  *
+ * Uses 3.5-Stage Guillotine Packing (CutLogic-style):
+ *   Stage 1: Horizontal cuts → rows
+ *   Stage 2: Vertical cuts → cells within rows
+ *   Stage 3: Horizontal cuts → at most 2 stacked panels per cell
+ *   Stage 3.5: Vertical trimming
+ *
  * Chromosome encoding:
  *   - order: permutation of panel indices (placement sequence)
  *   - rotations: boolean array (rotate each panel 90°?)
- *   - rectChoice: rectangle selection heuristic key
- *   - splitRule: guillotine split rule index
- *   - useMerge: whether to use merge variant
  *
- * Fitness = fabric height used (lower is better). Infinity if any panel can't be placed.
+ * Fitness = total fabric length used (lower is better).
  */
 
-const { guillotinePack, guillotinePackWithMerge, SplitRules } = require('./packing-strategies');
-
-const RECT_CHOICES = ['BAF', 'BSSF', 'BLSF', 'WAF', 'BL'];
-const SPLIT_RULES = [SplitRules.SLS, SplitRules.LLS, SplitRules.SAS, SplitRules.LAS, SplitRules.HSPLIT, SplitRules.VSPLIT];
+const { stagedPack } = require('./staged-packer');
 
 // ── Utility ─────────────────────────────────────────────────────────────────
 
@@ -37,18 +37,12 @@ function shuffle(arr) {
 function createRandomChromosome(n) {
   const order = shuffle(Array.from({ length: n }, (_, i) => i));
   const rotations = Array.from({ length: n }, () => Math.random() < 0.5);
-  return {
-    order,
-    rotations,
-    rectChoice: RECT_CHOICES[randInt(RECT_CHOICES.length)],
-    splitRule: SPLIT_RULES[randInt(SPLIT_RULES.length)],
-    useMerge: Math.random() < 0.3,
-  };
+  return { order, rotations };
 }
 
 // ── Seeded Chromosomes (smart initial solutions) ────────────────────────────
 
-function createSeededChromosomes(panels) {
+function createSeededChromosomes(panels, stockWidth) {
   const n = panels.length;
   const seeds = [];
 
@@ -56,92 +50,129 @@ function createSeededChromosomes(panels) {
   const byArea = Array.from({ length: n }, (_, i) => i)
     .sort((a, b) => (panels[b].width * panels[b].height) - (panels[a].width * panels[a].height));
 
-  // Sort by decreasing width
-  const byWidth = Array.from({ length: n }, (_, i) => i)
+  // Sort by decreasing max dimension
+  const byMaxDim = Array.from({ length: n }, (_, i) => i)
     .sort((a, b) => Math.max(panels[b].width, panels[b].height) - Math.max(panels[a].width, panels[a].height));
 
-  // Sort by decreasing height
+  // Sort by decreasing height (good for row height setting)
   const byHeight = Array.from({ length: n }, (_, i) => i)
     .sort((a, b) => panels[b].height - panels[a].height);
+
+  // Sort by decreasing width
+  const byWidth = Array.from({ length: n }, (_, i) => i)
+    .sort((a, b) => panels[b].width - panels[a].width);
 
   // Sort by decreasing perimeter
   const byPerimeter = Array.from({ length: n }, (_, i) => i)
     .sort((a, b) => (panels[b].width + panels[b].height) - (panels[a].width + panels[a].height));
 
-  // Sort by max dimension
-  const byMaxDim = Array.from({ length: n }, (_, i) => i)
-    .sort((a, b) => Math.max(panels[b].width, panels[b].height) - Math.max(panels[a].width, panels[a].height));
-
-  // Sort by min dimension (pack narrow panels together)
+  // Sort by decreasing min dimension (good for cell width matching)
   const byMinDim = Array.from({ length: n }, (_, i) => i)
     .sort((a, b) => Math.min(panels[b].width, panels[b].height) - Math.min(panels[a].width, panels[a].height));
 
-  // Original order (user's blind sequence)
+  // Original order
   const byOriginal = Array.from({ length: n }, (_, i) => i);
 
-  const sortOrders = [byArea, byWidth, byHeight, byPerimeter, byMaxDim, byMinDim, byOriginal];
+  // ── Staged-packing-specific sort orders ──
 
-  // Try no-rotation and smart-rotation for each sort
+  // Group panels whose heights sum to ~stockWidth (good row pairing)
+  const byHeightPairing = createPairedOrder(panels, stockWidth, 'height');
+
+  // Group panels whose widths are similar (good cell stacking)
+  const byWidthGrouping = Array.from({ length: n }, (_, i) => i)
+    .sort((a, b) => {
+      const wa = Math.min(panels[a].width, panels[a].height);
+      const wb = Math.min(panels[b].width, panels[b].height);
+      return wb - wa;
+    });
+
+  // Alternate: tallest, shortest, 2nd tallest, 2nd shortest, ...
+  const byAlternate = [];
+  {
+    const sorted = byHeight.slice();
+    let lo = 0, hi = sorted.length - 1;
+    while (lo <= hi) {
+      byAlternate.push(sorted[lo++]);
+      if (lo <= hi) byAlternate.push(sorted[hi--]);
+    }
+  }
+
+  const sortOrders = [
+    byArea, byMaxDim, byHeight, byWidth, byPerimeter, byMinDim,
+    byOriginal, byHeightPairing, byWidthGrouping, byAlternate,
+  ];
+
+  // Rotation strategies
   for (const sortOrder of sortOrders) {
     // No rotation
-    for (const rc of RECT_CHOICES) {
-      for (const sr of SPLIT_RULES) {
-        for (const merge of [false, true]) {
-          seeds.push({
-            order: sortOrder.slice(),
-            rotations: Array(n).fill(false),
-            rectChoice: rc,
-            splitRule: sr,
-            useMerge: merge,
-          });
-        }
-      }
-    }
-
-    // Smart rotation: rotate if panel is wider than tall (prefer tall panels in vertical packing)
-    const smartRot = sortOrder.map(i => panels[i].width > panels[i].height);
-    for (const rc of RECT_CHOICES) {
-      for (const sr of SPLIT_RULES) {
-        seeds.push({
-          order: sortOrder.slice(),
-          rotations: smartRot.slice(),
-          rectChoice: rc,
-          splitRule: sr,
-          useMerge: false,
-        });
-      }
-    }
+    seeds.push({ order: sortOrder.slice(), rotations: Array(n).fill(false) });
 
     // All rotated
-    for (const rc of RECT_CHOICES) {
-      for (const sr of SPLIT_RULES) {
-        seeds.push({
-          order: sortOrder.slice(),
-          rotations: Array(n).fill(true),
-          rectChoice: rc,
-          splitRule: sr,
-          useMerge: false,
-        });
-      }
-    }
+    seeds.push({ order: sortOrder.slice(), rotations: Array(n).fill(true) });
+
+    // Smart rotation: rotate so min dimension is width (X), max is height (Y)
+    // This makes panels tall and narrow → good for stacking in rows
+    const smartRotY = sortOrder.map(i =>
+      panels[i].width > panels[i].height // rotate if wider than tall
+    );
+    seeds.push({ order: sortOrder.slice(), rotations: smartRotY });
+
+    // Opposite: rotate so max dimension is width (X), min is height (Y)
+    // This makes panels wide → each occupies less row height
+    const smartRotX = sortOrder.map(i =>
+      panels[i].height > panels[i].width // rotate if taller than wide
+    );
+    seeds.push({ order: sortOrder.slice(), rotations: smartRotX });
   }
 
   return seeds;
 }
 
+/**
+ * Create a paired ordering where panels whose heights sum close to stockWidth
+ * are placed adjacent. This helps the staged packer form efficient rows.
+ */
+function createPairedOrder(panels, stockWidth, dimKey) {
+  const n = panels.length;
+  const indices = Array.from({ length: n }, (_, i) => i);
+  const used = new Set();
+  const result = [];
+
+  // Sort by dimension descending
+  indices.sort((a, b) => Math.max(panels[b].width, panels[b].height) - Math.max(panels[a].width, panels[a].height));
+
+  for (const i of indices) {
+    if (used.has(i)) continue;
+    used.add(i);
+    result.push(i);
+
+    // Find best partner (height sums to ~stockWidth)
+    const h1 = Math.max(panels[i].width, panels[i].height);
+    let bestJ = -1, bestGap = Infinity;
+
+    for (const j of indices) {
+      if (used.has(j)) continue;
+      const h2 = Math.min(panels[j].width, panels[j].height);
+      const gap = Math.abs(stockWidth - h1 - h2);
+      if (gap < bestGap) {
+        bestGap = gap;
+        bestJ = j;
+      }
+    }
+
+    if (bestJ >= 0) {
+      used.add(bestJ);
+      result.push(bestJ);
+    }
+  }
+
+  return result;
+}
+
 // ── Fitness Evaluation ──────────────────────────────────────────────────────
 
 function evaluate(chromosome, panels, stockWidth) {
-  const packFn = chromosome.useMerge ? guillotinePackWithMerge : guillotinePack;
-  const result = packFn(
-    panels,
-    chromosome.order,
-    chromosome.rotations,
-    stockWidth,
-    chromosome.rectChoice,
-    chromosome.splitRule,
-  );
-
+  const result = stagedPack(panels, chromosome.order, chromosome.rotations, stockWidth);
   return {
     fitness: result.allPlaced ? result.height : Infinity,
     result,
@@ -175,13 +206,11 @@ function orderCrossover(parent1, parent2) {
   const childOrder = new Array(n).fill(-1);
   const childRot = new Array(n);
 
-  // Copy segment from parent1
   for (let i = start; i < end && i < n; i++) {
     childOrder[i] = parent1.order[i];
     childRot[i] = parent1.rotations[i];
   }
 
-  // Fill remaining from parent2 in order
   const used = new Set(childOrder.filter(v => v !== -1));
   let pos = end % n;
   for (let i = 0; i < n; i++) {
@@ -195,13 +224,7 @@ function orderCrossover(parent1, parent2) {
     }
   }
 
-  return {
-    order: childOrder,
-    rotations: childRot,
-    rectChoice: Math.random() < 0.5 ? parent1.rectChoice : parent2.rectChoice,
-    splitRule: Math.random() < 0.5 ? parent1.splitRule : parent2.splitRule,
-    useMerge: Math.random() < 0.5 ? parent1.useMerge : parent2.useMerge,
-  };
+  return { order: childOrder, rotations: childRot };
 }
 
 /** Partially Mapped Crossover (PMX) */
@@ -210,23 +233,20 @@ function pmxCrossover(parent1, parent2) {
   const start = randInt(n - 1);
   const end = start + 1 + randInt(n - start - 1);
 
-  const child = { ...parent1, order: new Array(n).fill(-1), rotations: parent1.rotations.slice() };
+  const child = { order: new Array(n).fill(-1), rotations: parent1.rotations.slice() };
 
-  // Copy segment from parent1
   const mapping = {};
   for (let i = start; i <= end && i < n; i++) {
     child.order[i] = parent1.order[i];
     mapping[parent1.order[i]] = parent2.order[i];
   }
 
-  // Fill from parent2
   for (let i = 0; i < n; i++) {
     if (i >= start && i <= end) continue;
     let val = parent2.order[i];
     while (mapping[val] !== undefined && child.order.includes(val)) {
       val = mapping[val];
     }
-    // If val already placed, find next available
     if (child.order.includes(val)) {
       const used = new Set(child.order.filter(v => v !== -1));
       for (let v = 0; v < n; v++) {
@@ -236,7 +256,6 @@ function pmxCrossover(parent1, parent2) {
     child.order[i] = val;
   }
 
-  // Fix any remaining -1s
   const used = new Set(child.order.filter(v => v !== -1));
   const missing = [];
   for (let v = 0; v < n; v++) {
@@ -246,10 +265,6 @@ function pmxCrossover(parent1, parent2) {
   for (let i = 0; i < n; i++) {
     if (child.order[i] === -1) child.order[i] = missing[mi++];
   }
-
-  child.rectChoice = Math.random() < 0.5 ? parent1.rectChoice : parent2.rectChoice;
-  child.splitRule = Math.random() < 0.5 ? parent1.splitRule : parent2.splitRule;
-  child.useMerge = Math.random() < 0.5 ? parent1.useMerge : parent2.useMerge;
 
   return child;
 }
@@ -261,9 +276,6 @@ function mutate(chromosome, mutationRate = 0.15) {
   const c = {
     order: chromosome.order.slice(),
     rotations: chromosome.rotations.slice(),
-    rectChoice: chromosome.rectChoice,
-    splitRule: chromosome.splitRule,
-    useMerge: chromosome.useMerge,
   };
 
   // Swap mutation on order
@@ -296,17 +308,6 @@ function mutate(chromosome, mutationRate = 0.15) {
     }
   }
 
-  // Heuristic mutation
-  if (randFloat() < mutationRate * 0.4) {
-    c.rectChoice = RECT_CHOICES[randInt(RECT_CHOICES.length)];
-  }
-  if (randFloat() < mutationRate * 0.4) {
-    c.splitRule = SPLIT_RULES[randInt(SPLIT_RULES.length)];
-  }
-  if (randFloat() < mutationRate * 0.15) {
-    c.useMerge = !c.useMerge;
-  }
-
   return c;
 }
 
@@ -317,17 +318,12 @@ function scrambleMutate(chromosome) {
   const c = {
     order: chromosome.order.slice(),
     rotations: chromosome.rotations.slice(),
-    rectChoice: chromosome.rectChoice,
-    splitRule: chromosome.splitRule,
-    useMerge: chromosome.useMerge,
   };
 
-  // Scramble a random subsequence
   const start = randInt(n);
   const len = 2 + randInt(Math.min(5, n - start));
   const sub = c.order.slice(start, start + len);
   const subR = c.rotations.slice(start, start + len);
-  // Fisher-Yates on sub
   for (let i = sub.length - 1; i > 0; i--) {
     const j = randInt(i + 1);
     [sub[i], sub[j]] = [sub[j], sub[i]];
@@ -342,25 +338,25 @@ function scrambleMutate(chromosome) {
 // ── Main GA ─────────────────────────────────────────────────────────────────
 
 /**
- * Run the genetic algorithm optimizer.
+ * Run the genetic algorithm optimizer with 3.5-stage packing.
  *
  * @param {Array} panels - [{id, width, height, label}]
  * @param {Object} options
  * @param {number} options.stockWidth - Available width (default 3000)
- * @param {number} options.populationSize - Population size (default 80)
- * @param {number} options.maxGenerations - Max generations (default 400)
- * @param {number} options.stagnationLimit - Stop after N gens without improvement (default 40)
+ * @param {number} options.populationSize - Population size (default 100)
+ * @param {number} options.maxGenerations - Max generations (default 500)
+ * @param {number} options.stagnationLimit - Stop after N gens without improvement
  * @param {number} options.mutationRate - Base mutation rate (default 0.15)
  * @param {number} options.crossoverRate - Crossover probability (default 0.8)
- * @param {number} options.eliteCount - Number of elites preserved (default 4)
+ * @param {number} options.eliteCount - Elites preserved per gen (default 6)
  * @returns {Object} Best solution found
  */
 function optimize(panels, options = {}) {
   const {
     stockWidth = 3000,
-    populationSize = 100,
-    maxGenerations = 500,
-    stagnationLimit = 50,
+    populationSize = 120,
+    maxGenerations = 600,
+    stagnationLimit = 60,
     mutationRate = 0.15,
     crossoverRate = 0.8,
     eliteCount = 6,
@@ -370,8 +366,7 @@ function optimize(panels, options = {}) {
   const startTime = Date.now();
 
   // ── Phase 1: Exhaustive heuristic sweep ──────────────────────────────────
-  // Test all deterministic heuristic combinations first
-  const seeds = createSeededChromosomes(panels);
+  const seeds = createSeededChromosomes(panels, stockWidth);
   let globalBestFitness = Infinity;
   let globalBestChromosome = null;
   let globalBestResult = null;
@@ -388,18 +383,20 @@ function optimize(panels, options = {}) {
   // ── Phase 2: Initialize GA population ────────────────────────────────────
   let population = [];
 
-  // Include the best seeds
-  const evaluatedSeeds = seeds.map(s => ({ chromosome: s, fitness: evaluate(s, panels, stockWidth).fitness }));
+  const evaluatedSeeds = seeds.map(s => ({
+    chromosome: s,
+    fitness: evaluate(s, panels, stockWidth).fitness,
+  }));
   evaluatedSeeds.sort((a, b) => a.fitness - b.fitness);
+
   const topSeeds = evaluatedSeeds.slice(0, Math.floor(populationSize * 0.3));
   for (const s of topSeeds) population.push(s.chromosome);
 
-  // Fill rest with random
   while (population.length < populationSize) {
     population.push(createRandomChromosome(n));
   }
 
-  // Also inject mutations of the best seed
+  // Inject mutations of the best seed
   if (globalBestChromosome) {
     for (let i = 0; i < Math.floor(populationSize * 0.2); i++) {
       const idx = Math.floor(populationSize * 0.3) + i;
@@ -411,7 +408,6 @@ function optimize(panels, options = {}) {
 
   let fitnesses = population.map(c => evaluate(c, panels, stockWidth).fitness);
 
-  // Track best
   let bestGen = 0;
   let stagnation = 0;
   let adaptiveMutation = mutationRate;
@@ -429,10 +425,10 @@ function optimize(panels, options = {}) {
     const newPop = [];
     const newFit = [];
 
-    // Elitism: keep top N
     const indices = fitnesses.map((f, i) => i);
     indices.sort((a, b) => fitnesses[a] - fitnesses[b]);
 
+    // Elitism
     for (let e = 0; e < eliteCount && e < indices.length; e++) {
       newPop.push(population[indices[e]]);
       newFit.push(fitnesses[indices[e]]);
@@ -448,21 +444,12 @@ function optimize(panels, options = {}) {
         child = randFloat() < 0.5 ? orderCrossover(p1, p2) : pmxCrossover(p1, p2);
       } else {
         child = tournamentSelect(population, fitnesses, 3);
-        child = {
-          order: child.order.slice(),
-          rotations: child.rotations.slice(),
-          rectChoice: child.rectChoice,
-          splitRule: child.splitRule,
-          useMerge: child.useMerge,
-        };
+        child = { order: child.order.slice(), rotations: child.rotations.slice() };
       }
 
-      // Mutate
       if (randFloat() < adaptiveMutation) {
         child = mutate(child, adaptiveMutation);
       }
-
-      // Occasional strong mutation
       if (randFloat() < adaptiveMutation * 0.3) {
         child = scrambleMutate(child);
       }
@@ -484,14 +471,13 @@ function optimize(panels, options = {}) {
     fitnesses = newFit;
     stagnation++;
 
-    // Adaptive mutation: increase when stagnating
     if (stagnation > 10) {
       adaptiveMutation = Math.min(0.5, mutationRate + (stagnation - 10) * 0.01);
     } else {
       adaptiveMutation = mutationRate;
     }
 
-    // Inject fresh random individuals when stagnating
+    // Immigration when stagnating
     if (stagnation > 0 && stagnation % 15 === 0) {
       const numReplace = Math.floor(populationSize * 0.2);
       const worstIndices = indices.slice(-numReplace);
@@ -503,7 +489,7 @@ function optimize(panels, options = {}) {
       }
     }
 
-    // Also periodically inject mutations of the global best
+    // Inject mutations of global best
     if (stagnation > 0 && stagnation % 10 === 0 && globalBestChromosome) {
       const numInject = Math.floor(populationSize * 0.1);
       for (let i = 0; i < numInject; i++) {
@@ -522,10 +508,7 @@ function optimize(panels, options = {}) {
       }
     }
 
-    // Early termination
     if (stagnation >= stagnationLimit) break;
-
-    // Time limit (3000ms)
     if (Date.now() - startTime > 3000) break;
   }
 
@@ -551,12 +534,7 @@ function optimize(panels, options = {}) {
       populationSize,
       seedsTested: seeds.length,
     },
-    strategy: `Genetic Algorithm + Heuristic Sweep (Gen ${bestGen})`,
-    chromosome: globalBestChromosome ? {
-      rectChoice: globalBestChromosome.rectChoice,
-      splitRule: globalBestChromosome.splitRule,
-      useMerge: globalBestChromosome.useMerge,
-    } : null,
+    strategy: `3.5-Stage Guillotine + GA (Gen ${bestGen})`,
   };
 }
 

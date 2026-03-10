@@ -1119,11 +1119,24 @@ export const downloadWorksheet = async (
                 break;
             }
             case 'fabric-cut-pdf': {
-                res.setHeader('Content-Type', 'application/pdf');
-                res.setHeader('Content-Disposition', `attachment; filename="${order.orderNumber}-fabric-cut.pdf"`);
-                const fabricDoc = WorksheetExportService.generateFabricCutPDF(orderInfo, fabricCutData);
-                fabricDoc.pipe(res);
-                fabricDoc.end();
+                try {
+                    res.setHeader('Content-Type', 'application/pdf');
+                    res.setHeader('Content-Disposition', `attachment; filename="${order.orderNumber}-fabric-cut.pdf"`);
+                    const fabricDoc = WorksheetExportService.generateFabricCutPDF(orderInfo, fabricCutData);
+                    fabricDoc.on('error', (err: Error) => {
+                        logger.error('Fabric PDF stream error:', { message: err.message, stack: err.stack });
+                        if (!res.headersSent) {
+                            res.status(500).json({ status: 'error', message: 'PDF generation failed' });
+                        }
+                    });
+                    fabricDoc.pipe(res);
+                    fabricDoc.end();
+                } catch (pdfErr: any) {
+                    logger.error('Fabric PDF generation error:', { message: pdfErr.message, stack: pdfErr.stack });
+                    if (!res.headersSent) {
+                        throw new AppError(500, `PDF generation failed: ${pdfErr.message}`);
+                    }
+                }
                 break;
             }
             case 'tube-cut-csv': {
@@ -1134,11 +1147,24 @@ export const downloadWorksheet = async (
                 break;
             }
             case 'tube-cut-pdf': {
-                res.setHeader('Content-Type', 'application/pdf');
-                res.setHeader('Content-Disposition', `attachment; filename="${order.orderNumber}-tube-cut.pdf"`);
-                const tubeDoc = WorksheetExportService.generateTubeCutPDF(orderInfo, tubeCutData);
-                tubeDoc.pipe(res);
-                tubeDoc.end();
+                try {
+                    res.setHeader('Content-Type', 'application/pdf');
+                    res.setHeader('Content-Disposition', `attachment; filename="${order.orderNumber}-tube-cut.pdf"`);
+                    const tubeDoc = WorksheetExportService.generateTubeCutPDF(orderInfo, tubeCutData);
+                    tubeDoc.on('error', (err: Error) => {
+                        logger.error('Tube PDF stream error:', { message: err.message, stack: err.stack });
+                        if (!res.headersSent) {
+                            res.status(500).json({ status: 'error', message: 'PDF generation failed' });
+                        }
+                    });
+                    tubeDoc.pipe(res);
+                    tubeDoc.end();
+                } catch (pdfErr: any) {
+                    logger.error('Tube PDF generation error:', { message: pdfErr.message, stack: pdfErr.stack });
+                    if (!res.headersSent) {
+                        throw new AppError(500, `PDF generation failed: ${pdfErr.message}`);
+                    }
+                }
                 break;
             }
             default:

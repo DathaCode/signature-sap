@@ -1,12 +1,15 @@
 /**
  * Type declarations for the genetic-optimizer module.
  *
+ * 3.5-Stage Guillotine Packing with Genetic Algorithm optimization.
+ * Matches CutLogic "3.5 stages ver": V-H-V-H staged cutting.
+ *
  * The optimizer uses a hybrid approach:
- *   Phase 1 - Exhaustive heuristic sweep (~600 deterministic seed combinations)
+ *   Phase 1 - Exhaustive heuristic sweep (~40 deterministic seed combinations)
  *   Phase 2 - GA population initialization (top seeds + random + mutations)
  *   Phase 3 - Evolution (tournament selection, OX/PMX crossover, adaptive mutation)
  *
- * Produces guillotine-valid layouts on continuous stock (99,999mm height).
+ * Produces 3.5-stage guillotine-valid layouts — no nested cuts.
  */
 
 export interface GeneticPanel {
