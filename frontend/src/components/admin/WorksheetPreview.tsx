@@ -67,7 +67,7 @@ export default function WorksheetPreview({ orderId, orderNumber, data, onClose, 
                         <p className="text-sm text-gray-500">
                             {isAccepted
                                 ? `Accepted on ${new Date(previewData.worksheetData.acceptedAt!).toLocaleDateString()}`
-                                : 'Review and accept worksheets to deduct inventory'
+                                : 'Review and accept worksheets 📌'
                             }
                         </p>
                     </div>
@@ -102,21 +102,19 @@ export default function WorksheetPreview({ orderId, orderNumber, data, onClose, 
                 {/* Tabs */}
                 <div className="flex border-b px-6">
                     <button
-                        className={`px-4 py-3 text-sm font-medium border-b-2 ${
-                            activeTab === 'fabric'
+                        className={`px-4 py-3 text-sm font-medium border-b-2 ${activeTab === 'fabric'
                                 ? 'border-blue-500 text-blue-600'
                                 : 'border-transparent text-gray-500 hover:text-gray-700'
-                        }`}
+                            }`}
                         onClick={() => setActiveTab('fabric')}
                     >
                         Fabric Cut Worksheet
                     </button>
                     <button
-                        className={`px-4 py-3 text-sm font-medium border-b-2 ${
-                            activeTab === 'tube'
+                        className={`px-4 py-3 text-sm font-medium border-b-2 ${activeTab === 'tube'
                                 ? 'border-green-500 text-green-600'
                                 : 'border-transparent text-gray-500 hover:text-gray-700'
-                        }`}
+                            }`}
                         onClick={() => setActiveTab('tube')}
                     >
                         Tube Cut Worksheet
