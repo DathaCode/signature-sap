@@ -397,7 +397,7 @@ export class WorksheetExportService {
             if (doc.y > 460) doc.addPage();
 
             doc.fontSize(11).font('Helvetica-Bold').fillColor('#1B2B3A')
-                .text(`Fabric: ${fabricKey}`, TABLE_LEFT, doc.y, { underline: true, lineBreak: false });
+                .text(`Fabric: ${fabricKey}`, TABLE_LEFT, doc.y, { underline: true });
             doc.y += 18;
 
             // Column headers

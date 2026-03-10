@@ -1120,22 +1120,17 @@ export const downloadWorksheet = async (
             }
             case 'fabric-cut-pdf': {
                 try {
+                    const fabricDoc = WorksheetExportService.generateFabricCutPDF(orderInfo, fabricCutData);
                     res.setHeader('Content-Type', 'application/pdf');
                     res.setHeader('Content-Disposition', `attachment; filename="${order.orderNumber}-fabric-cut.pdf"`);
-                    const fabricDoc = WorksheetExportService.generateFabricCutPDF(orderInfo, fabricCutData);
                     fabricDoc.on('error', (err: Error) => {
                         logger.error('Fabric PDF stream error:', { message: err.message, stack: err.stack });
-                        if (!res.headersSent) {
-                            res.status(500).json({ status: 'error', message: 'PDF generation failed' });
-                        }
                     });
                     fabricDoc.pipe(res);
                     fabricDoc.end();
                 } catch (pdfErr: any) {
                     logger.error('Fabric PDF generation error:', { message: pdfErr.message, stack: pdfErr.stack });
-                    if (!res.headersSent) {
-                        throw new AppError(500, `PDF generation failed: ${pdfErr.message}`);
-                    }
+                    throw new AppError(500, `PDF generation failed: ${pdfErr.message}`);
                 }
                 break;
             }
@@ -1148,22 +1143,17 @@ export const downloadWorksheet = async (
             }
             case 'tube-cut-pdf': {
                 try {
+                    const tubeDoc = WorksheetExportService.generateTubeCutPDF(orderInfo, tubeCutData);
                     res.setHeader('Content-Type', 'application/pdf');
                     res.setHeader('Content-Disposition', `attachment; filename="${order.orderNumber}-tube-cut.pdf"`);
-                    const tubeDoc = WorksheetExportService.generateTubeCutPDF(orderInfo, tubeCutData);
                     tubeDoc.on('error', (err: Error) => {
                         logger.error('Tube PDF stream error:', { message: err.message, stack: err.stack });
-                        if (!res.headersSent) {
-                            res.status(500).json({ status: 'error', message: 'PDF generation failed' });
-                        }
                     });
                     tubeDoc.pipe(res);
                     tubeDoc.end();
                 } catch (pdfErr: any) {
                     logger.error('Tube PDF generation error:', { message: pdfErr.message, stack: pdfErr.stack });
-                    if (!res.headersSent) {
-                        throw new AppError(500, `PDF generation failed: ${pdfErr.message}`);
-                    }
+                    throw new AppError(500, `PDF generation failed: ${pdfErr.message}`);
                 }
                 break;
             }
