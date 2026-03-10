@@ -1121,13 +1121,19 @@ export const downloadWorksheet = async (
             case 'fabric-cut-pdf': {
                 try {
                     const fabricDoc = WorksheetExportService.generateFabricCutPDF(orderInfo, fabricCutData);
+                    // Buffer entire PDF before sending — catches async errors
+                    const fabricChunks: Buffer[] = [];
+                    fabricDoc.on('data', (chunk: Buffer) => fabricChunks.push(chunk));
+                    await new Promise<void>((resolve, reject) => {
+                        fabricDoc.on('end', resolve);
+                        fabricDoc.on('error', reject);
+                        fabricDoc.end();
+                    });
+                    const fabricPdf = Buffer.concat(fabricChunks);
                     res.setHeader('Content-Type', 'application/pdf');
                     res.setHeader('Content-Disposition', `attachment; filename="${order.orderNumber}-fabric-cut.pdf"`);
-                    fabricDoc.on('error', (err: Error) => {
-                        logger.error('Fabric PDF stream error:', { message: err.message, stack: err.stack });
-                    });
-                    fabricDoc.pipe(res);
-                    fabricDoc.end();
+                    res.setHeader('Content-Length', fabricPdf.length);
+                    res.send(fabricPdf);
                 } catch (pdfErr: any) {
                     logger.error('Fabric PDF generation error:', { message: pdfErr.message, stack: pdfErr.stack });
                     throw new AppError(500, `PDF generation failed: ${pdfErr.message}`);
@@ -1144,13 +1150,18 @@ export const downloadWorksheet = async (
             case 'tube-cut-pdf': {
                 try {
                     const tubeDoc = WorksheetExportService.generateTubeCutPDF(orderInfo, tubeCutData);
+                    const tubeChunks: Buffer[] = [];
+                    tubeDoc.on('data', (chunk: Buffer) => tubeChunks.push(chunk));
+                    await new Promise<void>((resolve, reject) => {
+                        tubeDoc.on('end', resolve);
+                        tubeDoc.on('error', reject);
+                        tubeDoc.end();
+                    });
+                    const tubePdf = Buffer.concat(tubeChunks);
                     res.setHeader('Content-Type', 'application/pdf');
                     res.setHeader('Content-Disposition', `attachment; filename="${order.orderNumber}-tube-cut.pdf"`);
-                    tubeDoc.on('error', (err: Error) => {
-                        logger.error('Tube PDF stream error:', { message: err.message, stack: err.stack });
-                    });
-                    tubeDoc.pipe(res);
-                    tubeDoc.end();
+                    res.setHeader('Content-Length', tubePdf.length);
+                    res.send(tubePdf);
                 } catch (pdfErr: any) {
                     logger.error('Tube PDF generation error:', { message: pdfErr.message, stack: pdfErr.stack });
                     throw new AppError(500, `PDF generation failed: ${pdfErr.message}`);

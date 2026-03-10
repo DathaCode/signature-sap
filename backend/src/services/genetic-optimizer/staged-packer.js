@@ -29,18 +29,22 @@ function stagedPack(panels, order, rotations, stockWidth) {
     const panel = panels[order[i]];
     const preferRotate = rotations[i];
 
-    // Build orientation options (preferred first)
+    // Use the chromosome's rotation preference (GA controls rotation)
+    // Only fall back to alternate orientation if preferred doesn't fit
     const orientations = [];
     {
       const prW = preferRotate ? panel.height : panel.width;
       const prH = preferRotate ? panel.width : panel.height;
       if (prW <= stockWidth) {
-        orientations.push({ pw: prW, ph: prH, rotated: prW !== panel.width });
+        orientations.push({ pw: prW, ph: prH, rotated: preferRotate });
       }
-      const altW = preferRotate ? panel.width : panel.height;
-      const altH = preferRotate ? panel.height : panel.width;
-      if (altW <= stockWidth && altW !== prW) {
-        orientations.push({ pw: altW, ph: altH, rotated: altW !== panel.width });
+      // Fallback: only if preferred orientation doesn't fit at all
+      if (orientations.length === 0) {
+        const altW = preferRotate ? panel.width : panel.height;
+        const altH = preferRotate ? panel.height : panel.width;
+        if (altW <= stockWidth) {
+          orientations.push({ pw: altW, ph: altH, rotated: !preferRotate });
+        }
       }
     }
 
@@ -106,9 +110,18 @@ function stagedPack(panels, order, rotations, stockWidth) {
 
         if (ph > row.height) {
           const heightIncrease = ph - row.height;
+          // Extra waste from growing: all existing cells get taller
           const extraWaste = heightIncrease * row.usedWidth;
-          // Priority 2: increases fabric length by heightIncrease
-          const score = 500000000 + heightIncrease * 100000 + extraWaste;
+          // Compare: if we DON'T grow, panel needs a new row of height ph.
+          // Net fabric cost of growing = heightIncrease (vs saving ph for new row).
+          // Only grow if heightIncrease is significantly < ph (i.e., saves fabric).
+          // Use fabric-area cost model: growing costs heightIncrease * stockWidth,
+          // new row costs ph * stockWidth. So grow only if heightIncrease < ph.
+          // But also penalize based on ratio: growing by 90% of row height is bad.
+          const growRatio = heightIncrease / row.height;
+          const fabricCost = heightIncrease * stockWidth;
+          // Priority 2: score based on actual fabric cost + growth penalty
+          const score = 500000000 + fabricCost + growRatio * 200000000;
           if (score < bestScore) {
             bestScore = score;
             bestOption = { type: 'cell-grow', ri, pw, ph, rotated,
@@ -119,8 +132,9 @@ function stagedPack(panels, order, rotations, stockWidth) {
 
       // ── Option C: New row ──
       {
-        // Priority 3: full fabric cost = ph
-        const score = 1000000000 + ph * 100000;
+        // Priority 3: full fabric cost = ph * stockWidth
+        const fabricCost = ph * stockWidth;
+        const score = 1000000000 + fabricCost;
         if (score < bestScore) {
           bestScore = score;
           bestOption = { type: 'new-row', pw, ph, rotated,
