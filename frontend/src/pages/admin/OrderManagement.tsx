@@ -8,6 +8,7 @@ import { Loader2, Check, Factory, Filter, Eye, FileText, Search, X } from 'lucid
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { toast } from 'react-hot-toast';
+import { confirmToast } from '../../utils/confirmToast';
 import WorksheetPreview from '../../components/admin/WorksheetPreview';
 
 export default function OrderManagement() {
@@ -49,7 +50,7 @@ export default function OrderManagement() {
     }, [statusFilter, dateFrom, dateTo]);
 
     const handleApprove = async (id: string) => {
-        if (!confirm('Approve this order?')) return;
+        if (!await confirmToast({ title: 'Approve Order', message: 'Approve this order and notify the customer?', confirmText: 'Approve', variant: 'info' })) return;
         try {
             await adminOrderApi.approveOrder(id);
             toast.success('Order approved');
@@ -61,7 +62,7 @@ export default function OrderManagement() {
     };
 
     const handleSendToProduction = async (id: string, orderNumber: string) => {
-        if (!confirm('Send to production? This will run fabric cut optimization.')) return;
+        if (!await confirmToast({ title: 'Send to Production', message: 'This will run fabric cut optimization. Continue?', confirmText: 'Send', variant: 'warning' })) return;
         setSendingToProduction(id);
         try {
             const result = await adminOrderApi.sendToProduction(id);
@@ -88,7 +89,12 @@ export default function OrderManagement() {
 
     const handleStatusChange = async (id: string, orderNumber: string, newStatus: string) => {
         const label = newStatus === 'COMPLETED' ? 'complete' : 'cancel';
-        if (!confirm(`Mark order ${orderNumber} as ${label}?`)) return;
+        if (!await confirmToast({
+            title: newStatus === 'COMPLETED' ? 'Complete Order' : 'Cancel Order',
+            message: `Mark order ${orderNumber} as ${label}?`,
+            confirmText: newStatus === 'COMPLETED' ? 'Complete' : 'Cancel Order',
+            variant: newStatus === 'CANCELLED' ? 'danger' : 'info',
+        })) return;
         setUpdatingStatus(id);
         try {
             await adminOrderApi.updateStatus(id, newStatus);

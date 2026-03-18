@@ -5,6 +5,7 @@ import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { FileText, Calendar, CheckCircle, XCircle, Trash2, ShoppingCart, Plus } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { confirmToast } from '../../utils/confirmToast';
 import api from '../../services/api';
 
 interface Quote {
@@ -40,7 +41,7 @@ export default function MyQuotesPage() {
     };
 
     const handleConvertToOrder = async (quoteId: string) => {
-        if (!confirm('Convert this quote to an order?')) return;
+        if (!await confirmToast({ title: 'Convert to Order', message: 'Convert this quote to an order?', confirmText: 'Convert', variant: 'info' })) return;
 
         try {
             await api.post(`/quotes/${quoteId}/convert-to-order`);
@@ -54,7 +55,7 @@ export default function MyQuotesPage() {
     };
 
     const handleDeleteQuote = async (quoteId: string) => {
-        if (!confirm('Delete this quote? This action cannot be undone.')) return;
+        if (!await confirmToast({ title: 'Delete Quote', message: 'Delete this quote? This action cannot be undone.', confirmText: 'Delete', variant: 'danger' })) return;
 
         try {
             await api.delete(`/quotes/${quoteId}`);

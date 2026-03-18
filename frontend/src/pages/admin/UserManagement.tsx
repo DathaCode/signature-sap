@@ -11,6 +11,7 @@ import {
     Phone, MapPin, Building2, Calendar, Pencil, Save
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { confirmToast } from '../../utils/confirmToast';
 import { format } from 'date-fns';
 
 interface UserWithCounts extends User {
@@ -320,7 +321,12 @@ export default function UserManagement() {
 
     const toggleStatus = async (user: UserWithCounts, e: React.MouseEvent) => {
         e.stopPropagation();
-        if (!confirm(`Are you sure you want to ${user.isActive ? 'deactivate' : 'activate'} ${user.name}?`)) return;
+        if (!await confirmToast({
+            title: user.isActive ? 'Deactivate User' : 'Activate User',
+            message: `Are you sure you want to ${user.isActive ? 'deactivate' : 'activate'} ${user.name}?`,
+            confirmText: user.isActive ? 'Deactivate' : 'Activate',
+            variant: user.isActive ? 'danger' : 'info',
+        })) return;
         try {
             await adminUserApi.updateUser(user.id, { isActive: !user.isActive });
             toast.success(`User ${user.isActive ? 'deactivated' : 'activated'}`);

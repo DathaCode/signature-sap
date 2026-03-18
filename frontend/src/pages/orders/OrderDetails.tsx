@@ -8,6 +8,7 @@ import { Button } from '../../components/ui/Button';
 import { Loader2, ArrowLeft, Printer, ChevronDown, ChevronUp } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'react-hot-toast';
+import { confirmToast } from '../../utils/confirmToast';
 
 export default function OrderDetails() {
     const { orderId } = useParams<{ orderId: string }>();
@@ -86,7 +87,7 @@ export default function OrderDetails() {
                         <Button
                             variant="destructive"
                             onClick={async () => {
-                                if (confirm('Are you sure you want to cancel this order?')) {
+                                if (await confirmToast({ title: 'Cancel Order', message: 'Are you sure you want to cancel this order?', confirmText: 'Cancel Order', variant: 'danger' })) {
                                     try {
                                         await webOrderApi.cancelOrder(order.id);
                                         toast.success('Order cancelled');

@@ -6,6 +6,7 @@ import { Button } from '../../components/ui/Button';
 import { Loader2, ArrowLeft, ShoppingCart, Calendar, ChevronDown, ChevronUp } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'react-hot-toast';
+import { confirmToast } from '../../utils/confirmToast';
 import api from '../../services/api';
 
 interface QuoteItem {
@@ -93,7 +94,7 @@ export default function QuoteDetails() {
     const isConverted = !!quote.convertedToOrder;
 
     const handleConvertToOrder = async () => {
-        if (!confirm('Convert this quote to an order?')) return;
+        if (!await confirmToast({ title: 'Convert to Order', message: 'Convert this quote to an order?', confirmText: 'Convert', variant: 'info' })) return;
         try {
             await api.post(`/quotes/${quote.id}/convert-to-order`);
             toast.success('Quote converted to order!');

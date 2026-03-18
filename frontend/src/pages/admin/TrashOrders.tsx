@@ -6,6 +6,7 @@ import { Loader2, ArrowLeft, RotateCcw, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { format, formatDistanceToNow } from 'date-fns';
 import { toast } from 'react-hot-toast';
+import { confirmToast } from '../../utils/confirmToast';
 import api from '../../services/api';
 import { Order } from '../../types/order';
 
@@ -34,7 +35,7 @@ export default function TrashOrders() {
     useEffect(() => { fetchTrash(); }, []);
 
     const handleRestore = async (id: string) => {
-        if (!confirm('Restore this order? It will be set back to PENDING.')) return;
+        if (!await confirmToast({ title: 'Restore Order', message: 'Restore this order? It will be set back to PENDING.', confirmText: 'Restore', variant: 'info' })) return;
         setActionId(id);
         try {
             await api.post(`/web-orders/${id}/restore`);
@@ -48,7 +49,7 @@ export default function TrashOrders() {
     };
 
     const handlePurge = async (id: string, orderNumber: string) => {
-        if (!confirm(`Permanently delete ${orderNumber}? This CANNOT be undone.`)) return;
+        if (!await confirmToast({ title: 'Permanent Delete', message: `Permanently delete ${orderNumber}? This CANNOT be undone.`, confirmText: 'Delete Forever', variant: 'danger' })) return;
         setActionId(id);
         try {
             await api.delete(`/web-orders/${id}/purge`);

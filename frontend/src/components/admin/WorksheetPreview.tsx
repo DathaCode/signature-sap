@@ -5,6 +5,7 @@ import { Button } from '../ui/Button';
 import FabricCutWorksheet from './FabricCutWorksheet';
 import TubeCutWorksheet from './TubeCutWorksheet';
 import { toast } from 'react-hot-toast';
+import { confirmToast } from '../../utils/confirmToast';
 import { X, Download, Check, AlertTriangle } from 'lucide-react';
 
 interface Props {
@@ -25,7 +26,7 @@ export default function WorksheetPreview({ orderId, orderNumber, data, onClose, 
     const hasInsufficientStock = !previewData.inventoryCheck.available;
 
     const handleAccept = async () => {
-        if (!confirm('Accept worksheets and deduct inventory? This cannot be undone.')) return;
+        if (!await confirmToast({ title: 'Accept Worksheets', message: 'Accept worksheets and deduct inventory? This cannot be undone.', confirmText: 'Accept', variant: 'warning' })) return;
         setAccepting(true);
         try {
             await adminOrderApi.acceptWorksheets(orderId);

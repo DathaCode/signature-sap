@@ -30,11 +30,28 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
                         style: {
                             background: '#1B2B3A',
                             color: '#FFFFFF',
+                            borderRadius: '10px',
+                            border: '1px solid rgba(255,255,255,0.08)',
+                            boxShadow: '0 12px 40px rgba(0,0,0,0.4)',
+                            padding: '12px 16px',
+                            fontSize: '14px',
                         },
                         success: {
                             iconTheme: {
                                 primary: '#C9A961',
                                 secondary: '#FFFFFF',
+                            },
+                            style: {
+                                border: '1px solid rgba(201,169,97,0.2)',
+                            },
+                        },
+                        error: {
+                            iconTheme: {
+                                primary: '#EF4444',
+                                secondary: '#FFFFFF',
+                            },
+                            style: {
+                                border: '1px solid rgba(239,68,68,0.2)',
                             },
                         },
                     }}

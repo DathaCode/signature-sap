@@ -8,6 +8,7 @@ import { Button } from '../../components/ui/Button';
 import { Loader2, ArrowLeft, ChevronDown, ChevronUp, Check, Trash2, Factory } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'react-hot-toast';
+import { confirmToast } from '../../utils/confirmToast';
 import api from '../../services/api';
 
 export default function AdminOrderDetails() {
@@ -59,7 +60,7 @@ export default function AdminOrderDetails() {
     };
 
     const handleApprove = async () => {
-        if (!confirm('Approve this order?')) return;
+        if (!await confirmToast({ title: 'Approve Order', message: 'Approve this order and notify the customer?', confirmText: 'Approve', variant: 'info' })) return;
         setActionLoading(true);
         try {
             await adminOrderApi.approveOrder(order.id);
@@ -73,7 +74,7 @@ export default function AdminOrderDetails() {
     };
 
     const handleSendToProduction = async () => {
-        if (!confirm('Send to production? This will run fabric cut optimization.')) return;
+        if (!await confirmToast({ title: 'Send to Production', message: 'This will run fabric cut optimization. Continue?', confirmText: 'Send', variant: 'warning' })) return;
         setActionLoading(true);
         try {
             await adminOrderApi.sendToProduction(order.id);
@@ -87,7 +88,7 @@ export default function AdminOrderDetails() {
     };
 
     const handleComplete = async () => {
-        if (!confirm('Mark this order as completed?')) return;
+        if (!await confirmToast({ title: 'Complete Order', message: 'Mark this order as completed?', confirmText: 'Complete', variant: 'info' })) return;
         setActionLoading(true);
         try {
             await adminOrderApi.updateStatus(order.id, 'COMPLETED');
@@ -101,7 +102,7 @@ export default function AdminOrderDetails() {
     };
 
     const handleTrash = async () => {
-        if (!confirm('Move this order to trash? It will be permanently deleted after 10 days.')) return;
+        if (!await confirmToast({ title: 'Move to Trash', message: 'Move this order to trash? It will be permanently deleted after 10 days.', confirmText: 'Trash', variant: 'danger' })) return;
         setActionLoading(true);
         try {
             await api.delete(`/web-orders/${order.id}/trash`);

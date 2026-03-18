@@ -10,6 +10,7 @@ import { Input } from '../../components/ui/Input';
 import { ArrowLeft, Copy, PlusCircle, CheckCircle } from 'lucide-react';
 import { BlindItem, CreateOrderRequest } from '../../types/order';
 import { toast } from 'react-hot-toast';
+import { confirmToast } from '../../utils/confirmToast';
 import api from '../../services/api';
 
 const emptyBlind: BlindItem = {
@@ -72,14 +73,22 @@ export default function NewOrderPage() {
                 const draft = JSON.parse(draftStr);
                 const hoursOld = (Date.now() - draft.timestamp) / (1000 * 60 * 60);
                 if (hoursOld < 24 && draft.blinds?.length > 0) {
-                    if (confirm(`You have an unsaved draft from ${new Date(draft.timestamp).toLocaleString()} with ${draft.blinds.length} blind(s). Restore it?`)) {
-                        setSavedBlinds(draft.blinds);
-                        if (draft.notes) setNotes(draft.notes);
-                        if (draft.customerReference) setCustomerReference(draft.customerReference);
-                        toast.success('Draft restored!');
-                    } else {
-                        localStorage.removeItem('order_draft');
-                    }
+                    confirmToast({
+                        title: 'Restore Draft',
+                        message: `You have an unsaved draft from ${new Date(draft.timestamp).toLocaleString()} with ${draft.blinds.length} blind(s). Restore it?`,
+                        confirmText: 'Restore',
+                        cancelText: 'Discard',
+                        variant: 'info',
+                    }).then((confirmed) => {
+                        if (confirmed) {
+                            setSavedBlinds(draft.blinds);
+                            if (draft.notes) setNotes(draft.notes);
+                            if (draft.customerReference) setCustomerReference(draft.customerReference);
+                            toast.success('Draft restored!');
+                        } else {
+                            localStorage.removeItem('order_draft');
+                        }
+                    });
                 } else if (hoursOld >= 24) {
                     localStorage.removeItem('order_draft');
                 }
@@ -224,8 +233,8 @@ export default function NewOrderPage() {
     };
 
     // Delete a saved blind
-    const handleDeleteBlind = (index: number) => {
-        if (!confirm(`Are you sure you want to delete Blind #${index + 1}?`)) return;
+    const handleDeleteBlind = async (index: number) => {
+        if (!await confirmToast({ title: 'Delete Blind', message: `Are you sure you want to delete Blind #${index + 1}?`, confirmText: 'Delete', variant: 'danger' })) return;
         const updated = savedBlinds.filter((_, i) => i !== index);
         setSavedBlinds(updated);
         toast.success(`Blind #${index + 1} deleted`);
