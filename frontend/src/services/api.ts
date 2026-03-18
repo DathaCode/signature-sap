@@ -241,7 +241,7 @@ export const webOrderApi = {
      */
     createOrder: async (data: import('../types/order').CreateOrderRequest): Promise<import('../types/order').Order> => {
         const response = await api.post('/web-orders/create', data)
-        return response.data.data
+        return response.data.data.order
     },
 
     /**
@@ -257,7 +257,7 @@ export const webOrderApi = {
      */
     getOrder: async (id: string): Promise<import('../types/order').Order> => {
         const response = await api.get(`/web-orders/${id}`)
-        return response.data.data
+        return response.data.data.order
     },
 
     /**
@@ -282,7 +282,7 @@ export const adminOrderApi = {
      */
     approveOrder: async (id: string, adminNotes?: string): Promise<import('../types/order').Order> => {
         const response = await api.post(`/web-orders/${id}/approve`, { adminNotes })
-        return response.data.data
+        return response.data.data.order
     },
 
     /**
@@ -332,7 +332,7 @@ export const adminOrderApi = {
      */
     updateStatus: async (id: string, status: string): Promise<import('../types/order').Order> => {
         const response = await api.patch(`/web-orders/${id}/status`, { status })
-        return response.data.data
+        return response.data.data.order
     },
 
     /**
