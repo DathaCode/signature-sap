@@ -512,7 +512,7 @@ export const getAllOrders = async (
     next: NextFunction
 ): Promise<void> => {
     try {
-        const { status, productType, userId } = req.query;
+        const { status, productType, userId, customerName, dateFrom, dateTo } = req.query;
 
         const orders = await prisma.order.findMany({
             where: {
@@ -520,6 +520,17 @@ export const getAllOrders = async (
                 ...(status && { status: status as OrderStatus }),
                 ...(productType && { productType: productType as any }),
                 ...(userId && { userId: userId as string }),
+                ...(customerName && {
+                    user: {
+                        name: { contains: customerName as string, mode: 'insensitive' as const },
+                    },
+                }),
+                ...((dateFrom || dateTo) && {
+                    createdAt: {
+                        ...(dateFrom && { gte: new Date(dateFrom as string) }),
+                        ...(dateTo && { lte: new Date(new Date(dateTo as string).setHours(23, 59, 59, 999)) }),
+                    },
+                }),
             },
             include: {
                 items: {

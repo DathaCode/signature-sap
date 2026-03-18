@@ -272,7 +272,7 @@ export const adminOrderApi = {
     /**
      * Get all orders (admin)
      */
-    getAllOrders: async (params?: { status?: string; productType?: string; userId?: string }): Promise<{ orders: import('../types/order').Order[]; count: number }> => {
+    getAllOrders: async (params?: { status?: string; productType?: string; userId?: string; customerName?: string; dateFrom?: string; dateTo?: string }): Promise<{ orders: import('../types/order').Order[]; count: number }> => {
         const response = await api.get('/web-orders/admin/all', { params })
         return response.data.data
     },
