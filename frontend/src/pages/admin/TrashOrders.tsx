@@ -5,7 +5,7 @@ import { Badge } from '../../components/ui/Badge';
 import { Loader2, ArrowLeft, RotateCcw, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { format, formatDistanceToNow } from 'date-fns';
-import { toast } from 'react-hot-toast';
+import { gooeyToast } from 'goey-toast';
 import { confirmToast } from '../../utils/confirmToast';
 import api from '../../services/api';
 import { Order } from '../../types/order';
@@ -26,7 +26,7 @@ export default function TrashOrders() {
             setOrders(response.data.data.orders);
         } catch (error) {
             console.error('Failed to fetch trash:', error);
-            toast.error('Failed to load trash');
+            gooeyToast.error('Failed to load trash');
         } finally {
             setLoading(false);
         }
@@ -39,10 +39,10 @@ export default function TrashOrders() {
         setActionId(id);
         try {
             await api.post(`/web-orders/${id}/restore`);
-            toast.success('Order restored');
+            gooeyToast.success('Order restored');
             fetchTrash();
         } catch (error) {
-            toast.error('Failed to restore order');
+            gooeyToast.error('Failed to restore order');
         } finally {
             setActionId(null);
         }
@@ -53,10 +53,10 @@ export default function TrashOrders() {
         setActionId(id);
         try {
             await api.delete(`/web-orders/${id}/purge`);
-            toast.success('Order permanently deleted');
+            gooeyToast.success('Order permanently deleted');
             fetchTrash();
         } catch (error) {
-            toast.error('Failed to delete order');
+            gooeyToast.error('Failed to delete order');
         } finally {
             setActionId(null);
         }

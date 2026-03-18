@@ -4,7 +4,7 @@ import { adminOrderApi } from '../../services/api';
 import { Button } from '../ui/Button';
 import FabricCutWorksheet from './FabricCutWorksheet';
 import TubeCutWorksheet from './TubeCutWorksheet';
-import { toast } from 'react-hot-toast';
+import { gooeyToast } from 'goey-toast';
 import { confirmToast } from '../../utils/confirmToast';
 import { X, Download, Check, AlertTriangle } from 'lucide-react';
 
@@ -30,11 +30,11 @@ export default function WorksheetPreview({ orderId, orderNumber, data, onClose, 
         setAccepting(true);
         try {
             await adminOrderApi.acceptWorksheets(orderId);
-            toast.success('Worksheets accepted. Inventory deducted.');
+            gooeyToast.success('Worksheets accepted. Inventory deducted.');
             onAccepted();
         } catch (error) {
             console.error(error);
-            toast.error('Failed to accept worksheets');
+            gooeyToast.error('Failed to accept worksheets');
         } finally {
             setAccepting(false);
         }
@@ -52,7 +52,7 @@ export default function WorksheetPreview({ orderId, orderNumber, data, onClose, 
             URL.revokeObjectURL(url);
         } catch (error) {
             console.error(error);
-            toast.error('Download failed');
+            gooeyToast.error('Download failed');
         } finally {
             setDownloading(null);
         }

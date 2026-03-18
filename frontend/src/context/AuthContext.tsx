@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { AuthState, LoginCredentials, RegisterCredentials } from '../types/auth';
 import { authApi } from '../services/api';
 import { jwtDecode } from 'jwt-decode';
-import toast from 'react-hot-toast';
+import { gooeyToast } from 'goey-toast';
 
 interface AuthContextType extends AuthState {
     login: (credentials: LoginCredentials) => Promise<void>;
@@ -72,10 +72,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 isAuthenticated: true,
                 isLoading: false,
             });
-            toast.success('Wait for welcome, ' + user.name);
+            gooeyToast.success('Wait for welcome, ' + user.name);
         } catch (error: any) {
             const message = error.response?.data?.message || 'Login failed';
-            toast.error(message);
+            gooeyToast.error(message);
             throw error;
         }
     };
@@ -92,10 +92,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 isAuthenticated: true,
                 isLoading: false,
             });
-            toast.success('Welcome to Signature Shades!');
+            gooeyToast.success('Welcome to Signature Shades!');
         } catch (error: any) {
             const message = error.response?.data?.message || 'Registration failed';
-            toast.error(message);
+            gooeyToast.error(message);
             throw error;
         }
     };
@@ -109,7 +109,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             isLoading: false,
         });
         authApi.logout().catch(console.error); // Fire and forget
-        toast.success('Logged out successfully');
+        gooeyToast.success('Logged out successfully');
     };
 
     return (

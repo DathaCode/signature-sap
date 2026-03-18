@@ -2,7 +2,8 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { Toaster } from 'react-hot-toast'
+import { GooeyToaster } from 'goey-toast'
+import 'goey-toast/styles.css'
 import { AuthProvider } from './context/AuthContext'
 import App from './App'
 import './index.css'
@@ -23,38 +24,16 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
                 <AuthProvider>
                     <App />
                 </AuthProvider>
-                <Toaster
+                <GooeyToaster
                     position="top-right"
-                    toastOptions={{
-                        duration: 4000,
-                        style: {
-                            background: '#1B2B3A',
-                            color: '#FFFFFF',
-                            borderRadius: '10px',
-                            border: '1px solid rgba(255,255,255,0.08)',
-                            boxShadow: '0 12px 40px rgba(0,0,0,0.4)',
-                            padding: '12px 16px',
-                            fontSize: '14px',
-                        },
-                        success: {
-                            iconTheme: {
-                                primary: '#C9A961',
-                                secondary: '#FFFFFF',
-                            },
-                            style: {
-                                border: '1px solid rgba(201,169,97,0.2)',
-                            },
-                        },
-                        error: {
-                            iconTheme: {
-                                primary: '#EF4444',
-                                secondary: '#FFFFFF',
-                            },
-                            style: {
-                                border: '1px solid rgba(239,68,68,0.2)',
-                            },
-                        },
-                    }}
+                    theme="dark"
+                    duration={4000}
+                    gap={14}
+                    offset="24px"
+                    spring={true}
+                    bounce={0.35}
+                    closeOnEscape={true}
+                    swipeToDismiss={true}
                 />
             </BrowserRouter>
         </QueryClientProvider>

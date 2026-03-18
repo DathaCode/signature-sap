@@ -1,4 +1,4 @@
-import toast from 'react-hot-toast';
+import { createRoot } from 'react-dom/client';
 
 type ConfirmVariant = 'danger' | 'warning' | 'info';
 
@@ -28,63 +28,81 @@ const VARIANT_CONFIG: Record<ConfirmVariant, { border: string; btnClass: string;
     },
 };
 
-export function confirmToast(options: ConfirmOptions): Promise<boolean> {
-    const {
-        title,
-        message,
-        confirmText = 'Confirm',
-        cancelText = 'Cancel',
-        variant = 'info',
-    } = options;
-
+function ConfirmDialog({
+    options,
+    onResolve,
+}: {
+    options: ConfirmOptions & { variant: ConfirmVariant };
+    onResolve: (value: boolean) => void;
+}) {
+    const { title, message, confirmText = 'Confirm', cancelText = 'Cancel', variant } = options;
     const config = VARIANT_CONFIG[variant];
 
-    return new Promise((resolve) => {
-        const toastId = toast.custom(
-            (t) => (
-                <div
-                    className={`${
-                        t.visible ? 'animate-enter' : 'animate-leave'
-                    } pointer-events-auto flex flex-col gap-3 w-[360px] rounded-xl border ${config.border} bg-[#1B2B3A] p-5 shadow-2xl`}
-                    style={{
-                        boxShadow: '0 20px 60px rgba(0,0,0,0.5), 0 8px 20px rgba(0,0,0,0.3)',
-                    }}
-                >
-                    {title && (
-                        <div className="flex items-center gap-2">
-                            <span className="text-lg">{config.icon}</span>
-                            <span className="font-bold text-[15px] text-white">{title}</span>
-                        </div>
-                    )}
-                    <p className="text-[13px] text-slate-300 leading-relaxed m-0">
-                        {message}
-                    </p>
-                    <div className="flex justify-end gap-2 mt-1">
-                        <button
-                            onClick={() => {
-                                toast.dismiss(toastId);
-                                resolve(false);
-                            }}
-                            className="px-4 py-1.5 rounded-lg text-[13px] font-medium border border-slate-600 bg-transparent text-slate-300 hover:bg-slate-700 transition-colors cursor-pointer"
-                        >
-                            {cancelText}
-                        </button>
-                        <button
-                            onClick={() => {
-                                toast.dismiss(toastId);
-                                resolve(true);
-                            }}
-                            className={`px-4 py-1.5 rounded-lg text-[13px] font-semibold border-none text-white ${config.btnClass} transition-colors cursor-pointer`}
-                        >
-                            {confirmText}
-                        </button>
+    return (
+        <div
+            className="fixed inset-0 z-[9999] flex items-start justify-center pt-24"
+            style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(2px)' }}
+            onClick={() => onResolve(false)}
+        >
+            <div
+                className={`flex flex-col gap-3 w-[380px] rounded-xl border ${config.border} bg-[#1B2B3A] p-6 shadow-2xl animate-in fade-in slide-in-from-top-4 duration-200`}
+                style={{
+                    boxShadow: '0 20px 60px rgba(0,0,0,0.5), 0 8px 20px rgba(0,0,0,0.3)',
+                    animation: 'confirmSlideIn 0.2s ease-out',
+                }}
+                onClick={(e) => e.stopPropagation()}
+            >
+                {title && (
+                    <div className="flex items-center gap-2">
+                        <span className="text-lg">{config.icon}</span>
+                        <span className="font-bold text-[15px] text-white">{title}</span>
                     </div>
+                )}
+                <p className="text-[13px] text-slate-300 leading-relaxed m-0">
+                    {message}
+                </p>
+                <div className="flex justify-end gap-2 mt-1">
+                    <button
+                        onClick={() => onResolve(false)}
+                        className="px-4 py-1.5 rounded-lg text-[13px] font-medium border border-slate-600 bg-transparent text-slate-300 hover:bg-slate-700 transition-colors cursor-pointer"
+                    >
+                        {cancelText}
+                    </button>
+                    <button
+                        onClick={() => onResolve(true)}
+                        className={`px-4 py-1.5 rounded-lg text-[13px] font-semibold border-none text-white ${config.btnClass} transition-colors cursor-pointer`}
+                    >
+                        {confirmText}
+                    </button>
                 </div>
-            ),
-            {
-                duration: Infinity,
-                position: 'top-center',
-            }
+            </div>
+        </div>
+    );
+}
+
+export function confirmToast(options: ConfirmOptions): Promise<boolean> {
+    const variant = options.variant || 'info';
+
+    return new Promise((resolve) => {
+        const container = document.createElement('div');
+        document.body.appendChild(container);
+        const root = createRoot(container);
+
+        const cleanup = () => {
+            root.unmount();
+            container.remove();
+        };
+
+        const handleResolve = (value: boolean) => {
+            cleanup();
+            resolve(value);
+        };
+
+        root.render(
+            <ConfirmDialog
+                options={{ ...options, variant }}
+                onResolve={handleResolve}
+            />
         );
     });
 }

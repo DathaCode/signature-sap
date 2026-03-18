@@ -4,7 +4,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Label } from '../../components/ui/Label';
-import { toast } from 'react-hot-toast';
+import { gooeyToast } from 'goey-toast';
 import api from '../../services/api';
 
 interface ResetForm {
@@ -21,16 +21,16 @@ export default function ResetPasswordPage() {
 
     const onSubmit = async (data: ResetForm) => {
         if (!token) {
-            toast.error('Invalid reset link. Please request a new one.');
+            gooeyToast.error('Invalid reset link. Please request a new one.');
             return;
         }
         setIsLoading(true);
         try {
             await api.post('/auth/reset-password', { token, password: data.password });
-            toast.success('Password updated! Please sign in.');
+            gooeyToast.success('Password updated! Please sign in.');
             navigate('/login');
         } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Invalid or expired reset link.');
+            gooeyToast.error(error.response?.data?.message || 'Invalid or expired reset link.');
         } finally {
             setIsLoading(false);
         }

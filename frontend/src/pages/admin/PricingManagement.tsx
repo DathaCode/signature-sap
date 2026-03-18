@@ -3,7 +3,7 @@ import { adminPricingApi } from '../../services/api';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Loader2, Save } from 'lucide-react';
-import { toast } from 'react-hot-toast';
+import { gooeyToast } from 'goey-toast';
 import { Input } from '../../components/ui/Input';
 
 interface PricingEntry {
@@ -38,7 +38,7 @@ export default function PricingManagement() {
             setDrops(uniqueDrops);
         } catch (error) {
             console.error('Failed to fetch pricing:', error);
-            toast.error('Failed to load pricing data');
+            gooeyToast.error('Failed to load pricing data');
         } finally {
             setLoading(false);
         }
@@ -71,12 +71,12 @@ export default function PricingManagement() {
 
         try {
             await Promise.all(promises);
-            toast.success('Pricing updated successfully');
+            gooeyToast.success('Pricing updated successfully');
             setEditedCells(new Map());
             fetchPricing();
         } catch (error) {
             console.error(error);
-            toast.error('Failed to update some prices');
+            gooeyToast.error('Failed to update some prices');
         }
     };
 

@@ -10,7 +10,7 @@ import {
     Loader2, UserX, UserCheck, X, ShoppingBag, FileText,
     Phone, MapPin, Building2, Calendar, Pencil, Save
 } from 'lucide-react';
-import { toast } from 'react-hot-toast';
+import { gooeyToast } from 'goey-toast';
 import { confirmToast } from '../../utils/confirmToast';
 import { format } from 'date-fns';
 
@@ -81,7 +81,7 @@ function UserDialog({
                 isActive: data.isActive ?? true,
             });
         }).catch(() => {
-            toast.error('Failed to load user details');
+            gooeyToast.error('Failed to load user details');
         }).finally(() => setLoading(false));
     }, [userId]);
 
@@ -89,12 +89,12 @@ function UserDialog({
         setSaving(true);
         try {
             await adminUserApi.updateUser(userId, form);
-            toast.success('User updated');
+            gooeyToast.success('User updated');
             setEditing(false);
             onUpdated(form);
             if (user) setUser({ ...user, ...form });
         } catch (error) {
-            toast.error('Failed to update user');
+            gooeyToast.error('Failed to update user');
         } finally {
             setSaving(false);
         }
@@ -308,7 +308,7 @@ export default function UserManagement() {
             const data = await adminUserApi.getAllUsers(params);
             setUsers(data.users as UserWithCounts[]);
         } catch (error) {
-            toast.error('Failed to load users');
+            gooeyToast.error('Failed to load users');
         } finally {
             setLoading(false);
         }
@@ -329,10 +329,10 @@ export default function UserManagement() {
         })) return;
         try {
             await adminUserApi.updateUser(user.id, { isActive: !user.isActive });
-            toast.success(`User ${user.isActive ? 'deactivated' : 'activated'}`);
+            gooeyToast.success(`User ${user.isActive ? 'deactivated' : 'activated'}`);
             setUsers(users.map(u => u.id === user.id ? { ...u, isActive: !u.isActive } : u));
         } catch {
-            toast.error('Failed to update user');
+            gooeyToast.error('Failed to update user');
         }
     };
 

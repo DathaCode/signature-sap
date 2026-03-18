@@ -5,7 +5,7 @@ import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Loader2, ArrowLeft, ShoppingCart, Calendar, ChevronDown, ChevronUp } from 'lucide-react';
 import { format } from 'date-fns';
-import { toast } from 'react-hot-toast';
+import { gooeyToast } from 'goey-toast';
 import { confirmToast } from '../../utils/confirmToast';
 import api from '../../services/api';
 
@@ -71,7 +71,7 @@ export default function QuoteDetails() {
                 setQuote(response.data.quote);
             } catch (error) {
                 console.error('Failed to fetch quote:', error);
-                toast.error('Quote not found');
+                gooeyToast.error('Quote not found');
                 navigate('/quotes');
             } finally {
                 setLoading(false);
@@ -97,10 +97,10 @@ export default function QuoteDetails() {
         if (!await confirmToast({ title: 'Convert to Order', message: 'Convert this quote to an order?', confirmText: 'Convert', variant: 'info' })) return;
         try {
             await api.post(`/quotes/${quote.id}/convert-to-order`);
-            toast.success('Quote converted to order!');
+            gooeyToast.success('Quote converted to order!');
             navigate('/orders');
         } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Failed to convert');
+            gooeyToast.error(error.response?.data?.message || 'Failed to convert');
         }
     };
 

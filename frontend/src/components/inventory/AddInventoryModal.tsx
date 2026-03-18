@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { X } from 'lucide-react'
-import { toast } from 'react-hot-toast'
+import { gooeyToast } from 'goey-toast'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { inventoryApi } from '../../services/api'
 import { getMaterials, getFabricTypes, getFabricColors } from '../../data/fabrics'
@@ -134,11 +134,11 @@ export default function AddInventoryModal({ isOpen, onClose }: AddInventoryModal
         mutationFn: inventoryApi.addInventory,
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['inventory'] })
-            toast.success('Stock updated successfully')
+            gooeyToast.success('Stock updated successfully')
             reset(); onClose()
         },
         onError: (error: any) => {
-            toast.error(error.response?.data?.message || 'Failed to add item')
+            gooeyToast.error(error.response?.data?.message || 'Failed to add item')
         }
     })
 

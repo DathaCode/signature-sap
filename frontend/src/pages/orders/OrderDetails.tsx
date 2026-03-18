@@ -7,7 +7,7 @@ import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Loader2, ArrowLeft, Printer, ChevronDown, ChevronUp } from 'lucide-react';
 import { format } from 'date-fns';
-import { toast } from 'react-hot-toast';
+import { gooeyToast } from 'goey-toast';
 import { confirmToast } from '../../utils/confirmToast';
 
 export default function OrderDetails() {
@@ -28,7 +28,7 @@ export default function OrderDetails() {
                 setOrder(data);
             } catch (error) {
                 console.error('Failed to fetch order:', error);
-                toast.error('Order not found');
+                gooeyToast.error('Order not found');
                 navigate('/orders');
             } finally {
                 setLoading(false);
@@ -90,11 +90,11 @@ export default function OrderDetails() {
                                 if (await confirmToast({ title: 'Cancel Order', message: 'Are you sure you want to cancel this order?', confirmText: 'Cancel Order', variant: 'danger' })) {
                                     try {
                                         await webOrderApi.cancelOrder(order.id);
-                                        toast.success('Order cancelled');
+                                        gooeyToast.success('Order cancelled');
                                         setOrder({ ...order, status: 'CANCELLED' });
                                     } catch (error) {
                                         console.error(error);
-                                        toast.error('Failed to cancel order');
+                                        gooeyToast.error('Failed to cancel order');
                                     }
                                 }
                             }}

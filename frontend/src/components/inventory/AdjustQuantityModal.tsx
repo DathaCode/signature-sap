@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { X, Plus, Minus } from 'lucide-react'
-import { toast } from 'react-hot-toast'
+import { gooeyToast } from 'goey-toast'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { inventoryApi } from '../../services/api'
 import type { InventoryItem } from '../../types'
@@ -23,20 +23,20 @@ export default function AdjustQuantityModal({ isOpen, onClose, item }: AdjustQua
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['inventory'] })
             queryClient.invalidateQueries({ queryKey: ['item', item.id] })
-            toast.success('Quantity adjusted successfully')
+            gooeyToast.success('Quantity adjusted successfully')
             onClose()
             setAmount(0)
             setNotes('')
         },
         onError: (error: any) => {
-            toast.error(error.response?.data?.message || 'Failed to adjust quantity')
+            gooeyToast.error(error.response?.data?.message || 'Failed to adjust quantity')
         }
     })
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
         if (amount <= 0) {
-            toast.error('Amount must be greater than 0')
+            gooeyToast.error('Amount must be greater than 0')
             return
         }
 

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { FileSpreadsheet, Download, ArrowLeft, FileText } from 'lucide-react'
-import toast from 'react-hot-toast'
+import { gooeyToast } from 'goey-toast'
 import { orderApi } from '../services/api'
 import type { WorksheetData } from '../types'
 
@@ -21,7 +21,7 @@ export default function WorksheetPreview() {
                 const data = await orderApi.getWorksheets(orderId)
                 setWorksheets(data)
             } catch (error: any) {
-                toast.error('Failed to load worksheets')
+                gooeyToast.error('Failed to load worksheets')
                 console.error(error)
             } finally {
                 setIsLoading(false)
@@ -47,9 +47,9 @@ export default function WorksheetPreview() {
             a.click()
             window.URL.revokeObjectURL(url)
             document.body.removeChild(a)
-            toast.success(`Downloaded ${type.replace('_', ' ')} as ${format.toUpperCase()}`)
+            gooeyToast.success(`Downloaded ${type.replace('_', ' ')} as ${format.toUpperCase()}`)
         } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Download failed')
+            gooeyToast.error(error.response?.data?.message || 'Download failed')
         } finally {
             setDownloading(null)
         }

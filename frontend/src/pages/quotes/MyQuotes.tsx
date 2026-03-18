@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Ca
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { FileText, Calendar, CheckCircle, XCircle, Trash2, ShoppingCart, Plus } from 'lucide-react';
-import { toast } from 'react-hot-toast';
+import { gooeyToast } from 'goey-toast';
 import { confirmToast } from '../../utils/confirmToast';
 import api from '../../services/api';
 
@@ -34,7 +34,7 @@ export default function MyQuotesPage() {
             setQuotes(response.data.quotes);
         } catch (error) {
             console.error('Failed to fetch quotes:', error);
-            toast.error('Failed to load quotes');
+            gooeyToast.error('Failed to load quotes');
         } finally {
             setLoading(false);
         }
@@ -45,12 +45,12 @@ export default function MyQuotesPage() {
 
         try {
             await api.post(`/quotes/${quoteId}/convert-to-order`);
-            toast.success('Quote converted to order successfully!');
+            gooeyToast.success('Quote converted to order successfully!');
             fetchQuotes(); // Refresh list
             navigate('/dashboard');
         } catch (error: any) {
             console.error('Failed to convert quote:', error);
-            toast.error(error.response?.data?.message || 'Failed to convert quote');
+            gooeyToast.error(error.response?.data?.message || 'Failed to convert quote');
         }
     };
 
@@ -59,11 +59,11 @@ export default function MyQuotesPage() {
 
         try {
             await api.delete(`/quotes/${quoteId}`);
-            toast.success('Quote deleted successfully');
+            gooeyToast.success('Quote deleted successfully');
             fetchQuotes(); // Refresh list
         } catch (error) {
             console.error('Failed to delete quote:', error);
-            toast.error('Failed to delete quote');
+            gooeyToast.error('Failed to delete quote');
         }
     };
 

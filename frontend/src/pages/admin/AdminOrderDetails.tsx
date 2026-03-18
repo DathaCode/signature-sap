@@ -7,7 +7,7 @@ import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Loader2, ArrowLeft, ChevronDown, ChevronUp, Check, Trash2, Factory } from 'lucide-react';
 import { format } from 'date-fns';
-import { toast } from 'react-hot-toast';
+import { gooeyToast } from 'goey-toast';
 import { confirmToast } from '../../utils/confirmToast';
 import api from '../../services/api';
 
@@ -30,7 +30,7 @@ export default function AdminOrderDetails() {
                 setOrder(data);
             } catch (error) {
                 console.error('Failed to fetch order:', error);
-                toast.error('Order not found');
+                gooeyToast.error('Order not found');
                 navigate('/admin/orders');
             } finally {
                 setLoading(false);
@@ -64,10 +64,10 @@ export default function AdminOrderDetails() {
         setActionLoading(true);
         try {
             await adminOrderApi.approveOrder(order.id);
-            toast.success('Order approved');
+            gooeyToast.success('Order approved');
             setOrder({ ...order, status: 'CONFIRMED' });
         } catch (error) {
-            toast.error('Failed to approve order');
+            gooeyToast.error('Failed to approve order');
         } finally {
             setActionLoading(false);
         }
@@ -78,10 +78,10 @@ export default function AdminOrderDetails() {
         setActionLoading(true);
         try {
             await adminOrderApi.sendToProduction(order.id);
-            toast.success('Sent to production');
+            gooeyToast.success('Sent to production');
             setOrder({ ...order, status: 'PRODUCTION' });
         } catch (error) {
-            toast.error('Failed to send to production');
+            gooeyToast.error('Failed to send to production');
         } finally {
             setActionLoading(false);
         }
@@ -92,10 +92,10 @@ export default function AdminOrderDetails() {
         setActionLoading(true);
         try {
             await adminOrderApi.updateStatus(order.id, 'COMPLETED');
-            toast.success('Order marked as completed');
+            gooeyToast.success('Order marked as completed');
             setOrder({ ...order, status: 'COMPLETED' });
         } catch (error) {
-            toast.error('Failed to update status');
+            gooeyToast.error('Failed to update status');
         } finally {
             setActionLoading(false);
         }
@@ -106,10 +106,10 @@ export default function AdminOrderDetails() {
         setActionLoading(true);
         try {
             await api.delete(`/web-orders/${order.id}/trash`);
-            toast.success('Order moved to trash');
+            gooeyToast.success('Order moved to trash');
             navigate('/admin/orders');
         } catch (error) {
-            toast.error('Failed to trash order');
+            gooeyToast.error('Failed to trash order');
         } finally {
             setActionLoading(false);
         }

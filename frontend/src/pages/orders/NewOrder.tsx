@@ -9,7 +9,7 @@ import { Label } from '../../components/ui/Label';
 import { Input } from '../../components/ui/Input';
 import { ArrowLeft, Copy, PlusCircle, CheckCircle } from 'lucide-react';
 import { BlindItem, CreateOrderRequest } from '../../types/order';
-import { toast } from 'react-hot-toast';
+import { gooeyToast } from 'goey-toast';
 import { confirmToast } from '../../utils/confirmToast';
 import api from '../../services/api';
 
@@ -84,7 +84,7 @@ export default function NewOrderPage() {
                             setSavedBlinds(draft.blinds);
                             if (draft.notes) setNotes(draft.notes);
                             if (draft.customerReference) setCustomerReference(draft.customerReference);
-                            toast.success('Draft restored!');
+                            gooeyToast.success('Draft restored!');
                         } else {
                             localStorage.removeItem('order_draft');
                         }
@@ -136,7 +136,7 @@ export default function NewOrderPage() {
     // Save current blind and copy settings (except Location, Width, Drop)
     const handleUpdateAndCopy = () => {
         if (!validateCurrentBlind()) {
-            toast.error('Please fill all required fields before saving');
+            gooeyToast.error('Please fill all required fields before saving');
             return;
         }
 
@@ -146,11 +146,11 @@ export default function NewOrderPage() {
             const updated = [...savedBlinds];
             updated[editingIndex] = item;
             setSavedBlinds(updated);
-            toast.success(`Blind #${editingIndex + 1} updated! Fields copied (except Location, Width, Drop).`);
+            gooeyToast.success(`Blind #${editingIndex + 1} updated! Fields copied (except Location, Width, Drop).`);
             setEditingIndex(null);
         } else {
             setSavedBlinds([...savedBlinds, item]);
-            toast.success(`Blind #${savedBlinds.length + 1} saved! Fields copied (except Location, Width, Drop).`);
+            gooeyToast.success(`Blind #${savedBlinds.length + 1} saved! Fields copied (except Location, Width, Drop).`);
         }
 
         // Copy all fields EXCEPT Location, Width, Drop, price
@@ -173,7 +173,7 @@ export default function NewOrderPage() {
     // Save current blind and clear ALL fields
     const handleUpdateAndContinueAdding = () => {
         if (!validateCurrentBlind()) {
-            toast.error('Please fill all required fields before saving');
+            gooeyToast.error('Please fill all required fields before saving');
             return;
         }
 
@@ -183,11 +183,11 @@ export default function NewOrderPage() {
             const updated = [...savedBlinds];
             updated[editingIndex] = item;
             setSavedBlinds(updated);
-            toast.success(`Blind #${editingIndex + 1} updated! Ready for next blind.`);
+            gooeyToast.success(`Blind #${editingIndex + 1} updated! Ready for next blind.`);
             setEditingIndex(null);
         } else {
             setSavedBlinds([...savedBlinds, item]);
-            toast.success(`Blind #${savedBlinds.length + 1} saved! Ready for next blind.`);
+            gooeyToast.success(`Blind #${savedBlinds.length + 1} saved! Ready for next blind.`);
         }
 
         // Clear ALL fields
@@ -204,7 +204,7 @@ export default function NewOrderPage() {
         // If current form has data, try to save it first
         if (isPartiallyFilled()) {
             if (!validateCurrentBlind()) {
-                toast.error('Please complete all fields for the current blind or clear them to proceed');
+                gooeyToast.error('Please complete all fields for the current blind or clear them to proceed');
                 return;
             }
             const item = { ...getValues('items.0') };
@@ -212,7 +212,7 @@ export default function NewOrderPage() {
         }
 
         if (savedBlinds.length === 0 && !isPartiallyFilled()) {
-            toast.error('Please add at least one blind to proceed');
+            gooeyToast.error('Please add at least one blind to proceed');
             return;
         }
 
@@ -229,7 +229,7 @@ export default function NewOrderPage() {
         setEditingIndex(index);
         setShowSummary(false);
         window.scrollTo({ top: 0, behavior: 'smooth' });
-        toast(`Editing Blind #${index + 1}`, { icon: '✏️' });
+        gooeyToast.info(`Editing Blind #${index + 1}`);
     };
 
     // Delete a saved blind
@@ -237,7 +237,7 @@ export default function NewOrderPage() {
         if (!await confirmToast({ title: 'Delete Blind', message: `Are you sure you want to delete Blind #${index + 1}?`, confirmText: 'Delete', variant: 'danger' })) return;
         const updated = savedBlinds.filter((_, i) => i !== index);
         setSavedBlinds(updated);
-        toast.success(`Blind #${index + 1} deleted`);
+        gooeyToast.success(`Blind #${index + 1} deleted`);
 
         if (updated.length === 0) {
             setShowSummary(false);
@@ -256,11 +256,11 @@ export default function NewOrderPage() {
             };
             await api.post('/web-orders/create', data);
             clearDraft();
-            toast.success('Order placed successfully!');
+            gooeyToast.success('Order placed successfully!');
             navigate('/dashboard');
         } catch (error: any) {
             console.error(error);
-            toast.error(error.response?.data?.message || 'Failed to place order');
+            gooeyToast.error(error.response?.data?.message || 'Failed to place order');
         } finally {
             setIsSubmitting(false);
         }
@@ -277,11 +277,11 @@ export default function NewOrderPage() {
                 customerReference: customerReference || undefined,
             });
             clearDraft();
-            toast.success('Quote saved successfully!');
+            gooeyToast.success('Quote saved successfully!');
             navigate('/quotes');
         } catch (error: any) {
             console.error(error);
-            toast.error(error.response?.data?.message || 'Failed to save quote');
+            gooeyToast.error(error.response?.data?.message || 'Failed to save quote');
         } finally {
             setIsSubmitting(false);
         }

@@ -7,7 +7,7 @@ import { Button } from '../../components/ui/Button';
 import { Loader2, Check, Factory, Filter, Eye, FileText, Search, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
-import { toast } from 'react-hot-toast';
+import { gooeyToast } from 'goey-toast';
 import { confirmToast } from '../../utils/confirmToast';
 import WorksheetPreview from '../../components/admin/WorksheetPreview';
 
@@ -39,7 +39,7 @@ export default function OrderManagement() {
             setOrders(data.orders);
         } catch (error) {
             console.error('Failed to fetch orders:', error);
-            toast.error('Failed to load orders');
+            gooeyToast.error('Failed to load orders');
         } finally {
             setLoading(false);
         }
@@ -53,11 +53,11 @@ export default function OrderManagement() {
         if (!await confirmToast({ title: 'Approve Order', message: 'Approve this order and notify the customer?', confirmText: 'Approve', variant: 'info' })) return;
         try {
             await adminOrderApi.approveOrder(id);
-            toast.success('Order approved');
+            gooeyToast.success('Order approved');
             fetchOrders();
         } catch (error) {
             console.error(error);
-            toast.error('Failed to approve order');
+            gooeyToast.error('Failed to approve order');
         }
     };
 
@@ -66,12 +66,12 @@ export default function OrderManagement() {
         setSendingToProduction(id);
         try {
             const result = await adminOrderApi.sendToProduction(id);
-            toast.success('Optimization complete');
+            gooeyToast.success('Optimization complete');
             setWorksheetPreview({ orderId: id, orderNumber, data: result });
             fetchOrders();
         } catch (error) {
             console.error(error);
-            toast.error('Failed to send to production');
+            gooeyToast.error('Failed to send to production');
         } finally {
             setSendingToProduction(null);
         }
@@ -83,7 +83,7 @@ export default function OrderManagement() {
             setWorksheetPreview({ orderId: id, orderNumber, data: result });
         } catch (error) {
             console.error(error);
-            toast.error('No worksheet data available');
+            gooeyToast.error('No worksheet data available');
         }
     };
 
@@ -98,11 +98,11 @@ export default function OrderManagement() {
         setUpdatingStatus(id);
         try {
             await adminOrderApi.updateStatus(id, newStatus);
-            toast.success(`Order marked as ${newStatus.toLowerCase()}`);
+            gooeyToast.success(`Order marked as ${newStatus.toLowerCase()}`);
             fetchOrders();
         } catch (error) {
             console.error(error);
-            toast.error('Failed to update order status');
+            gooeyToast.error('Failed to update order status');
         } finally {
             setUpdatingStatus(null);
         }
