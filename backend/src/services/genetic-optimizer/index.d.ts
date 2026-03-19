@@ -29,6 +29,7 @@ export interface GeneticOptions {
     crossoverRate?: number;
     eliteCount?: number;
     validate?: boolean;
+    allowRotation?: boolean;
 }
 
 export interface PlacedGeneticPanel {

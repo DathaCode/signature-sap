@@ -210,6 +210,7 @@ export class FabricCutOptimizerService {
             maxGenerations: 800,
             stagnationLimit: 80,
             validate: true,
+            allowRotation: false,
         });
 
         if (!gaResult.success) {

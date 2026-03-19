@@ -687,13 +687,19 @@ function optimize(panels, options = {}) {
     mutationRate = 0.15,
     crossoverRate = 0.8,
     eliteCount = 8,
+    allowRotation = true,
   } = options;
 
   const n = panels.length;
   const startTime = Date.now();
 
+  // Strip rotations from a chromosome when rotation is disabled
+  const noRot = allowRotation
+    ? c => c
+    : c => ({ order: c.order, rotations: new Array(n).fill(false) });
+
   // ── Phase 1: Exhaustive heuristic sweep ──────────────────────────────────
-  const seeds = createSeededChromosomes(panels, stockWidth);
+  const seeds = createSeededChromosomes(panels, stockWidth).map(noRot);
   let globalBestFitness = Infinity;
   let globalBestChromosome = null;
   let globalBestResult = null;
@@ -720,7 +726,7 @@ function optimize(panels, options = {}) {
   for (const s of topSeeds) population.push(s.chromosome);
 
   while (population.length < populationSize) {
-    population.push(createRandomChromosome(n));
+    population.push(noRot(createRandomChromosome(n)));
   }
 
   // Inject mutations of the best seed
@@ -728,7 +734,7 @@ function optimize(panels, options = {}) {
     for (let i = 0; i < Math.floor(populationSize * 0.2); i++) {
       const idx = Math.floor(populationSize * 0.3) + i;
       if (idx < population.length) {
-        population[idx] = mutate(globalBestChromosome, 0.3);
+        population[idx] = noRot(mutate(globalBestChromosome, 0.3));
       }
     }
   }
@@ -775,10 +781,10 @@ function optimize(panels, options = {}) {
       }
 
       if (randFloat() < adaptiveMutation) {
-        child = mutate(child, adaptiveMutation);
+        child = noRot(mutate(child, adaptiveMutation));
       }
       if (randFloat() < adaptiveMutation * 0.3) {
-        child = scrambleMutate(child);
+        child = noRot(scrambleMutate(child));
       }
 
       const { fitness } = evaluate(child, panels, stockWidth);
@@ -810,7 +816,7 @@ function optimize(panels, options = {}) {
       const worstIndices = indices.slice(-numReplace);
       for (const wi of worstIndices) {
         if (wi < population.length) {
-          population[wi] = createRandomChromosome(n);
+          population[wi] = noRot(createRandomChromosome(n));
           fitnesses[wi] = evaluate(population[wi], panels, stockWidth).fitness;
         }
       }
@@ -822,7 +828,7 @@ function optimize(panels, options = {}) {
       for (let i = 0; i < numInject; i++) {
         const wi = indices[indices.length - 1 - i];
         if (wi < population.length) {
-          population[wi] = mutate(globalBestChromosome, 0.25);
+          population[wi] = noRot(mutate(globalBestChromosome, 0.25));
           fitnesses[wi] = evaluate(population[wi], panels, stockWidth).fitness;
           if (fitnesses[wi] < globalBestFitness) {
             globalBestFitness = fitnesses[wi];
