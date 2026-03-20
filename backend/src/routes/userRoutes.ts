@@ -5,6 +5,7 @@ import {
     getUserById,
     updateUser,
     deactivateUser,
+    setUserDiscounts,
 } from '../controllers/user.controller';
 import { authenticateToken, requireAdmin } from '../middleware/auth';
 
@@ -16,5 +17,6 @@ router.get('/', authenticateToken, requireAdmin, getAllUsers);
 router.get('/:id', authenticateToken, requireAdmin, getUserById);
 router.patch('/:id', authenticateToken, requireAdmin, updateUser);
 router.delete('/:id', authenticateToken, requireAdmin, deactivateUser);
+router.patch('/:id/discounts', authenticateToken, requireAdmin, setUserDiscounts);
 
 export default router;

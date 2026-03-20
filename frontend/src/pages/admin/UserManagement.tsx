@@ -7,7 +7,7 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Label } from '../../components/ui/Label';
 import {
-    Loader2, UserX, UserCheck, X, ShoppingBag, FileText,
+    Loader2, UserX, UserCheck, X,
     Phone, MapPin, Building2, Calendar, Pencil, Save
 } from 'lucide-react';
 import { gooeyToast } from 'goey-toast';
@@ -22,31 +22,23 @@ interface UserDetail extends UserWithCounts {
     phone?: string;
     address?: string;
     updatedAt?: string;
-    orders?: Array<{
-        id: string;
-        orderNumber: string;
-        customerReference?: string;
-        status: string;
-        total: number;
-        createdAt: string;
-    }>;
-    quotes?: Array<{
-        id: string;
-        quoteNumber: string;
-        customerReference?: string;
-        total: number;
-        convertedToOrder?: string;
-        createdAt: string;
-        expiresAt: string;
-    }>;
+    discounts?: {
+        G1: { acmeda: number; tbs: number };
+        G2: { acmeda: number; tbs: number };
+        G3: { acmeda: number; tbs: number };
+        G4: { acmeda: number; tbs: number };
+    } | null;
 }
 
-const STATUS_COLOURS: Record<string, string> = {
-    PENDING: 'bg-yellow-100 text-yellow-800',
-    CONFIRMED: 'bg-blue-100 text-blue-800',
-    PRODUCTION: 'bg-purple-100 text-purple-800',
-    COMPLETED: 'bg-green-100 text-green-800',
-    CANCELLED: 'bg-red-100 text-red-800',
+type DialogTab = 'discounts' | 'account';
+
+const GROUPS = ['G1', 'G2', 'G3', 'G4'] as const;
+
+const DEFAULT_DISCOUNTS = {
+    G1: { acmeda: 0, tbs: 0 },
+    G2: { acmeda: 0, tbs: 0 },
+    G3: { acmeda: 0, tbs: 0 },
+    G4: { acmeda: 0, tbs: 0 },
 };
 
 // ─── User Detail / Edit Dialog ─────────────────────────────────────────────
@@ -61,12 +53,17 @@ function UserDialog({
 }) {
     const [user, setUser] = useState<UserDetail | null>(null);
     const [loading, setLoading] = useState(true);
+    const [activeTab, setActiveTab] = useState<DialogTab>('discounts');
     const [editing, setEditing] = useState(false);
     const [saving, setSaving] = useState(false);
+    const [savingDiscounts, setSavingDiscounts] = useState(false);
+
     const [form, setForm] = useState({
         name: '', email: '', phone: '', company: '', address: '',
         role: 'CUSTOMER' as 'CUSTOMER' | 'ADMIN', isActive: true,
     });
+
+    const [discounts, setDiscounts] = useState(DEFAULT_DISCOUNTS);
 
     useEffect(() => {
         adminUserApi.getUserById(userId).then((data) => {
@@ -80,211 +77,289 @@ function UserDialog({
                 role: data.role || 'CUSTOMER',
                 isActive: data.isActive ?? true,
             });
+            if (data.discounts) {
+                setDiscounts({
+                    G1: data.discounts.G1 ?? { acmeda: 0, tbs: 0 },
+                    G2: data.discounts.G2 ?? { acmeda: 0, tbs: 0 },
+                    G3: data.discounts.G3 ?? { acmeda: 0, tbs: 0 },
+                    G4: data.discounts.G4 ?? { acmeda: 0, tbs: 0 },
+                });
+            } else {
+                setDiscounts(DEFAULT_DISCOUNTS);
+            }
         }).catch(() => {
             gooeyToast.error('Failed to load user details');
         }).finally(() => setLoading(false));
     }, [userId]);
 
-    const handleSave = async () => {
+    const handleSaveProfile = async () => {
         setSaving(true);
         try {
             await adminUserApi.updateUser(userId, form);
-            gooeyToast.success('User updated');
+            gooeyToast.success('Profile updated');
             setEditing(false);
             onUpdated(form);
             if (user) setUser({ ...user, ...form });
-        } catch (error) {
+        } catch {
             gooeyToast.error('Failed to update user');
         } finally {
             setSaving(false);
         }
     };
 
+    const handleSaveDiscounts = async () => {
+        setSavingDiscounts(true);
+        try {
+            await adminUserApi.setUserDiscounts(userId, discounts);
+            gooeyToast.success('Discounts saved');
+            if (user) setUser({ ...user, discounts });
+        } catch {
+            gooeyToast.error('Failed to save discounts');
+        } finally {
+            setSavingDiscounts(false);
+        }
+    };
+
+    const handleResetDiscounts = () => {
+        setDiscounts(DEFAULT_DISCOUNTS);
+    };
+
+    const setDiscount = (group: typeof GROUPS[number], supplier: 'acmeda' | 'tbs', value: string) => {
+        const num = parseFloat(value);
+        if (isNaN(num) || num < 0 || num > 100) return;
+        setDiscounts(prev => ({ ...prev, [group]: { ...prev[group], [supplier]: num } }));
+    };
+
     const fmtDate = (d: string) => format(new Date(d), 'MMM d, yyyy');
 
+    const tabClass = (tab: DialogTab) =>
+        `px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === tab
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+        }`;
+
     return (
-        /* Backdrop */
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col">
-                {/* Dialog Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b">
-                    <h2 className="text-xl font-bold">
-                        {loading ? 'Loading...' : user?.name}
-                    </h2>
-                    <div className="flex items-center gap-2">
-                        {!loading && !editing && (
-                            <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
-                                <Pencil className="mr-1 h-3 w-3" />
-                                Edit
-                            </Button>
-                        )}
-                        {editing && (
-                            <>
-                                <Button size="sm" onClick={handleSave} disabled={saving} className="bg-green-600 hover:bg-green-700">
-                                    {saving ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Save className="mr-1 h-3 w-3" />}
-                                    Save
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl flex flex-col" style={{ maxHeight: '90vh' }}>
+                {/* Header */}
+                <div className="px-6 pt-5 pb-3 border-b">
+                    <div className="flex items-start justify-between mb-1">
+                        <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-sm">
+                                {loading ? '?' : user?.name?.slice(0, 2).toUpperCase()}
+                            </div>
+                            <div>
+                                <h2 className="text-lg font-bold leading-tight">
+                                    {loading ? 'Loading...' : user?.name}
+                                </h2>
+                                {!loading && user && (
+                                    <p className="text-xs text-gray-500">
+                                        {user.company || '—'} · Member since {user.createdAt ? fmtDate(user.createdAt) : '—'}
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            {activeTab === 'account' && !editing && (
+                                <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
+                                    <Pencil className="mr-1 h-3 w-3" />
+                                    Edit profile
                                 </Button>
-                                <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>Cancel</Button>
-                            </>
-                        )}
-                        <Button size="icon" variant="ghost" onClick={onClose}>
-                            <X className="h-5 w-5" />
-                        </Button>
+                            )}
+                            {activeTab === 'account' && editing && (
+                                <>
+                                    <Button size="sm" onClick={handleSaveProfile} disabled={saving} className="bg-green-600 hover:bg-green-700">
+                                        {saving ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Save className="mr-1 h-3 w-3" />}
+                                        Save
+                                    </Button>
+                                    <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>Cancel</Button>
+                                </>
+                            )}
+                            <Button size="icon" variant="ghost" onClick={onClose} className="text-red-500 hover:text-red-600 hover:bg-red-50">
+                                <X className="h-5 w-5" />
+                            </Button>
+                        </div>
+                    </div>
+
+                    {/* Tabs */}
+                    <div className="flex gap-0 mt-3 -mb-3">
+                        <button className={tabClass('discounts')} onClick={() => setActiveTab('discounts')}>
+                            Customer discounts
+                        </button>
+                        <button className={tabClass('account')} onClick={() => setActiveTab('account')}>
+                            Account info
+                        </button>
                     </div>
                 </div>
 
-                {/* Dialog Body */}
-                <div className="overflow-y-auto flex-1 px-6 py-5 space-y-6">
+                {/* Body */}
+                <div className="overflow-y-auto flex-1 px-6 py-5">
                     {loading ? (
                         <div className="flex items-center justify-center py-12">
                             <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
                         </div>
                     ) : user ? (
                         <>
-                            {/* Profile Section */}
-                            {editing ? (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div className="space-y-1">
-                                        <Label>Full Name</Label>
-                                        <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
+                            {/* ── Discounts Tab ── */}
+                            {activeTab === 'discounts' && (
+                                <div className="space-y-4">
+                                    <p className="text-sm text-gray-500">
+                                        Set per-group fabric discounts for Acmeda and TBS suppliers. These override the default pricing for this customer.
+                                    </p>
+
+                                    <div className="border rounded-lg overflow-hidden">
+                                        <table className="w-full text-sm">
+                                            <thead className="bg-gray-50">
+                                                <tr>
+                                                    <th className="px-4 py-3 text-left font-medium text-gray-600 text-xs uppercase tracking-wide">Fabric Group</th>
+                                                    <th className="px-4 py-3 text-left font-medium text-blue-600 text-xs uppercase tracking-wide">
+                                                        <span className="inline-flex items-center gap-1.5">
+                                                            <span className="h-2 w-2 rounded-full bg-blue-500 inline-block" />
+                                                            Acmeda (%)
+                                                        </span>
+                                                    </th>
+                                                    <th className="px-4 py-3 text-left font-medium text-green-600 text-xs uppercase tracking-wide">
+                                                        <span className="inline-flex items-center gap-1.5">
+                                                            <span className="h-2 w-2 rounded-full bg-green-500 inline-block" />
+                                                            TBS (%)
+                                                        </span>
+                                                    </th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y">
+                                                {GROUPS.map((group) => (
+                                                    <tr key={group} className="hover:bg-gray-50/50">
+                                                        <td className="px-4 py-3 font-semibold text-gray-800">
+                                                            Group {group.replace('G', '')}
+                                                        </td>
+                                                        <td className="px-4 py-3">
+                                                            <div className="flex items-center gap-2">
+                                                                <input
+                                                                    type="number"
+                                                                    min={0}
+                                                                    max={100}
+                                                                    step={0.5}
+                                                                    value={discounts[group].acmeda}
+                                                                    onChange={e => setDiscount(group, 'acmeda', e.target.value)}
+                                                                    className="w-20 h-9 rounded-lg border border-gray-300 px-2 text-center text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                                />
+                                                                <span className="text-gray-400 text-sm">%</span>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-4 py-3">
+                                                            <div className="flex items-center gap-2">
+                                                                <input
+                                                                    type="number"
+                                                                    min={0}
+                                                                    max={100}
+                                                                    step={0.5}
+                                                                    value={discounts[group].tbs}
+                                                                    onChange={e => setDiscount(group, 'tbs', e.target.value)}
+                                                                    className="w-20 h-9 rounded-lg border border-gray-300 px-2 text-center text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                                />
+                                                                <span className="text-gray-400 text-sm">%</span>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
                                     </div>
-                                    <div className="space-y-1">
-                                        <Label>Email</Label>
-                                        <Input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <Label>Phone</Label>
-                                        <Input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <Label>Company</Label>
-                                        <Input value={form.company} onChange={e => setForm(f => ({ ...f, company: e.target.value }))} />
-                                    </div>
-                                    <div className="space-y-1 sm:col-span-2">
-                                        <Label>Address</Label>
-                                        <Input value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <Label>Role</Label>
-                                        <select
-                                            className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
-                                            value={form.role}
-                                            onChange={e => setForm(f => ({ ...f, role: e.target.value as 'CUSTOMER' | 'ADMIN' }))}
-                                        >
-                                            <option value="CUSTOMER">CUSTOMER</option>
-                                            <option value="ADMIN">ADMIN</option>
-                                        </select>
-                                    </div>
-                                    <div className="space-y-1 flex items-center gap-3 mt-6">
-                                        <input
-                                            type="checkbox"
-                                            id="isActive"
-                                            checked={form.isActive}
-                                            onChange={e => setForm(f => ({ ...f, isActive: e.target.checked }))}
-                                            className="h-4 w-4 rounded border-gray-300"
-                                        />
-                                        <Label htmlFor="isActive">Account Active</Label>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                                    <div className="flex items-start gap-2">
-                                        <Phone className="h-4 w-4 text-gray-400 mt-0.5 shrink-0" />
-                                        <div>
-                                            <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">Phone</p>
-                                            <p className="font-medium">{user.phone || '—'}</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-start gap-2">
-                                        <Building2 className="h-4 w-4 text-gray-400 mt-0.5 shrink-0" />
-                                        <div>
-                                            <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">Company</p>
-                                            <p className="font-medium">{user.company || '—'}</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-start gap-2">
-                                        <MapPin className="h-4 w-4 text-gray-400 mt-0.5 shrink-0" />
-                                        <div>
-                                            <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">Address</p>
-                                            <p className="font-medium">{user.address || '—'}</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-start gap-2">
-                                        <Calendar className="h-4 w-4 text-gray-400 mt-0.5 shrink-0" />
-                                        <div>
-                                            <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">Member Since</p>
-                                            <p className="font-medium">{user.createdAt ? fmtDate(user.createdAt) : '—'}</p>
-                                        </div>
+
+                                    <div className="flex justify-end gap-2 pt-2">
+                                        <Button variant="outline" onClick={handleResetDiscounts}>
+                                            Reset
+                                        </Button>
+                                        <Button onClick={handleSaveDiscounts} disabled={savingDiscounts} className="bg-blue-600 hover:bg-blue-700">
+                                            {savingDiscounts ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                                            Save discounts
+                                        </Button>
                                     </div>
                                 </div>
                             )}
 
-                            {/* Orders & Quotes */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                                {/* Orders */}
+                            {/* ── Account Info Tab ── */}
+                            {activeTab === 'account' && (
                                 <div>
-                                    <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1.5">
-                                        <ShoppingBag className="h-4 w-4 text-blue-500" />
-                                        Recent Orders ({user.orders?.length ?? 0})
-                                    </h4>
-                                    {!user.orders?.length ? (
-                                        <p className="text-xs text-gray-500 italic">No orders yet.</p>
+                                    {editing ? (
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <div className="space-y-1">
+                                                <Label>Full Name</Label>
+                                                <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <Label>Email</Label>
+                                                <Input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <Label>Phone</Label>
+                                                <Input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <Label>Company</Label>
+                                                <Input value={form.company} onChange={e => setForm(f => ({ ...f, company: e.target.value }))} />
+                                            </div>
+                                            <div className="space-y-1 sm:col-span-2">
+                                                <Label>Address</Label>
+                                                <Input value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <Label>Role</Label>
+                                                <select
+                                                    className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                                    value={form.role}
+                                                    onChange={e => setForm(f => ({ ...f, role: e.target.value as 'CUSTOMER' | 'ADMIN' }))}
+                                                >
+                                                    <option value="CUSTOMER">CUSTOMER</option>
+                                                    <option value="ADMIN">ADMIN</option>
+                                                </select>
+                                            </div>
+                                            <div className="space-y-1 flex items-center gap-3 mt-6">
+                                                <input
+                                                    type="checkbox"
+                                                    id="isActive"
+                                                    checked={form.isActive}
+                                                    onChange={e => setForm(f => ({ ...f, isActive: e.target.checked }))}
+                                                    className="h-4 w-4 rounded border-gray-300"
+                                                />
+                                                <Label htmlFor="isActive">Account Active</Label>
+                                            </div>
+                                        </div>
                                     ) : (
-                                        <div className="space-y-1.5 max-h-52 overflow-y-auto">
-                                            {user.orders.map(order => (
-                                                <div key={order.id} className="flex items-center justify-between text-xs bg-gray-50 border rounded px-3 py-2">
-                                                    <div>
-                                                        <span className="font-mono font-medium">{order.orderNumber}</span>
-                                                        {order.customerReference && (
-                                                            <span className="text-gray-400 ml-1.5">({order.customerReference})</span>
-                                                        )}
-                                                        <span className="text-gray-400 ml-2">{fmtDate(order.createdAt)}</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-2">
-                                                        <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${STATUS_COLOURS[order.status] || 'bg-gray-100 text-gray-700'}`}>
-                                                            {order.status}
-                                                        </span>
-                                                        <span className="font-semibold">${Number(order.total).toFixed(2)}</span>
-                                                    </div>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                            <div className="flex items-start gap-3">
+                                                <Phone className="h-4 w-4 text-gray-400 mt-1 shrink-0" />
+                                                <div>
+                                                    <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-0.5">Phone</p>
+                                                    <p className="font-medium text-sm">{user.phone || '—'}</p>
                                                 </div>
-                                            ))}
+                                            </div>
+                                            <div className="flex items-start gap-3">
+                                                <Building2 className="h-4 w-4 text-gray-400 mt-1 shrink-0" />
+                                                <div>
+                                                    <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-0.5">Company</p>
+                                                    <p className="font-medium text-sm">{user.company || '—'}</p>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-start gap-3">
+                                                <MapPin className="h-4 w-4 text-gray-400 mt-1 shrink-0" />
+                                                <div>
+                                                    <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-0.5">Address</p>
+                                                    <p className="font-medium text-sm">{user.address || '—'}</p>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-start gap-3">
+                                                <Calendar className="h-4 w-4 text-gray-400 mt-1 shrink-0" />
+                                                <div>
+                                                    <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-0.5">Member Since</p>
+                                                    <p className="font-medium text-sm">{user.createdAt ? fmtDate(user.createdAt) : '—'}</p>
+                                                </div>
+                                            </div>
                                         </div>
                                     )}
                                 </div>
-
-                                {/* Quotes */}
-                                <div>
-                                    <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1.5">
-                                        <FileText className="h-4 w-4 text-purple-500" />
-                                        Recent Quotes ({user.quotes?.length ?? 0})
-                                    </h4>
-                                    {!user.quotes?.length ? (
-                                        <p className="text-xs text-gray-500 italic">No quotes yet.</p>
-                                    ) : (
-                                        <div className="space-y-1.5 max-h-52 overflow-y-auto">
-                                            {user.quotes.map(quote => (
-                                                <div key={quote.id} className="flex items-center justify-between text-xs bg-gray-50 border rounded px-3 py-2">
-                                                    <div>
-                                                        <span className="font-mono font-medium">{quote.quoteNumber}</span>
-                                                        {quote.customerReference && (
-                                                            <span className="text-gray-400 ml-1.5">({quote.customerReference})</span>
-                                                        )}
-                                                        <span className="text-gray-400 ml-2">{fmtDate(quote.createdAt)}</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-2">
-                                                        {quote.convertedToOrder ? (
-                                                            <span className="px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700">Converted</span>
-                                                        ) : (
-                                                            <span className="px-1.5 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-700">Active</span>
-                                                        )}
-                                                        <span className="font-semibold">${Number(quote.total).toFixed(2)}</span>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
+                            )}
                         </>
                     ) : null}
                 </div>
@@ -398,16 +473,10 @@ export default function UserManagement() {
                                             <td className="p-4">{user.email}</td>
                                             <td className="p-4">{user.company || <span className="text-gray-400">—</span>}</td>
                                             <td className="p-4 text-center">
-                                                <span className="inline-flex items-center gap-1 text-xs font-medium">
-                                                    <ShoppingBag className="h-3 w-3 text-blue-500" />
-                                                    {user._count?.orders ?? 0}
-                                                </span>
+                                                <span className="text-xs font-medium text-gray-600">{user._count?.orders ?? 0}</span>
                                             </td>
                                             <td className="p-4 text-center">
-                                                <span className="inline-flex items-center gap-1 text-xs font-medium">
-                                                    <FileText className="h-3 w-3 text-purple-500" />
-                                                    {user._count?.quotes ?? 0}
-                                                </span>
+                                                <span className="text-xs font-medium text-gray-600">{user._count?.quotes ?? 0}</span>
                                             </td>
                                             <td className="p-4">
                                                 <Badge variant={user.role === 'ADMIN' ? 'default' : 'secondary'}>

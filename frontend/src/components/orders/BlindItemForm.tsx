@@ -141,6 +141,7 @@ export function BlindItemForm({ index, onRemove, onCopy, onContinue, canRemove =
             fabricType,
             width: Number(width),
             drop: Number(drop),
+            chainOrMotor: chainOrMotor || undefined,
         });
 
         const fabricDiscounted = fabricResult.finalPrice;   // after discount

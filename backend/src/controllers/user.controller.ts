@@ -25,6 +25,13 @@ const updateUserSchema = z.object({
     isActive: z.boolean().optional(),
 });
 
+const discountsSchema = z.object({
+    G1: z.object({ acmeda: z.number().min(0).max(100), tbs: z.number().min(0).max(100) }),
+    G2: z.object({ acmeda: z.number().min(0).max(100), tbs: z.number().min(0).max(100) }),
+    G3: z.object({ acmeda: z.number().min(0).max(100), tbs: z.number().min(0).max(100) }),
+    G4: z.object({ acmeda: z.number().min(0).max(100), tbs: z.number().min(0).max(100) }),
+});
+
 /**
  * Create new customer account (admin only)
  */
@@ -154,6 +161,7 @@ export const getUserById = async (
                 address: true,
                 role: true,
                 isActive: true,
+                discounts: true,
                 createdAt: true,
                 updatedAt: true,
                 orders: {
@@ -239,6 +247,48 @@ export const updateUser = async (
             success: true,
             message: 'User updated successfully',
             data: { user: updated },
+        });
+    } catch (error) {
+        if (error instanceof z.ZodError) {
+            next(new AppError(400, error.errors[0].message));
+        } else {
+            next(error);
+        }
+    }
+};
+
+/**
+ * Set per-customer fabric discounts (admin only)
+ */
+export const setUserDiscounts = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> => {
+    try {
+        const authReq = req as AuthRequest;
+        const validatedData = discountsSchema.parse(req.body);
+
+        const user = await prisma.user.findUnique({
+            where: { id: req.params.id as string },
+        });
+
+        if (!user) {
+            throw new AppError(404, 'User not found');
+        }
+
+        const updated = await prisma.user.update({
+            where: { id: req.params.id as string },
+            data: { discounts: validatedData },
+            select: { id: true, name: true, discounts: true },
+        });
+
+        logger.info(`Discounts updated for user: ${user.email} by ${authReq.user?.email}`);
+
+        res.json({
+            success: true,
+            message: 'Discounts updated successfully',
+            data: { discounts: updated.discounts },
         });
     } catch (error) {
         if (error instanceof z.ZodError) {

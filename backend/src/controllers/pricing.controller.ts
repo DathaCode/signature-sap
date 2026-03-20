@@ -1,10 +1,43 @@
 import { Request, Response, NextFunction } from 'express';
-
+import { PrismaClient } from '@prisma/client';
 import pricingService from '../services/pricing.service';
 import comprehensivePricingService from '../services/comprehensivePricing.service';
 import { AuthRequest } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
 import { z } from 'zod';
+
+const prisma = new PrismaClient();
+
+/**
+ * Determine supplier key ('acmeda' | 'tbs') from chainOrMotor string
+ */
+function getSupplierKey(chainOrMotor?: string): 'acmeda' | 'tbs' {
+    if (!chainOrMotor) return 'acmeda';
+    const lower = chainOrMotor.toLowerCase();
+    if (lower.includes('tbs')) return 'tbs';
+    return 'acmeda';
+}
+
+/**
+ * Get customer discount for a fabric group + supplier from user's stored discounts
+ */
+async function getCustomerDiscount(
+    userId: string | undefined,
+    fabricGroup: number,
+    chainOrMotor?: string
+): Promise<number | null> {
+    if (!userId) return null;
+    const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { discounts: true },
+    });
+    const discounts = user?.discounts as Record<string, { acmeda: number; tbs: number }> | null;
+    if (!discounts) return null;
+    const groupKey = `G${fabricGroup}`;
+    const supplierKey = getSupplierKey(chainOrMotor);
+    const val = discounts[groupKey]?.[supplierKey];
+    return typeof val === 'number' ? val : null;
+}
 
 
 
@@ -14,6 +47,7 @@ const calculatePriceSchema = z.object({
     fabricType: z.string().min(1, 'Fabric type is required'),
     width: z.number().int().positive('Width must be a positive number'),
     drop: z.number().int().positive('Drop must be a positive number'),
+    chainOrMotor: z.string().optional(),
 });
 
 const updatePriceSchema = z.object({
@@ -46,8 +80,8 @@ export const getPricingMatrix = async (
     try {
         const fabricGroup = parseInt(req.params.fabricGroup as string);
 
-        if (isNaN(fabricGroup) || fabricGroup < 1 || fabricGroup > 3) {
-            throw new AppError(400, 'Invalid fabric group. Must be 1-3');
+        if (isNaN(fabricGroup) || fabricGroup < 1 || fabricGroup > 5) {
+            throw new AppError(400, 'Invalid fabric group. Must be 1-5');
         }
 
         const pricing = await pricingService.getPricingMatrixByGroup(fabricGroup);
@@ -70,6 +104,7 @@ export const calculateItemPrice = async (
     next: NextFunction
 ): Promise<void> => {
     try {
+        const authReq = req as AuthRequest;
         const validatedData = calculatePriceSchema.parse(req.body);
 
         const priceResult = await pricingService.calculatePrice({
@@ -78,6 +113,20 @@ export const calculateItemPrice = async (
             width: validatedData.width,
             drop: validatedData.drop,
         });
+
+        // Override discount with customer-specific discount if configured
+        const customDiscount = await getCustomerDiscount(
+            authReq.user?.userId,
+            priceResult.fabricGroup,
+            validatedData.chainOrMotor
+        );
+
+        if (customDiscount !== null) {
+            const discountAmount = parseFloat((priceResult.basePrice * customDiscount / 100).toFixed(2));
+            priceResult.discountPercent = customDiscount;
+            priceResult.discountAmount = discountAmount;
+            priceResult.finalPrice = parseFloat((priceResult.basePrice - discountAmount).toFixed(2));
+        }
 
         res.json({
             success: true,
@@ -106,8 +155,8 @@ export const updatePricingMatrix = async (
         const width = parseInt(req.params.width as string);
         const drop = parseInt(req.params.drop as string);
 
-        if (isNaN(fabricGroup) || fabricGroup < 1 || fabricGroup > 3) {
-            throw new AppError(400, 'Invalid fabric group. Must be 1-3');
+        if (isNaN(fabricGroup) || fabricGroup < 1 || fabricGroup > 5) {
+            throw new AppError(400, 'Invalid fabric group. Must be 1-5');
         }
 
         if (isNaN(width) || width <= 0) {

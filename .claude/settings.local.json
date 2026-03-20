@@ -24,7 +24,8 @@
       "Bash(powershell:*)",
       "Bash(npx jest:*)",
       "Bash(npm test:*)",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "Bash(python3 -c \"import json; d=json.load\\(open\\(''f:/SIGNATUR SHADES/signature-sap/backend/fabrics_filtered_with_groups.json''\\)\\); print\\(list\\(d.keys\\(\\)\\)\\)\")"
     ]
   }
 }

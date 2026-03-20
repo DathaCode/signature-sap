@@ -164,13 +164,14 @@ export const authApi = {
 
 export const pricingApi = {
     /**
-     * Calculate fabric price only (from matrix)
+     * Calculate fabric price only (from matrix), with optional chainOrMotor for per-customer discount
      */
     calculatePrice: async (data: {
         material: string;
         fabricType: string;
         width: number;
-        drop: number
+        drop: number;
+        chainOrMotor?: string;
     }): Promise<{ basePrice: number; finalPrice: number; discountPercent: number; discountAmount: number; fabricGroup: number }> => {
         const response = await api.post('/pricing/calculate', data)
         return response.data.data
@@ -396,6 +397,18 @@ export const adminUserApi = {
     updateUser: async (id: string, data: Partial<import('../types/auth').User>): Promise<import('../types/auth').User> => {
         const response = await api.patch(`/users/${id}`, data)
         return response.data.data.user
+    },
+
+    /**
+     * Set per-customer fabric discounts (per group × supplier)
+     */
+    setUserDiscounts: async (id: string, discounts: {
+        G1: { acmeda: number; tbs: number };
+        G2: { acmeda: number; tbs: number };
+        G3: { acmeda: number; tbs: number };
+        G4: { acmeda: number; tbs: number };
+    }): Promise<void> => {
+        await api.patch(`/users/${id}/discounts`, discounts)
     }
 }
 
@@ -442,18 +455,18 @@ export const quoteApi = {
 
 export const adminPricingApi = {
     /**
-     * Get pricing matrix
+     * Get pricing matrix for a fabric group (1-5)
      */
     getPricing: async (fabricGroup: number): Promise<any[]> => {
-        const response = await api.get(`/pricing/matrix/${fabricGroup}`)
-        return response.data.data
+        const response = await api.get(`/pricing/${fabricGroup}`)
+        return response.data.data.pricing ?? []
     },
 
     /**
      * Update pricing cell
      */
     updatePrice: async (fabricGroup: number, width: number, drop: number, price: number): Promise<void> => {
-        await api.post('/pricing/update', { fabricGroup, width, drop, price })
+        await api.put(`/pricing/${fabricGroup}/${width}/${drop}`, { price })
     }
 }
 
