@@ -116,7 +116,7 @@ export const calculateItemPrice = async (
 
         // Override discount with customer-specific discount if configured
         const customDiscount = await getCustomerDiscount(
-            authReq.user?.userId,
+            authReq.user?.id,
             priceResult.fabricGroup,
             validatedData.chainOrMotor
         );
