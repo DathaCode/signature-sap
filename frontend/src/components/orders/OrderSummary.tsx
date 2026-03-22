@@ -106,7 +106,12 @@ export default function OrderSummary({
                                                 </div>
                                             </td>
                                             <td className="p-4 text-right">
-                                                <span className="font-semibold">${(blind.price || 0).toFixed(2)}</span>
+                                                {blind.discountPercent != null && Number(blind.discountPercent) > 0 && blind.fabricPrice != null && (
+                                                    <span className="block text-xs text-gray-400 line-through">
+                                                        ${(Number(blind.fabricPrice) / (1 - Number(blind.discountPercent) / 100)).toFixed(2)}
+                                                    </span>
+                                                )}
+                                                <span className="font-semibold text-blue-700">${(blind.price || 0).toFixed(2)}</span>
                                                 {blind.discountPercent != null && Number(blind.discountPercent) > 0 && (
                                                     <span className="block text-xs text-green-600">
                                                         -{Number(blind.discountPercent)}% fabric discount
@@ -140,21 +145,19 @@ export default function OrderSummary({
                                             <tr key={`detail-${index}`} className="bg-blue-50 border-b">
                                                 <td colSpan={7} className="px-8 py-4">
                                                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 text-sm">
-                                                        {/* Fabric price (without & with discount) */}
+                                                        {/* Fabric price (base → discounted) */}
                                                         <div className="col-span-2 md:col-span-2">
-                                                            <span className="text-gray-500 text-xs font-medium uppercase tracking-wide">Fabric Price</span>
+                                                            <span className="text-gray-500 text-xs font-medium uppercase tracking-wide">Fabric</span>
                                                             <p className="font-medium mt-0.5">
                                                                 {blind.fabricPrice != null ? (
                                                                     blind.discountPercent && Number(blind.discountPercent) > 0 ? (
-                                                                        <span className="flex items-center gap-2">
-                                                                            <span className="line-through text-gray-400">
+                                                                        <span className="flex items-center gap-2 flex-wrap">
+                                                                            <span className="bg-yellow-100 text-yellow-800 px-1.5 py-0.5 rounded font-semibold line-through text-xs">
                                                                                 ${(Number(blind.fabricPrice) / (1 - Number(blind.discountPercent) / 100)).toFixed(2)}
                                                                             </span>
+                                                                            <span className="text-xs text-orange-600">-{Number(blind.discountPercent)}%</span>
                                                                             <span className="text-green-700 font-semibold">
                                                                                 ${Number(blind.fabricPrice).toFixed(2)}
-                                                                            </span>
-                                                                            <span className="text-xs text-orange-600">
-                                                                                (-{Number(blind.discountPercent)}%)
                                                                             </span>
                                                                         </span>
                                                                     ) : (

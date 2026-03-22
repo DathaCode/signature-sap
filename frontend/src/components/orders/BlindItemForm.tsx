@@ -26,6 +26,8 @@ import { pricingApi } from '../../services/api';
 
 interface SimplePriceBreakdown {
     fabricBase: number;
+    motorPrice: number;
+    bracketPrice: number;
 }
 
 interface BlindItemFormProps {
@@ -134,27 +136,35 @@ export function BlindItemForm({ index, onRemove, onCopy, onContinue, canRemove =
         prevChainOrMotorRef.current = chainOrMotor;
     }, [chainOrMotor, setValue, index]);
 
-    // Shared price calculation logic
+    // Shared price calculation logic — uses comprehensive pricing (fabric + motor + bracket)
     const calculateAndSetPrice = async () => {
-        const fabricResult = await pricingApi.calculatePrice({
+        const result = await pricingApi.calculateBlindPrice({
             material,
             fabricType,
+            fabricColour,
             width: Number(width),
             drop: Number(drop),
-            chainOrMotor: chainOrMotor || undefined,
+            chainOrMotor,
+            chainType: chainType || undefined,
+            bracketType,
+            bracketColour,
+            bottomRailType,
+            bottomRailColour,
         });
 
-        const fabricDiscounted = fabricResult.finalPrice;   // after discount
-        const fabricBase = fabricResult.basePrice;           // before discount
+        const totalPrice = result.totalPrice;
+        const fabricBase = result.fabricBasePrice;  // pre-discount fabric price
 
-        setValue(`items.${index}.price`, fabricDiscounted);
-        setValue(`items.${index}.fabricGroup`, fabricResult.fabricGroup);
-        setValue(`items.${index}.discountPercent`, fabricResult.discountPercent);
-        setValue(`items.${index}.fabricPrice`, fabricDiscounted);
+        setValue(`items.${index}.price`, totalPrice);
+        setValue(`items.${index}.fabricGroup`, result.fabricGroup);
+        setValue(`items.${index}.discountPercent`, result.discountPercent);
+        setValue(`items.${index}.fabricPrice`, result.fabricPrice);   // discounted fabric
+        setValue(`items.${index}.motorPrice`, result.motorChainPrice);
+        setValue(`items.${index}.bracketPrice`, result.bracketPrice);
 
-        setPriceBreakdown({ fabricBase });
+        setPriceBreakdown({ fabricBase, motorPrice: result.motorChainPrice, bracketPrice: result.bracketPrice });
 
-        return fabricDiscounted;
+        return totalPrice;
     };
 
     // Auto-calculate price when all required fields are filled (debounced)
@@ -233,17 +243,29 @@ export function BlindItemForm({ index, onRemove, onCopy, onContinue, canRemove =
                         <Label>Width (mm)</Label>
                         <Input
                             type="number"
-                            {...register(`items.${index}.width`, { required: 'Required', valueAsNumber: true, min: 100 })}
+                            {...register(`items.${index}.width`, { required: 'Required', valueAsNumber: true, min: 200, max: 3000 })}
                             placeholder="Width"
                         />
+                        {Number(width) > 0 && (Number(width) < 200 || Number(width) > 3000) && (
+                            <p className="text-xs text-amber-600 flex items-center gap-1">
+                                <AlertCircle className="h-3 w-3" />
+                                Width must be between 200mm and 3000mm
+                            </p>
+                        )}
                     </div>
                     <div className="space-y-2">
                         <Label>Drop (mm)</Label>
                         <Input
                             type="number"
-                            {...register(`items.${index}.drop`, { required: 'Required', valueAsNumber: true, min: 100 })}
+                            {...register(`items.${index}.drop`, { required: 'Required', valueAsNumber: true, min: 200, max: 3000 })}
                             placeholder="Drop"
                         />
+                        {Number(drop) > 0 && (Number(drop) < 200 || Number(drop) > 3000) && (
+                            <p className="text-xs text-amber-600 flex items-center gap-1">
+                                <AlertCircle className="h-3 w-3" />
+                                Drop must be between 200mm and 3000mm
+                            </p>
+                        )}
                     </div>
                 </div>
 

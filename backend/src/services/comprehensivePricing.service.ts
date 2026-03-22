@@ -56,8 +56,7 @@ export class ComprehensivePricingService {
      */
     async calculateBlindPrice(data: BlindPricingData): Promise<PriceBreakdown> {
         try {
-            // All non-fabric component prices are flat $1.00 each
-            const COMPONENT_PRICE = 1.00;
+            const DEFAULT_COMPONENT_PRICE = 1.00;
 
             const breakdown: PriceBreakdown = {
                 fabricBasePrice: 0,
@@ -88,53 +87,65 @@ export class ComprehensivePricingService {
             breakdown.discountPercent = fabricResult.discountPercent;
             breakdown.componentsUsed.push(`Fabric: ${data.material} - ${data.fabricType} - ${data.fabricColour}`);
 
-            // 2. MOTOR/CHAIN — $1
-            breakdown.motorChainPrice = COMPONENT_PRICE;
+            // 2. MOTOR/CHAIN — lookup from inventory (admin-configurable price)
+            const motorItem = await prisma.inventoryItem.findFirst({
+                where: { itemName: data.chainOrMotor },
+                select: { price: true },
+            });
+            breakdown.motorChainPrice = motorItem && parseFloat(motorItem.price.toString()) > 0
+                ? parseFloat(motorItem.price.toString())
+                : DEFAULT_COMPONENT_PRICE;
             breakdown.componentsUsed.push(data.chainOrMotor);
 
-            // 3. BRACKET — $1
+            // 3. BRACKET — only charge for Extended/Dual; Single = $0
+            //    Look up from inventory for admin-configurable pricing
+            const isChargeableBracket = ['Single Extension', 'Dual Left', 'Dual Right'].includes(data.bracketType);
             const bracketName = this.getBracketName(data.chainOrMotor, data.bracketType, data.bracketColour);
-            breakdown.bracketPrice = COMPONENT_PRICE;
             breakdown.componentsUsed.push(bracketName);
+            if (isChargeableBracket) {
+                const bracketItem = await prisma.inventoryItem.findFirst({
+                    where: { itemName: bracketName },
+                    select: { price: true },
+                });
+                breakdown.bracketPrice = bracketItem && parseFloat(bracketItem.price.toString()) > 0
+                    ? parseFloat(bracketItem.price.toString())
+                    : DEFAULT_COMPONENT_PRICE;
+            }
 
-            // 4. CHAIN (if winder selected) — $1
+            // 4. CHAIN (informational only — not charged)
             if (this.isWinder(data.chainOrMotor)) {
                 if (!data.chainType) {
                     throw new AppError(400, 'Chain type is required for winder motors');
                 }
                 const chainLength = this.getChainLength(data.drop);
                 const chainName = `${data.chainType} Chain - ${chainLength}mm`;
-                breakdown.chainPrice = COMPONENT_PRICE;
+                breakdown.chainPrice = DEFAULT_COMPONENT_PRICE;
                 breakdown.componentsUsed.push(chainName);
             }
 
-            // 5. CLIPS (left + right = $1 each = $2 total)
+            // 5. CLIPS (informational only — not charged)
             const clipLeftName = `Bottom bar Clips Left - ${data.bottomRailType} - ${data.bottomRailColour}`;
             const clipRightName = `Bottom bar Clips Right - ${data.bottomRailType} - ${data.bottomRailColour}`;
-            breakdown.clipsPrice = COMPONENT_PRICE + COMPONENT_PRICE;
+            breakdown.clipsPrice = DEFAULT_COMPONENT_PRICE + DEFAULT_COMPONENT_PRICE;
             breakdown.componentsUsed.push(clipLeftName, clipRightName);
 
-            // 6. IDLER & CLUTCH (if applicable) — $1 each = $2
+            // 6. IDLER & CLUTCH (informational only — not charged)
             if (this.needsIdlerClutch(data.chainOrMotor, data.bracketType)) {
-                breakdown.idlerClutchPrice = COMPONENT_PRICE + COMPONENT_PRICE;
+                breakdown.idlerClutchPrice = DEFAULT_COMPONENT_PRICE + DEFAULT_COMPONENT_PRICE;
                 breakdown.componentsUsed.push('Acmeda Idler', 'Acmeda Clutch');
             }
 
-            // 7. STOP BOLT & SAFETY LOCK (if chain) — $1 each = $2
+            // 7. STOP BOLT & SAFETY LOCK (informational only — not charged)
             if (this.isWinder(data.chainOrMotor)) {
-                breakdown.stopBoltSafetyLockPrice = COMPONENT_PRICE + COMPONENT_PRICE;
+                breakdown.stopBoltSafetyLockPrice = DEFAULT_COMPONENT_PRICE + DEFAULT_COMPONENT_PRICE;
                 breakdown.componentsUsed.push('Stop bolt', 'Safety lock');
             }
 
-            // Calculate total
+            // Total: ONLY fabric + motor + bracket (chain/clips/accessories not billed)
             breakdown.totalPrice = parseFloat((
                 breakdown.fabricPrice +
                 breakdown.motorChainPrice +
-                breakdown.bracketPrice +
-                breakdown.chainPrice +
-                breakdown.clipsPrice +
-                breakdown.idlerClutchPrice +
-                breakdown.stopBoltSafetyLockPrice
+                breakdown.bracketPrice
             ).toFixed(2));
 
             logger.info(`Comprehensive price calculated: $${breakdown.totalPrice} (${breakdown.componentsUsed.length} components)`);

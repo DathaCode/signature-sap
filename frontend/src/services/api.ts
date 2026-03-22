@@ -194,6 +194,7 @@ export const pricingApi = {
         bottomRailColour: string;
         controlSide?: string;
     }): Promise<{
+        fabricBasePrice: number;
         fabricPrice: number;
         motorChainPrice: number;
         bracketPrice: number;

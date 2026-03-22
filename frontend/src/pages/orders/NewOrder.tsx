@@ -7,11 +7,11 @@ import { Button } from '../../components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Label } from '../../components/ui/Label';
 import { Input } from '../../components/ui/Input';
-import { ArrowLeft, Copy, PlusCircle, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Copy, PlusCircle, CheckCircle, X } from 'lucide-react';
 import { BlindItem, CreateOrderRequest } from '../../types/order';
 import { gooeyToast } from 'goey-toast';
 import { confirmToast } from '../../utils/confirmToast';
-import api from '../../services/api';
+import api, { pricingApi } from '../../services/api';
 
 const emptyBlind: BlindItem = {
     location: '',
@@ -103,6 +103,57 @@ export default function NewOrderPage() {
         localStorage.removeItem('order_draft');
     }, []);
 
+    // Force-calculate price if still 0 (handles case where user saves before 800ms debounce fires)
+    const forceCalculatePrice = async (item: BlindItem): Promise<BlindItem> => {
+        if ((item.price ?? 0) > 0) return item;
+        if (!item.material || !item.fabricType || !item.fabricColour ||
+            !item.chainOrMotor || !item.bracketType || !item.bracketColour ||
+            !item.bottomRailType || !item.bottomRailColour) {
+            return item;
+        }
+        try {
+            const result = await pricingApi.calculateBlindPrice({
+                material: item.material,
+                fabricType: item.fabricType,
+                fabricColour: item.fabricColour,
+                width: item.width,
+                drop: item.drop,
+                chainOrMotor: item.chainOrMotor,
+                chainType: item.chainType || undefined,
+                bracketType: item.bracketType,
+                bracketColour: item.bracketColour,
+                bottomRailType: item.bottomRailType,
+                bottomRailColour: item.bottomRailColour,
+            });
+            return {
+                ...item,
+                price: result.totalPrice,
+                fabricPrice: result.fabricPrice,
+                motorPrice: result.motorChainPrice,
+                bracketPrice: result.bracketPrice,
+                fabricGroup: result.fabricGroup,
+                discountPercent: result.discountPercent,
+            };
+        } catch {
+            return item;
+        }
+    };
+
+    // Discard current blind form
+    const handleDiscardCurrentBlind = async () => {
+        const confirmed = await confirmToast({
+            title: 'Discard Blind',
+            message: 'Discard the current blind you are adding?',
+            confirmText: 'Discard',
+            cancelText: 'Keep Editing',
+            variant: 'danger',
+        });
+        if (confirmed) {
+            reset({ productType: 'BLINDS', items: [{ ...emptyBlind }] });
+            setEditingIndex(null);
+        }
+    };
+
     // Validate current blind has all required fields
     const validateCurrentBlind = (): boolean => {
         const item = getValues('items.0');
@@ -117,6 +168,16 @@ export default function NewOrderPage() {
             if (!val || val === '' || val === 0) {
                 return false;
             }
+        }
+
+        // Dimension range check
+        if (item.width < 200 || item.width > 3000) {
+            gooeyToast.error('Width must be between 200mm and 3000mm');
+            return false;
+        }
+        if (item.drop < 200 || item.drop > 3000) {
+            gooeyToast.error('Drop must be between 200mm and 3000mm');
+            return false;
         }
 
         // If winder, chain type is required
@@ -134,13 +195,13 @@ export default function NewOrderPage() {
     };
 
     // Save current blind and copy settings (except Location, Width, Drop)
-    const handleUpdateAndCopy = () => {
+    const handleUpdateAndCopy = async () => {
         if (!validateCurrentBlind()) {
             gooeyToast.error('Please fill all required fields before saving');
             return;
         }
 
-        const item = { ...getValues('items.0') };
+        let item = await forceCalculatePrice({ ...getValues('items.0') });
 
         if (editingIndex !== null) {
             const updated = [...savedBlinds];
@@ -171,13 +232,13 @@ export default function NewOrderPage() {
     };
 
     // Save current blind and clear ALL fields
-    const handleUpdateAndContinueAdding = () => {
+    const handleUpdateAndContinueAdding = async () => {
         if (!validateCurrentBlind()) {
             gooeyToast.error('Please fill all required fields before saving');
             return;
         }
 
-        const item = { ...getValues('items.0') };
+        let item = await forceCalculatePrice({ ...getValues('items.0') });
 
         if (editingIndex !== null) {
             const updated = [...savedBlinds];
@@ -200,14 +261,14 @@ export default function NewOrderPage() {
     };
 
     // Finish adding blinds and go to review
-    const handleFinishAndReview = () => {
+    const handleFinishAndReview = async () => {
         // If current form has data, try to save it first
         if (isPartiallyFilled()) {
             if (!validateCurrentBlind()) {
                 gooeyToast.error('Please complete all fields for the current blind or clear them to proceed');
                 return;
             }
-            const item = { ...getValues('items.0') };
+            const item = await forceCalculatePrice({ ...getValues('items.0') });
             setSavedBlinds(prev => [...prev, item]);
         }
 
@@ -374,7 +435,7 @@ export default function NewOrderPage() {
                             <button
                                 type="button"
                                 onClick={handleUpdateAndCopy}
-                                className="flex-1 min-w-[240px] bg-gradient-to-r from-blue-500 to-blue-600 text-white px-6 py-4 rounded-lg font-semibold text-lg flex items-center justify-center gap-3 hover:from-blue-600 hover:to-blue-700 transition-all hover:shadow-lg"
+                                className="flex-1 min-w-[200px] bg-gradient-to-r from-blue-500 to-blue-600 text-white px-6 py-4 rounded-lg font-semibold text-lg flex items-center justify-center gap-3 hover:from-blue-600 hover:to-blue-700 transition-all hover:shadow-lg"
                                 title={editingIndex !== null
                                     ? "Update this blind and copy settings for a new blind"
                                     : "Save this blind and copy settings (except Location, Width, Drop)"
@@ -387,7 +448,7 @@ export default function NewOrderPage() {
                             <button
                                 type="button"
                                 onClick={handleUpdateAndContinueAdding}
-                                className="flex-1 min-w-[240px] bg-gradient-to-r from-green-500 to-green-600 text-white px-6 py-4 rounded-lg font-semibold text-lg flex items-center justify-center gap-3 hover:from-green-600 hover:to-green-700 transition-all hover:shadow-lg"
+                                className="flex-1 min-w-[200px] bg-gradient-to-r from-green-500 to-green-600 text-white px-6 py-4 rounded-lg font-semibold text-lg flex items-center justify-center gap-3 hover:from-green-600 hover:to-green-700 transition-all hover:shadow-lg"
                                 title={editingIndex !== null
                                     ? "Update this blind"
                                     : "Save this blind and start fresh"
@@ -395,6 +456,16 @@ export default function NewOrderPage() {
                             >
                                 <PlusCircle className="h-5 w-5" />
                                 {editingIndex !== null ? 'Update' : 'Add'}
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={handleDiscardCurrentBlind}
+                                className="bg-gray-200 text-gray-700 px-6 py-4 rounded-lg font-semibold text-lg flex items-center justify-center gap-3 hover:bg-gray-300 transition-all"
+                                title="Discard the current blind without saving"
+                            >
+                                <X className="h-5 w-5" />
+                                Cancel
                             </button>
                         </div>
 
@@ -406,7 +477,7 @@ export default function NewOrderPage() {
                                     className="bg-gradient-to-r from-purple-500 to-purple-600 text-white px-8 py-4 rounded-lg font-bold text-lg hover:from-purple-600 hover:to-purple-700 transition-all hover:shadow-lg inline-flex items-center gap-2"
                                 >
                                     <CheckCircle className="h-5 w-5" />
-                                    Finish & Review Order ({savedBlinds.length} blind{savedBlinds.length !== 1 ? 's' : ''})
+                                    Finish & Review Order ({savedBlinds.length + 1} blind{savedBlinds.length + 1 !== 1 ? 's' : ''})
                                 </button>
                             </div>
                         )}

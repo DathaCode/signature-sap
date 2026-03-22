@@ -204,7 +204,12 @@ export default function OrderDetails() {
                                                     {item.controlSide} / {item.roll}
                                                 </td>
                                                 <td className="p-4 align-middle text-right font-medium">
-                                                    ${Number(item.price || 0).toFixed(2)}
+                                                    {item.discountPercent != null && Number(item.discountPercent) > 0 && item.fabricPrice != null && (
+                                                        <span className="block text-xs text-gray-400 line-through">
+                                                            ${(Number(item.fabricPrice) / (1 - Number(item.discountPercent) / 100)).toFixed(2)}
+                                                        </span>
+                                                    )}
+                                                    <span className="text-blue-700">${Number(item.price || 0).toFixed(2)}</span>
                                                     {item.discountPercent != null && Number(item.discountPercent) > 0 && (
                                                         <span className="block text-xs text-green-600">
                                                             {Number(item.discountPercent)}% off
@@ -219,37 +224,26 @@ export default function OrderDetails() {
                                                             {item.fabricPrice != null && (
                                                                 <div className="flex justify-between">
                                                                     <span className="text-muted-foreground">Fabric:</span>
-                                                                    <span>${Number(item.fabricPrice).toFixed(2)}</span>
+                                                                    <span className="flex items-center gap-2">
+                                                                        {item.discountPercent != null && Number(item.discountPercent) > 0 && (
+                                                                            <span className="text-xs text-gray-400 line-through bg-yellow-50 px-1 rounded">
+                                                                                ${(Number(item.fabricPrice) / (1 - Number(item.discountPercent) / 100)).toFixed(2)}
+                                                                            </span>
+                                                                        )}
+                                                                        <span className="font-medium">${Number(item.fabricPrice).toFixed(2)}</span>
+                                                                    </span>
                                                                 </div>
                                                             )}
                                                             {item.motorPrice != null && Number(item.motorPrice) > 0 && (
                                                                 <div className="flex justify-between">
                                                                     <span className="text-muted-foreground">Motor/Chain:</span>
-                                                                    <span>${Number(item.motorPrice).toFixed(2)}</span>
+                                                                    <span>+${Number(item.motorPrice).toFixed(2)}</span>
                                                                 </div>
                                                             )}
                                                             {item.bracketPrice != null && Number(item.bracketPrice) > 0 && (
                                                                 <div className="flex justify-between">
                                                                     <span className="text-muted-foreground">Brackets:</span>
-                                                                    <span>${Number(item.bracketPrice).toFixed(2)}</span>
-                                                                </div>
-                                                            )}
-                                                            {item.chainPrice != null && Number(item.chainPrice) > 0 && (
-                                                                <div className="flex justify-between">
-                                                                    <span className="text-muted-foreground">Chain:</span>
-                                                                    <span>${Number(item.chainPrice).toFixed(2)}</span>
-                                                                </div>
-                                                            )}
-                                                            {item.clipsPrice != null && Number(item.clipsPrice) > 0 && (
-                                                                <div className="flex justify-between">
-                                                                    <span className="text-muted-foreground">Clips:</span>
-                                                                    <span>${Number(item.clipsPrice).toFixed(2)}</span>
-                                                                </div>
-                                                            )}
-                                                            {item.componentPrice != null && Number(item.componentPrice) > 0 && (
-                                                                <div className="flex justify-between">
-                                                                    <span className="text-muted-foreground">Accessories:</span>
-                                                                    <span>${Number(item.componentPrice).toFixed(2)}</span>
+                                                                    <span>+${Number(item.bracketPrice).toFixed(2)}</span>
                                                                 </div>
                                                             )}
                                                         </div>

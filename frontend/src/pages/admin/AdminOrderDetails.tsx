@@ -272,7 +272,12 @@ export default function AdminOrderDetails() {
                                                 <td className="p-4 align-middle">{item.width}mm × {item.drop}mm</td>
                                                 <td className="p-4 align-middle">{item.controlSide} / {item.roll}</td>
                                                 <td className="p-4 align-middle text-right font-medium">
-                                                    ${Number(item.price || 0).toFixed(2)}
+                                                    {item.discountPercent != null && Number(item.discountPercent) > 0 && item.fabricPrice != null && (
+                                                        <span className="block text-xs text-gray-400 line-through">
+                                                            ${(Number(item.fabricPrice) / (1 - Number(item.discountPercent) / 100)).toFixed(2)}
+                                                        </span>
+                                                    )}
+                                                    <span className="text-blue-700">${Number(item.price || 0).toFixed(2)}</span>
                                                     {item.discountPercent != null && Number(item.discountPercent) > 0 && (
                                                         <span className="block text-xs text-green-600">{Number(item.discountPercent)}% off</span>
                                                     )}
@@ -294,7 +299,14 @@ export default function AdminOrderDetails() {
                                                             {item.fabricPrice != null && (
                                                                 <div className="flex justify-between">
                                                                     <span className="text-muted-foreground">Fabric:</span>
-                                                                    <span>${Number(item.fabricPrice).toFixed(2)}</span>
+                                                                    <span className="flex items-center gap-2">
+                                                                        {item.discountPercent != null && Number(item.discountPercent) > 0 && (
+                                                                            <span className="text-xs text-gray-400 line-through bg-yellow-50 px-1 rounded">
+                                                                                ${(Number(item.fabricPrice) / (1 - Number(item.discountPercent) / 100)).toFixed(2)}
+                                                                            </span>
+                                                                        )}
+                                                                        <span className="font-semibold text-yellow-700">${Number(item.fabricPrice).toFixed(2)}</span>
+                                                                    </span>
                                                                 </div>
                                                             )}
                                                             {item.motorPrice != null && Number(item.motorPrice) > 0 && (
