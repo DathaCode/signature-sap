@@ -204,6 +204,7 @@ export const calculateBlindPrice = async (
     next: NextFunction
 ): Promise<void> => {
     try {
+        const authReq = req as AuthRequest;
         const validatedData = calculateBlindPriceSchema.parse(req.body);
 
         const priceBreakdown = await comprehensivePricingService.calculateBlindPrice({
@@ -220,6 +221,20 @@ export const calculateBlindPrice = async (
             bottomRailColour: validatedData.bottomRailColour,
             controlSide: validatedData.controlSide,
         });
+
+        // Apply customer-specific discount override if configured
+        const customDiscount = await getCustomerDiscount(
+            authReq.user?.id,
+            priceBreakdown.fabricGroup,
+            validatedData.chainOrMotor
+        );
+
+        if (customDiscount !== null) {
+            const newFabricPrice = parseFloat((priceBreakdown.fabricBasePrice * (1 - customDiscount / 100)).toFixed(2));
+            priceBreakdown.discountPercent = customDiscount;
+            priceBreakdown.fabricPrice = newFabricPrice;
+            priceBreakdown.totalPrice = parseFloat((newFabricPrice + priceBreakdown.motorChainPrice + priceBreakdown.bracketPrice).toFixed(2));
+        }
 
         res.json({
             success: true,
