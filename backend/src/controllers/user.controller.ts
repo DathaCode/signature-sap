@@ -25,11 +25,17 @@ const updateUserSchema = z.object({
     isActive: z.boolean().optional(),
 });
 
+const groupDiscountSchema = z.object({
+    acmeda: z.number().min(0).max(100),
+    tbs: z.number().min(0).max(100),
+    motorised: z.number().min(0).max(100),
+});
+
 const discountsSchema = z.object({
-    G1: z.object({ acmeda: z.number().min(0).max(100), tbs: z.number().min(0).max(100) }),
-    G2: z.object({ acmeda: z.number().min(0).max(100), tbs: z.number().min(0).max(100) }),
-    G3: z.object({ acmeda: z.number().min(0).max(100), tbs: z.number().min(0).max(100) }),
-    G4: z.object({ acmeda: z.number().min(0).max(100), tbs: z.number().min(0).max(100) }),
+    G1: groupDiscountSchema,
+    G2: groupDiscountSchema,
+    G3: groupDiscountSchema,
+    G4: groupDiscountSchema,
 });
 
 /**

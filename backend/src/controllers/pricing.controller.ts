@@ -9,13 +9,17 @@ import { z } from 'zod';
 const prisma = new PrismaClient();
 
 /**
- * Determine supplier key ('acmeda' | 'tbs') from chainOrMotor string
+ * Determine supplier key from chainOrMotor string.
+ * - 'tbs'       → TBS winder
+ * - 'acmeda'    → Acmeda winder
+ * - 'motorised' → all Automate / Alpha motors
  */
-function getSupplierKey(chainOrMotor?: string): 'acmeda' | 'tbs' {
+function getSupplierKey(chainOrMotor?: string): 'acmeda' | 'tbs' | 'motorised' {
     if (!chainOrMotor) return 'acmeda';
     const lower = chainOrMotor.toLowerCase();
     if (lower.includes('tbs')) return 'tbs';
-    return 'acmeda';
+    if (lower.includes('acmeda')) return 'acmeda';
+    return 'motorised';
 }
 
 /**
@@ -31,7 +35,7 @@ async function getCustomerDiscount(
         where: { id: userId },
         select: { discounts: true },
     });
-    const discounts = user?.discounts as Record<string, { acmeda: number; tbs: number }> | null;
+    const discounts = user?.discounts as Record<string, { acmeda: number; tbs: number; motorised: number }> | null;
     if (!discounts) return null;
     const groupKey = `G${fabricGroup}`;
     const supplierKey = getSupplierKey(chainOrMotor);

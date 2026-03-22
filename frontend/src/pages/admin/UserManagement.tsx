@@ -23,10 +23,10 @@ interface UserDetail extends UserWithCounts {
     address?: string;
     updatedAt?: string;
     discounts?: {
-        G1: { acmeda: number; tbs: number };
-        G2: { acmeda: number; tbs: number };
-        G3: { acmeda: number; tbs: number };
-        G4: { acmeda: number; tbs: number };
+        G1: { acmeda: number; tbs: number; motorised: number };
+        G2: { acmeda: number; tbs: number; motorised: number };
+        G3: { acmeda: number; tbs: number; motorised: number };
+        G4: { acmeda: number; tbs: number; motorised: number };
     } | null;
 }
 
@@ -35,10 +35,10 @@ type DialogTab = 'discounts' | 'account';
 const GROUPS = ['G1', 'G2', 'G3', 'G4'] as const;
 
 const DEFAULT_DISCOUNTS = {
-    G1: { acmeda: 0, tbs: 0 },
-    G2: { acmeda: 0, tbs: 0 },
-    G3: { acmeda: 0, tbs: 0 },
-    G4: { acmeda: 0, tbs: 0 },
+    G1: { acmeda: 0, tbs: 0, motorised: 0 },
+    G2: { acmeda: 0, tbs: 0, motorised: 0 },
+    G3: { acmeda: 0, tbs: 0, motorised: 0 },
+    G4: { acmeda: 0, tbs: 0, motorised: 0 },
 };
 
 // ─── User Detail / Edit Dialog ─────────────────────────────────────────────
@@ -79,10 +79,10 @@ function UserDialog({
             });
             if (data.discounts) {
                 setDiscounts({
-                    G1: data.discounts.G1 ?? { acmeda: 0, tbs: 0 },
-                    G2: data.discounts.G2 ?? { acmeda: 0, tbs: 0 },
-                    G3: data.discounts.G3 ?? { acmeda: 0, tbs: 0 },
-                    G4: data.discounts.G4 ?? { acmeda: 0, tbs: 0 },
+                    G1: { acmeda: 0, tbs: 0, motorised: 0, ...data.discounts.G1 },
+                    G2: { acmeda: 0, tbs: 0, motorised: 0, ...data.discounts.G2 },
+                    G3: { acmeda: 0, tbs: 0, motorised: 0, ...data.discounts.G3 },
+                    G4: { acmeda: 0, tbs: 0, motorised: 0, ...data.discounts.G4 },
                 });
             } else {
                 setDiscounts(DEFAULT_DISCOUNTS);
@@ -124,7 +124,7 @@ function UserDialog({
         setDiscounts(DEFAULT_DISCOUNTS);
     };
 
-    const setDiscount = (group: typeof GROUPS[number], supplier: 'acmeda' | 'tbs', value: string) => {
+    const setDiscount = (group: typeof GROUPS[number], supplier: 'acmeda' | 'tbs' | 'motorised', value: string) => {
         const num = parseFloat(value);
         if (isNaN(num) || num < 0 || num > 100) return;
         setDiscounts(prev => ({ ...prev, [group]: { ...prev[group], [supplier]: num } }));
@@ -205,7 +205,7 @@ function UserDialog({
                             {activeTab === 'discounts' && (
                                 <div className="space-y-4">
                                     <p className="text-sm text-gray-500">
-                                        Set per-group fabric discounts for Acmeda and TBS suppliers. These override the default pricing for this customer.
+                                        Set per-group fabric discounts for Acmeda, TBS, and Motorised suppliers. These override the default pricing for this customer.
                                     </p>
 
                                     <div className="border rounded-lg overflow-hidden">
@@ -225,6 +225,12 @@ function UserDialog({
                                                             TBS (%)
                                                         </span>
                                                     </th>
+                                                    <th className="px-4 py-3 text-left font-medium text-purple-600 text-xs uppercase tracking-wide">
+                                                        <span className="inline-flex items-center gap-1.5">
+                                                            <span className="h-2 w-2 rounded-full bg-purple-500 inline-block" />
+                                                            Motorised (%)
+                                                        </span>
+                                                    </th>
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y">
@@ -242,7 +248,7 @@ function UserDialog({
                                                                     step={0.5}
                                                                     value={discounts[group].acmeda}
                                                                     onChange={e => setDiscount(group, 'acmeda', e.target.value)}
-                                                                    className="w-20 h-9 rounded-lg border border-gray-300 px-2 text-center text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                                    className="w-16 h-9 rounded-lg border border-gray-300 px-2 text-center text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                                                                 />
                                                                 <span className="text-gray-400 text-sm">%</span>
                                                             </div>
@@ -256,7 +262,21 @@ function UserDialog({
                                                                     step={0.5}
                                                                     value={discounts[group].tbs}
                                                                     onChange={e => setDiscount(group, 'tbs', e.target.value)}
-                                                                    className="w-20 h-9 rounded-lg border border-gray-300 px-2 text-center text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                                    className="w-16 h-9 rounded-lg border border-gray-300 px-2 text-center text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                                                                />
+                                                                <span className="text-gray-400 text-sm">%</span>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-4 py-3">
+                                                            <div className="flex items-center gap-2">
+                                                                <input
+                                                                    type="number"
+                                                                    min={0}
+                                                                    max={100}
+                                                                    step={0.5}
+                                                                    value={discounts[group].motorised}
+                                                                    onChange={e => setDiscount(group, 'motorised', e.target.value)}
+                                                                    className="w-16 h-9 rounded-lg border border-gray-300 px-2 text-center text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
                                                                 />
                                                                 <span className="text-gray-400 text-sm">%</span>
                                                             </div>

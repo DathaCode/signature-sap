@@ -403,10 +403,10 @@ export const adminUserApi = {
      * Set per-customer fabric discounts (per group × supplier)
      */
     setUserDiscounts: async (id: string, discounts: {
-        G1: { acmeda: number; tbs: number };
-        G2: { acmeda: number; tbs: number };
-        G3: { acmeda: number; tbs: number };
-        G4: { acmeda: number; tbs: number };
+        G1: { acmeda: number; tbs: number; motorised: number };
+        G2: { acmeda: number; tbs: number; motorised: number };
+        G3: { acmeda: number; tbs: number; motorised: number };
+        G4: { acmeda: number; tbs: number; motorised: number };
     }): Promise<void> => {
         await api.patch(`/users/${id}/discounts`, discounts)
     }
