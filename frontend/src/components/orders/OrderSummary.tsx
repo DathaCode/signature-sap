@@ -106,17 +106,7 @@ export default function OrderSummary({
                                                 </div>
                                             </td>
                                             <td className="p-4 text-right">
-                                                {blind.discountPercent != null && Number(blind.discountPercent) > 0 && blind.fabricPrice != null && (
-                                                    <span className="block text-xs text-gray-400 line-through">
-                                                        ${(Number(blind.fabricPrice) / (1 - Number(blind.discountPercent) / 100)).toFixed(2)}
-                                                    </span>
-                                                )}
                                                 <span className="font-semibold text-blue-700">${(blind.price || 0).toFixed(2)}</span>
-                                                {blind.discountPercent != null && Number(blind.discountPercent) > 0 && (
-                                                    <span className="block text-xs text-green-600">
-                                                        -{Number(blind.discountPercent)}% fabric discount
-                                                    </span>
-                                                )}
                                             </td>
                                             <td className="p-4 text-center" onClick={e => e.stopPropagation()}>
                                                 <div className="flex gap-1 justify-center">

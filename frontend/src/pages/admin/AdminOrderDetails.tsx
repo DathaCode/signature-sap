@@ -272,15 +272,7 @@ export default function AdminOrderDetails() {
                                                 <td className="p-4 align-middle">{item.width}mm × {item.drop}mm</td>
                                                 <td className="p-4 align-middle">{item.controlSide} / {item.roll}</td>
                                                 <td className="p-4 align-middle text-right font-medium">
-                                                    {item.discountPercent != null && Number(item.discountPercent) > 0 && item.fabricPrice != null && (
-                                                        <span className="block text-xs text-gray-400 line-through">
-                                                            ${(Number(item.fabricPrice) / (1 - Number(item.discountPercent) / 100)).toFixed(2)}
-                                                        </span>
-                                                    )}
                                                     <span className="text-blue-700">${Number(item.price || 0).toFixed(2)}</span>
-                                                    {item.discountPercent != null && Number(item.discountPercent) > 0 && (
-                                                        <span className="block text-xs text-green-600">{Number(item.discountPercent)}% off</span>
-                                                    )}
                                                 </td>
                                             </tr>
                                             {isExpanded && hasBreakdown && (

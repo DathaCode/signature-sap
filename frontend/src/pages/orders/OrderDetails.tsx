@@ -18,7 +18,7 @@ export default function OrderDetails() {
     const [expandedItem, setExpandedItem] = useState<number | null>(null);
 
     const hasPriceBreakdown = (item: BlindItem) =>
-        item.fabricPrice != null || item.motorPrice != null || item.bracketPrice != null;
+        item.fabricPrice != null || item.motorPrice != null || item.bracketPrice != null || item.fixing != null;
 
     useEffect(() => {
         const fetchOrder = async () => {
@@ -180,15 +180,14 @@ export default function OrderDetails() {
                                         <>
                                             <tr
                                                 key={itemKey}
-                                                className={`border-b transition-colors hover:bg-muted/50 ${hasBreakdown ? 'cursor-pointer' : ''}`}
-                                                onClick={() => hasBreakdown && setExpandedItem(isExpanded ? null : itemKey)}
+                                                className="border-b transition-colors hover:bg-muted/50 cursor-pointer"
+                                                onClick={() => setExpandedItem(isExpanded ? null : itemKey)}
                                             >
                                                 <td className="p-4 align-middle">
-                                                    {hasBreakdown && (
-                                                        isExpanded
-                                                            ? <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                                                            : <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                                                    )}
+                                                    {isExpanded
+                                                        ? <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                                                        : <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                                                    }
                                                 </td>
                                                 <td className="p-4 align-middle font-medium">{item.location}</td>
                                                 <td className="p-4 align-middle">
@@ -204,31 +203,35 @@ export default function OrderDetails() {
                                                     {item.controlSide} / {item.roll}
                                                 </td>
                                                 <td className="p-4 align-middle text-right font-medium">
-                                                    {item.discountPercent != null && Number(item.discountPercent) > 0 && item.fabricPrice != null && (
-                                                        <span className="block text-xs text-gray-400 line-through">
-                                                            ${(Number(item.fabricPrice) / (1 - Number(item.discountPercent) / 100)).toFixed(2)}
-                                                        </span>
-                                                    )}
                                                     <span className="text-blue-700">${Number(item.price || 0).toFixed(2)}</span>
-                                                    {item.discountPercent != null && Number(item.discountPercent) > 0 && (
-                                                        <span className="block text-xs text-green-600">
-                                                            {Number(item.discountPercent)}% off
-                                                        </span>
-                                                    )}
                                                 </td>
                                             </tr>
                                             {isExpanded && hasBreakdown && (
-                                                <tr key={`${itemKey}-breakdown`} className="border-b bg-muted/30">
-                                                    <td colSpan={6} className="px-8 py-3">
-                                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-x-8 gap-y-1 text-sm">
+                                                <tr key={`${itemKey}-breakdown`} className="border-b bg-blue-50">
+                                                    <td colSpan={6} className="px-8 py-4">
+                                                        {/* Blind specification details */}
+                                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-1 text-sm mb-3">
+                                                            {item.fixing && <div><span className="text-muted-foreground">Fixing: </span><span className="font-medium">{item.fixing}</span></div>}
+                                                            {item.bracketType && <div><span className="text-muted-foreground">Bracket: </span><span className="font-medium">{item.bracketType}</span></div>}
+                                                            {item.bracketColour && <div><span className="text-muted-foreground">Bracket Colour: </span><span className="font-medium">{item.bracketColour}</span></div>}
+                                                            {item.chainOrMotor && <div><span className="text-muted-foreground">Motor: </span><span className="font-medium">{item.chainOrMotor}</span></div>}
+                                                            {item.chainType && <div><span className="text-muted-foreground">Chain Type: </span><span className="font-medium">{item.chainType}</span></div>}
+                                                            {item.bottomRailType && <div><span className="text-muted-foreground">Bottom Rail: </span><span className="font-medium">{item.bottomRailType}</span></div>}
+                                                            {item.bottomRailColour && <div><span className="text-muted-foreground">Rail Colour: </span><span className="font-medium">{item.bottomRailColour}</span></div>}
+                                                        </div>
+                                                        {/* Price breakdown */}
+                                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-x-8 gap-y-1 text-sm border-t border-blue-200 pt-3">
                                                             {item.fabricPrice != null && (
                                                                 <div className="flex justify-between">
                                                                     <span className="text-muted-foreground">Fabric:</span>
                                                                     <span className="flex items-center gap-2">
                                                                         {item.discountPercent != null && Number(item.discountPercent) > 0 && (
-                                                                            <span className="text-xs text-gray-400 line-through bg-yellow-50 px-1 rounded">
+                                                                            <span className="text-xs text-gray-400 line-through">
                                                                                 ${(Number(item.fabricPrice) / (1 - Number(item.discountPercent) / 100)).toFixed(2)}
                                                                             </span>
+                                                                        )}
+                                                                        {item.discountPercent != null && Number(item.discountPercent) > 0 && (
+                                                                            <span className="text-xs text-orange-600">-{Number(item.discountPercent)}%</span>
                                                                         )}
                                                                         <span className="font-medium">${Number(item.fabricPrice).toFixed(2)}</span>
                                                                     </span>

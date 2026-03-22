@@ -139,11 +139,11 @@ export default function NewOrderPage() {
         }
     };
 
-    // Discard current blind form
+    // Discard current blind form — if blinds already saved, return to review
     const handleDiscardCurrentBlind = async () => {
         const confirmed = await confirmToast({
             title: 'Discard Blind',
-            message: 'Discard the current blind you are adding?',
+            message: 'Discard the current blind without saving?',
             confirmText: 'Discard',
             cancelText: 'Keep Editing',
             variant: 'danger',
@@ -151,6 +151,9 @@ export default function NewOrderPage() {
         if (confirmed) {
             reset({ productType: 'BLINDS', items: [{ ...emptyBlind }] });
             setEditingIndex(null);
+            if (savedBlinds.length > 0) {
+                setShowSummary(true);
+            }
         }
     };
 

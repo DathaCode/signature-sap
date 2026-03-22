@@ -247,6 +247,7 @@ export default function OrderManagement() {
                                         <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Order #</th>
                                         <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Date</th>
                                         <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Customer</th>
+                                        <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Reference</th>
                                         <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Items</th>
                                         <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Total</th>
                                         <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Status</th>
@@ -265,6 +266,15 @@ export default function OrderManagement() {
                                                         <span className="font-medium">{order.customerName}</span>
                                                         <span className="text-xs text-muted-foreground">{order.customerEmail}</span>
                                                     </div>
+                                                </td>
+                                                <td className="p-4 align-middle">
+                                                    {order.customerReference ? (
+                                                        <span className="text-sm font-medium text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded">
+                                                            {order.customerReference}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-xs text-muted-foreground">—</span>
+                                                    )}
                                                 </td>
                                                 <td className="p-4 align-middle">{order.items.length} items</td>
                                                 <td className="p-4 align-middle">${Number(order.total).toFixed(2)}</td>

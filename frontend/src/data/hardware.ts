@@ -69,3 +69,12 @@ export function isTBSExtendedInvalid(motor: string, bracketType: string): boolea
 export function toSelectOptions(items: string[]) {
     return items.map(item => ({ label: item, value: item }));
 }
+
+/**
+ * Motor dropdown options — winders show friendly labels without mm suffix
+ */
+export const MOTOR_OPTIONS = MOTORS.map(motor => {
+    if (motor === 'Acmeda winder-29mm') return { label: 'Acmeda Winder', value: motor };
+    if (motor === 'TBS winder-32mm')    return { label: 'TBS Winder',    value: motor };
+    return { label: motor, value: motor };
+});

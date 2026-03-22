@@ -8,7 +8,6 @@ import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 import { getMaterials, getFabricTypes, getFabricColors } from '../../data/fabrics';
 import {
-    MOTORS,
     FIXING_TYPES,
     BRACKET_TYPES,
     BRACKET_COLOURS,
@@ -17,6 +16,7 @@ import {
     BOTTOM_RAIL_COLOURS,
     CONTROL_SIDES,
     ROLL_DIRECTIONS,
+    MOTOR_OPTIONS,
     toSelectOptions,
     isWinderMotor,
     isTBSExtendedInvalid
@@ -126,15 +126,20 @@ export function BlindItemForm({ index, onRemove, onCopy, onContinue, canRemove =
     }, [fabricType, fabricColour, material, setValue, index]);
 
     // Reset chain type when motor changes to non-winder
+    // Also force Oval bottom rail when TBS winder is selected
     useEffect(() => {
         if (isInitialMount.current) return;
         if (prevChainOrMotorRef.current !== undefined && prevChainOrMotorRef.current !== chainOrMotor) {
             if (chainOrMotor && !isWinderMotor(chainOrMotor)) {
                 setValue(`items.${index}.chainType`, '');
             }
+            // TBS winder only supports Oval bottom rail
+            if (chainOrMotor === 'TBS winder-32mm' && bottomRailType === 'D30') {
+                setValue(`items.${index}.bottomRailType`, 'Oval');
+            }
         }
         prevChainOrMotorRef.current = chainOrMotor;
-    }, [chainOrMotor, setValue, index]);
+    }, [chainOrMotor, bottomRailType, setValue, index]);
 
     // Shared price calculation logic — uses comprehensive pricing (fabric + motor + bracket)
     const calculateAndSetPrice = async () => {
@@ -315,7 +320,7 @@ export function BlindItemForm({ index, onRemove, onCopy, onContinue, canRemove =
                         <Label>Chain/Motor</Label>
                         <Select
                             {...register(`items.${index}.chainOrMotor`)}
-                            options={toSelectOptions(MOTORS)}
+                            options={MOTOR_OPTIONS}
                             placeholder="Select Motor/Winder"
                         />
                     </div>
@@ -375,9 +380,19 @@ export function BlindItemForm({ index, onRemove, onCopy, onContinue, canRemove =
                         <Label>Bottom Rail Type</Label>
                         <Select
                             {...register(`items.${index}.bottomRailType`)}
-                            options={toSelectOptions(BOTTOM_RAIL_TYPES)}
+                            options={BOTTOM_RAIL_TYPES.map(t => ({
+                                label: t,
+                                value: t,
+                                disabled: chainOrMotor === 'TBS winder-32mm' && t === 'D30',
+                            }))}
                             placeholder="Select Type"
                         />
+                        {chainOrMotor === 'TBS winder-32mm' && (
+                            <p className="text-xs text-amber-600 flex items-center gap-1">
+                                <AlertCircle className="h-3 w-3" />
+                                TBS Winder requires Oval bottom rail only
+                            </p>
+                        )}
                     </div>
                     <div className="space-y-2">
                         <Label>Bottom Rail Colour</Label>
