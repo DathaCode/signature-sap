@@ -381,6 +381,64 @@ export const convertQuoteToOrder = async (
 };
 
 /**
+ * Update quote items/notes (owner only, not if converted or expired)
+ */
+export const updateQuote = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> => {
+    try {
+        const user = (req as AuthRequest).user;
+        if (!user) throw new AppError(401, 'User not authenticated');
+
+        const id = req.params.id as string;
+        const quote = await prisma.quote.findUnique({ where: { id } });
+        if (!quote) throw new AppError(404, 'Quote not found');
+        if (quote.userId !== user.id) throw new AppError(403, 'Access denied');
+        if (quote.convertedToOrder) throw new AppError(400, 'Cannot edit a quote that has been converted to an order');
+
+        const UpdateQuoteSchema = z.object({
+            items: z.array(QuoteItemSchema).min(1).optional(),
+            notes: z.string().optional(),
+            customerReference: z.string().max(255).optional().nullable(),
+        });
+
+        const body = UpdateQuoteSchema.parse(req.body);
+
+        const subtotal = body.items
+            ? body.items.reduce((sum, item) => sum + (item.price || 0), 0)
+            : parseFloat(quote.subtotal.toString());
+
+        const updated = await prisma.quote.update({
+            where: { id },
+            data: {
+                ...(body.items !== undefined && { items: body.items }),
+                ...(body.notes !== undefined && { notes: body.notes }),
+                ...(body.customerReference !== undefined && { customerReference: body.customerReference }),
+                ...(body.items !== undefined && { subtotal, total: subtotal }),
+            },
+        });
+
+        res.json({
+            success: true,
+            message: 'Quote updated',
+            quote: {
+                ...updated,
+                subtotal: parseFloat(updated.subtotal.toString()),
+                total: parseFloat(updated.total.toString()),
+            },
+        });
+    } catch (error) {
+        if (error instanceof z.ZodError) {
+            next(new AppError(400, error.errors[0].message));
+        } else {
+            next(error);
+        }
+    }
+};
+
+/**
  * Delete quote
  */
 export const deleteQuote = async (

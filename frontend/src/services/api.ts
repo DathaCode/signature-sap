@@ -139,7 +139,7 @@ export const authApi = {
         return response.data
     },
 
-    register: async (credentials: import('../types/auth').RegisterCredentials): Promise<import('../types/auth').AuthResponse> => {
+    register: async (credentials: import('../types/auth').RegisterCredentials): Promise<import('../types/auth').AuthResponse & { pendingApproval?: boolean }> => {
         const response = await api.post('/auth/register', credentials)
         return response.data
     },
@@ -364,6 +364,14 @@ export const adminOrderApi = {
      */
     purgeOrder: async (id: string): Promise<void> => {
         await api.delete(`/web-orders/${id}/purge`)
+    },
+
+    /**
+     * Edit order details (items, notes, customerReference) — PENDING or CONFIRMED only
+     */
+    editOrder: async (id: string, data: { items?: import('../types/order').BlindItem[]; notes?: string; customerReference?: string | null }): Promise<import('../types/order').Order> => {
+        const response = await api.patch(`/web-orders/${id}/details`, data)
+        return response.data.data.order
     }
 }
 
@@ -452,6 +460,14 @@ export const quoteApi = {
     deleteQuote: async (id: string): Promise<void> => {
         await api.delete(`/quotes/${id}`)
     },
+
+    /**
+     * Update quote items/notes (owner only, not converted)
+     */
+    updateQuote: async (id: string, data: { items?: any[]; notes?: string; customerReference?: string | null }): Promise<any> => {
+        const response = await api.patch(`/quotes/${id}`, data)
+        return response.data.quote
+    }
 }
 
 export const adminPricingApi = {

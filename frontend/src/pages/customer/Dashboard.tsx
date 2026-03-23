@@ -3,7 +3,7 @@ import { Button } from "../../components/ui/Button";
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { webOrderApi, quoteApi } from "../../services/api";
-import { Loader2, Trash2 } from "lucide-react";
+import { Loader2, Trash2, Users, Package, DollarSign } from "lucide-react";
 import { Order } from "../../types/order";
 
 // Simple SVG bar chart for monthly order counts
@@ -141,15 +141,53 @@ export default function CustomerDashboard() {
                     <p className="text-sm text-muted-foreground mt-1">Saved quotes expiring soon.</p>
                 </div>
 
-                <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
-                    <h3 className="font-semibold leading-none tracking-tight">Account Status</h3>
-                    <div className="mt-2 flex items-center gap-2">
-                        <span className="flex h-3 w-3 rounded-full bg-green-500" />
-                        <span className="font-medium">Active</span>
+                {!isAdmin && (
+                    <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
+                        <h3 className="font-semibold leading-none tracking-tight">Account Status</h3>
+                        <div className="mt-2 flex items-center gap-2">
+                            <span className="flex h-3 w-3 rounded-full bg-green-500" />
+                            <span className="font-medium">Active</span>
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-1">{user?.company || user?.email}</p>
                     </div>
-                    <p className="text-sm text-muted-foreground mt-1">{user?.company || user?.email}</p>
-                </div>
+                )}
             </div>
+
+            {/* Admin Tools */}
+            {isAdmin && (
+                <div>
+                    <h2 className="text-lg font-semibold mb-3">Admin Tools</h2>
+                    <div className="grid gap-4 md:grid-cols-3">
+                        <Link to="/admin/users" className="rounded-lg border bg-white shadow-sm p-5 flex items-center gap-4 hover:shadow-md hover:border-blue-300 transition-all">
+                            <div className="h-11 w-11 rounded-lg bg-blue-100 flex items-center justify-center">
+                                <Users className="h-6 w-6 text-blue-600" />
+                            </div>
+                            <div>
+                                <p className="font-semibold text-gray-800">Manage Users</p>
+                                <p className="text-sm text-gray-500">Accounts &amp; approvals</p>
+                            </div>
+                        </Link>
+                        <Link to="/admin/inventory" className="rounded-lg border bg-white shadow-sm p-5 flex items-center gap-4 hover:shadow-md hover:border-green-300 transition-all">
+                            <div className="h-11 w-11 rounded-lg bg-green-100 flex items-center justify-center">
+                                <Package className="h-6 w-6 text-green-600" />
+                            </div>
+                            <div>
+                                <p className="font-semibold text-gray-800">Inventory</p>
+                                <p className="text-sm text-gray-500">Stock &amp; materials</p>
+                            </div>
+                        </Link>
+                        <Link to="/admin/pricing" className="rounded-lg border bg-white shadow-sm p-5 flex items-center gap-4 hover:shadow-md hover:border-purple-300 transition-all">
+                            <div className="h-11 w-11 rounded-lg bg-purple-100 flex items-center justify-center">
+                                <DollarSign className="h-6 w-6 text-purple-600" />
+                            </div>
+                            <div>
+                                <p className="font-semibold text-gray-800">Pricing</p>
+                                <p className="text-sm text-gray-500">Fabric price matrix</p>
+                            </div>
+                        </Link>
+                    </div>
+                </div>
+            )}
 
             {/* Monthly Orders Bar Chart */}
             <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">

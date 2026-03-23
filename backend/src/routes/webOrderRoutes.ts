@@ -16,6 +16,7 @@ import {
     getTrashOrders,
     restoreOrder,
     purgeOrder,
+    editOrderDetails,
 } from '../controllers/webOrder.controller';
 import { authenticateToken, requireAdmin } from '../middleware/auth';
 
@@ -32,6 +33,7 @@ router.get('/:id', authenticateToken, getOrderById);
 router.delete('/:id', authenticateToken, cancelOrder);
 
 // Admin order actions
+router.patch('/:id/details', authenticateToken, requireAdmin, editOrderDetails);
 router.post('/:id/approve', authenticateToken, requireAdmin, approveOrder);
 router.post('/:id/send-to-production', authenticateToken, requireAdmin, sendToProduction);
 router.patch('/:id/status', authenticateToken, requireAdmin, updateOrderStatus);

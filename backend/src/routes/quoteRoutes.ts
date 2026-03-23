@@ -5,6 +5,7 @@ import {
     getQuoteById,
     convertQuoteToOrder,
     deleteQuote,
+    updateQuote,
 } from '../controllers/quote.controller';
 import { authenticateToken } from '../middleware/auth';
 
@@ -36,6 +37,12 @@ router.get('/:id', authenticateToken, getQuoteById);
  * Convert a quote to an order
  */
 router.post('/:id/convert-to-order', authenticateToken, convertQuoteToOrder);
+
+/**
+ * PATCH /api/quotes/:id
+ * Update quote items/notes (owner only)
+ */
+router.patch('/:id', authenticateToken, updateQuote);
 
 /**
  * DELETE /api/quotes/:id

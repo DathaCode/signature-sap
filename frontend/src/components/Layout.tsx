@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Package, FileText, ShoppingBag, LogOut, ShieldCheck, Home, ChevronRight, Users, DollarSign, ClipboardList } from 'lucide-react';
+import { FileText, ShoppingBag, LogOut, ShieldCheck, Home, ChevronRight, ClipboardList } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 interface LayoutProps {
@@ -70,48 +70,16 @@ export default function Layout({ children }: LayoutProps) {
                             </Link>
 
                             {isAdmin && (
-                                <>
-                                    <Link
-                                        to="/admin/orders"
-                                        className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${isActive('/admin/orders')
-                                                ? 'bg-brand-gold text-white'
-                                                : 'text-white hover:bg-brand-navy-light'
-                                            }`}
-                                    >
-                                        <ClipboardList className="h-5 w-5" />
-                                        <span className="hidden sm:inline">Orders</span>
-                                    </Link>
-                                    <Link
-                                        to="/admin/inventory"
-                                        className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${isActive('/admin/inventory')
-                                                ? 'bg-brand-gold text-white'
-                                                : 'text-white hover:bg-brand-navy-light'
-                                            }`}
-                                    >
-                                        <Package className="h-5 w-5" />
-                                        <span className="hidden sm:inline">Inventory</span>
-                                    </Link>
-                                    <Link
-                                        to="/admin/users"
-                                        className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${isActive('/admin/users')
-                                                ? 'bg-brand-gold text-white'
-                                                : 'text-white hover:bg-brand-navy-light'
-                                            }`}
-                                    >
-                                        <Users className="h-5 w-5" />
-                                        <span className="hidden sm:inline">Users</span>
-                                    </Link>
-                                    <Link
-                                        to="/admin/pricing"
-                                        className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${isActive('/admin/pricing')
-                                                ? 'bg-brand-gold text-white'
-                                                : 'text-white hover:bg-brand-navy-light'
-                                            }`}
-                                    >
-                                        <DollarSign className="h-5 w-5" />
-                                        <span className="hidden sm:inline">Pricing</span>
-                                    </Link>
-                                </>
+                                <Link
+                                    to="/admin/orders"
+                                    className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${isActive('/admin/orders')
+                                            ? 'bg-brand-gold text-white'
+                                            : 'text-white hover:bg-brand-navy-light'
+                                        }`}
+                                >
+                                    <ClipboardList className="h-5 w-5" />
+                                    <span className="hidden sm:inline">Orders</span>
+                                </Link>
                             )}
 
                             <button

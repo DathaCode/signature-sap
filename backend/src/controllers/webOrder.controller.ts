@@ -1321,3 +1321,112 @@ export const purgeOrder = async (
         next(error);
     }
 };
+
+/**
+ * Edit order details (items, notes, customerReference) — Admin only
+ * Only allowed for PENDING or CONFIRMED orders
+ */
+export const editOrderDetails = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> => {
+    try {
+        const orderId = req.params.id as string;
+        const order = await prisma.order.findUnique({
+            where: { id: orderId },
+            include: { items: true },
+        });
+        if (!order) throw new AppError(404, 'Order not found');
+        if (!['PENDING', 'CONFIRMED'].includes(order.status)) {
+            throw new AppError(400, 'Order can only be edited when PENDING or CONFIRMED');
+        }
+
+        const EditOrderSchema = z.object({
+            notes: z.string().optional(),
+            customerReference: z.string().max(255).optional().nullable(),
+            items: z.array(OrderItemSchema).min(1, 'At least one item is required').optional(),
+        });
+
+        const body = EditOrderSchema.parse(req.body);
+
+        if (body.items) {
+            // Delete existing items and recreate from submitted data
+            await prisma.orderItem.deleteMany({ where: { orderId } });
+
+            const newItems = body.items.map((item: any, index: number) => {
+                const w = parseInt(item.width) || 0;
+                const d = parseInt(item.drop) || 0;
+                const motorDeduction = getMotorDeduction(item.chainOrMotor);
+                return {
+                    orderId,
+                    itemNumber: index + 1,
+                    itemType: 'blind',
+                    location: item.location || '',
+                    width: w,
+                    drop: d,
+                    fixing: item.fixing || null,
+                    bracketType: item.bracketType || null,
+                    bracketColour: item.bracketColour || null,
+                    controlSide: item.controlSide || 'Left',
+                    chainOrMotor: item.chainOrMotor || null,
+                    chainType: item.chainType || null,
+                    roll: item.roll || 'Front',
+                    material: item.material || null,
+                    fabricType: item.fabricType || null,
+                    fabricColour: item.fabricColour || null,
+                    bottomRailType: item.bottomRailType || null,
+                    bottomRailColour: item.bottomRailColour || null,
+                    calculatedWidth: w > 0 ? w - 28 : null,
+                    calculatedDrop: d > 0 ? d + 200 : null,
+                    fabricCutWidth: w > 0 ? w - motorDeduction : null,
+                    price: item.price || 0,
+                    fabricGroup: item.fabricGroup || null,
+                    discountPercent: item.discountPercent || 0,
+                    fabricPrice: item.fabricPrice || null,
+                    motorPrice: item.motorPrice || null,
+                    bracketPrice: item.bracketPrice || null,
+                    chainPrice: item.chainPrice || null,
+                    clipsPrice: item.clipsPrice || null,
+                    componentPrice: item.componentPrice || null,
+                };
+            });
+
+            await prisma.orderItem.createMany({ data: newItems });
+
+            // Recalculate totals
+            const subtotal = body.items.reduce((sum: number, item: any) => sum + (item.price || 0), 0);
+            await prisma.order.update({
+                where: { id: orderId },
+                data: {
+                    subtotal,
+                    total: subtotal,
+                    ...(body.notes !== undefined && { notes: body.notes }),
+                    ...(body.customerReference !== undefined && { customerReference: body.customerReference }),
+                },
+            });
+        } else {
+            // Just update order-level fields
+            await prisma.order.update({
+                where: { id: orderId },
+                data: {
+                    ...(body.notes !== undefined && { notes: body.notes }),
+                    ...(body.customerReference !== undefined && { customerReference: body.customerReference }),
+                },
+            });
+        }
+
+        const updated = await prisma.order.findUnique({
+            where: { id: orderId },
+            include: { items: { orderBy: { itemNumber: 'asc' } } },
+        });
+
+        res.json({ success: true, message: 'Order updated', data: { order: updated } });
+    } catch (error) {
+        if (error instanceof z.ZodError) {
+            next(new AppError(400, error.errors[0].message));
+        } else {
+            next(error);
+        }
+    }
+};

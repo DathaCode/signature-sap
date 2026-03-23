@@ -96,6 +96,7 @@ model User {
   address              String      @db.Text
   role                 UserRole    @default(CUSTOMER)
   isActive             Boolean     @default(true) @map("is_active")
+  isApproved           Boolean     @default(true) @map("is_approved") // false for new self-registrations pending admin approval
   discounts            Json?       // { G1: { acmeda: 0, tbs: 0 }, G2: {...}, G3: {...}, G4: {...} }
   passwordResetToken   String?     @map("password_reset_token") @db.VarChar(255)
   passwordResetExpires DateTime?   @map("password_reset_expires") @db.Timestamp(6)

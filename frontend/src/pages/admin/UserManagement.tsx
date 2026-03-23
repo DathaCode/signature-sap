@@ -8,7 +8,7 @@ import { Input } from '../../components/ui/Input';
 import { Label } from '../../components/ui/Label';
 import {
     Loader2, UserX, UserCheck, X,
-    Phone, MapPin, Building2, Calendar, Pencil, Save
+    Phone, MapPin, Building2, Calendar, Pencil, Save, ShieldCheck
 } from 'lucide-react';
 import { gooeyToast } from 'goey-toast';
 import { confirmToast } from '../../utils/confirmToast';
@@ -16,12 +16,14 @@ import { format } from 'date-fns';
 
 interface UserWithCounts extends User {
     _count?: { orders: number; quotes: number };
+    isApproved?: boolean;
 }
 
 interface UserDetail extends UserWithCounts {
     phone?: string;
     address?: string;
     updatedAt?: string;
+    isApproved?: boolean;
     discounts?: {
         G1: { acmeda: number; tbs: number; motorised: number };
         G2: { acmeda: number; tbs: number; motorised: number };
@@ -59,9 +61,9 @@ function UserDialog({
     const [savingDiscounts, setSavingDiscounts] = useState(false);
 
     const [form, setForm] = useState({
-        name: '', email: '', phone: '', company: '', address: '',
-        role: 'CUSTOMER' as 'CUSTOMER' | 'ADMIN', isActive: true,
+        name: '', email: '', phone: '', company: '', address: '', isActive: true,
     });
+    const [approving, setApproving] = useState(false);
 
     const [discounts, setDiscounts] = useState(DEFAULT_DISCOUNTS);
 
@@ -74,7 +76,6 @@ function UserDialog({
                 phone: data.phone || '',
                 company: data.company || '',
                 address: data.address || '',
-                role: data.role || 'CUSTOMER',
                 isActive: data.isActive ?? true,
             });
             if (data.discounts) {
@@ -124,6 +125,20 @@ function UserDialog({
         setDiscounts(DEFAULT_DISCOUNTS);
     };
 
+    const handleApprove = async () => {
+        setApproving(true);
+        try {
+            await adminUserApi.updateUser(userId, { isApproved: true } as any);
+            gooeyToast.success('User approved');
+            if (user) setUser({ ...user, isApproved: true });
+            onUpdated({ isApproved: true } as any);
+        } catch {
+            gooeyToast.error('Failed to approve user');
+        } finally {
+            setApproving(false);
+        }
+    };
+
     const setDiscount = (group: typeof GROUPS[number], supplier: 'acmeda' | 'tbs' | 'motorised', value: string) => {
         const num = parseFloat(value);
         if (isNaN(num) || num < 0 || num > 100) return;
@@ -161,6 +176,12 @@ function UserDialog({
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
+                            {user && !user.isApproved && (
+                                <Button size="sm" onClick={handleApprove} disabled={approving} className="bg-amber-500 hover:bg-amber-600 text-white">
+                                    {approving ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <ShieldCheck className="mr-1 h-3 w-3" />}
+                                    Approve
+                                </Button>
+                            )}
                             {activeTab === 'account' && !editing && (
                                 <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
                                     <Pencil className="mr-1 h-3 w-3" />
@@ -324,27 +345,18 @@ function UserDialog({
                                                 <Label>Address</Label>
                                                 <Input value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} />
                                             </div>
-                                            <div className="space-y-1">
-                                                <Label>Role</Label>
-                                                <select
-                                                    className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
-                                                    value={form.role}
-                                                    onChange={e => setForm(f => ({ ...f, role: e.target.value as 'CUSTOMER' | 'ADMIN' }))}
-                                                >
-                                                    <option value="CUSTOMER">CUSTOMER</option>
-                                                    <option value="ADMIN">ADMIN</option>
-                                                </select>
-                                            </div>
-                                            <div className="space-y-1 flex items-center gap-3 mt-6">
-                                                <input
-                                                    type="checkbox"
-                                                    id="isActive"
-                                                    checked={form.isActive}
-                                                    onChange={e => setForm(f => ({ ...f, isActive: e.target.checked }))}
-                                                    className="h-4 w-4 rounded border-gray-300"
-                                                />
-                                                <Label htmlFor="isActive">Account Active</Label>
-                                            </div>
+                                            {user?.role !== 'ADMIN' && (
+                                                <div className="space-y-1 flex items-center gap-3 mt-6">
+                                                    <input
+                                                        type="checkbox"
+                                                        id="isActive"
+                                                        checked={form.isActive}
+                                                        onChange={e => setForm(f => ({ ...f, isActive: e.target.checked }))}
+                                                        className="h-4 w-4 rounded border-gray-300"
+                                                    />
+                                                    <Label htmlFor="isActive">Account Active</Label>
+                                                </div>
+                                            )}
                                         </div>
                                     ) : (
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -504,26 +516,32 @@ export default function UserManagement() {
                                                 </Badge>
                                             </td>
                                             <td className="p-4">
-                                                <Badge variant={user.isActive ? 'success' : 'destructive'}>
-                                                    {user.isActive ? 'Active' : 'Inactive'}
-                                                </Badge>
+                                                {user.isApproved === false ? (
+                                                    <Badge variant="outline" className="text-amber-600 border-amber-400">Pending</Badge>
+                                                ) : (
+                                                    <Badge variant={user.isActive ? 'success' : 'destructive'}>
+                                                        {user.isActive ? 'Active' : 'Inactive'}
+                                                    </Badge>
+                                                )}
                                             </td>
                                             <td className="p-4 text-right">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={(e) => toggleStatus(user, e)}
-                                                    className={user.isActive
-                                                        ? "text-red-600 hover:text-red-700 hover:bg-red-50"
-                                                        : "text-green-600 hover:text-green-700 hover:bg-green-50"
-                                                    }
-                                                >
-                                                    {user.isActive ? (
-                                                        <><UserX className="mr-2 h-4 w-4" />Deactivate</>
-                                                    ) : (
-                                                        <><UserCheck className="mr-2 h-4 w-4" />Activate</>
-                                                    )}
-                                                </Button>
+                                                {user.role !== 'ADMIN' && (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={(e) => toggleStatus(user, e)}
+                                                        className={user.isActive
+                                                            ? "text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                            : "text-green-600 hover:text-green-700 hover:bg-green-50"
+                                                        }
+                                                    >
+                                                        {user.isActive ? (
+                                                            <><UserX className="mr-2 h-4 w-4" />Deactivate</>
+                                                        ) : (
+                                                            <><UserCheck className="mr-2 h-4 w-4" />Activate</>
+                                                        )}
+                                                    </Button>
+                                                )}
                                             </td>
                                         </tr>
                                     ))}

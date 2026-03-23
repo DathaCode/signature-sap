@@ -9,6 +9,7 @@ export interface User {
     company?: string;
     address?: string;
     isActive: boolean;
+    isApproved?: boolean;
     createdAt?: string;
     updatedAt?: string;
 }

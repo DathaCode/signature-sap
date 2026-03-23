@@ -6,7 +6,7 @@ import { gooeyToast } from 'goey-toast';
 
 interface AuthContextType extends AuthState {
     login: (credentials: LoginCredentials) => Promise<void>;
-    register: (credentials: RegisterCredentials) => Promise<void>;
+    register: (credentials: RegisterCredentials) => Promise<{ pendingApproval: boolean }>;
     logout: () => void;
 }
 
@@ -80,19 +80,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     };
 
-    const register = async (credentials: RegisterCredentials) => {
+    const register = async (credentials: RegisterCredentials): Promise<{ pendingApproval: boolean }> => {
         try {
             const response = await authApi.register(credentials);
-            const { user, token } = response.data;
-
-            localStorage.setItem('token', token);
-            setState({
-                user,
-                token,
-                isAuthenticated: true,
-                isLoading: false,
-            });
-            gooeyToast.success('Welcome to Signature Shades!');
+            // New accounts require admin approval — no token issued
+            if (response.pendingApproval) {
+                return { pendingApproval: true };
+            }
+            // Fallback: if server ever issues a token (e.g. admin-created accounts)
+            if (response.data?.token) {
+                const { user, token } = response.data;
+                localStorage.setItem('token', token);
+                setState({ user, token, isAuthenticated: true, isLoading: false });
+                gooeyToast.success('Welcome to Signature Shades!');
+            }
+            return { pendingApproval: false };
         } catch (error: any) {
             const message = error.response?.data?.message || 'Registration failed';
             gooeyToast.error(message);

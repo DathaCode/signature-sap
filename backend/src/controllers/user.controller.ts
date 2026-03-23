@@ -23,6 +23,7 @@ const updateUserSchema = z.object({
     address: z.string().min(5).optional(),
     company: z.string().optional(),
     isActive: z.boolean().optional(),
+    isApproved: z.boolean().optional(),
 });
 
 const groupDiscountSchema = z.object({
@@ -130,6 +131,7 @@ export const getAllUsers = async (
                 address: true,
                 role: true,
                 isActive: true,
+                isApproved: true,
                 createdAt: true,
                 _count: {
                     select: { orders: true, quotes: true },
@@ -167,6 +169,7 @@ export const getUserById = async (
                 address: true,
                 role: true,
                 isActive: true,
+                isApproved: true,
                 discounts: true,
                 createdAt: true,
                 updatedAt: true,
@@ -243,6 +246,7 @@ export const updateUser = async (
                 address: true,
                 role: true,
                 isActive: true,
+                isApproved: true,
                 updatedAt: true,
             },
         });

@@ -3,11 +3,92 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
-import { Loader2, ArrowLeft, ShoppingCart, Calendar, ChevronDown, ChevronUp } from 'lucide-react';
+import { Input } from '../../components/ui/Input';
+import { Loader2, ArrowLeft, ShoppingCart, Calendar, ChevronDown, ChevronUp, Pencil, Save, X, Plus } from 'lucide-react';
 import { format } from 'date-fns';
 import { gooeyToast } from 'goey-toast';
 import { confirmToast } from '../../utils/confirmToast';
-import api from '../../services/api';
+import api, { quoteApi } from '../../services/api';
+
+const BRACKET_TYPES = ['Single', 'Single Extension', 'Dual Left', 'Dual Right'];
+const BRACKET_COLOURS = ['White', 'Black', 'Dune', 'Bone', 'Anodised'];
+const RAIL_TYPES = ['D30', 'Oval'];
+const RAIL_COLOURS = ['White', 'Black', 'Dune', 'Bone', 'Anodised'];
+
+function EditQuoteItem({ item, index, onChange, onRemove }: {
+    item: QuoteItem;
+    index: number;
+    onChange: (idx: number, field: keyof QuoteItem, value: any) => void;
+    onRemove: (idx: number) => void;
+}) {
+    const f = (field: keyof QuoteItem, value: any) => onChange(index, field, value);
+    const inp = "h-8 text-xs px-2";
+    const sel = "h-8 text-xs px-2 rounded-md border border-input bg-background w-full";
+    return (
+        <div className="border rounded-lg p-3 space-y-2 bg-gray-50">
+            <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-semibold text-gray-600">Item {index + 1}</span>
+                <button onClick={() => onRemove(index)} className="text-red-400 hover:text-red-600"><X className="h-4 w-4" /></button>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div><label className="text-xs text-gray-500">Location</label><Input className={inp} value={item.location || ''} onChange={e => f('location', e.target.value)} /></div>
+                <div><label className="text-xs text-gray-500">Width (mm)</label><Input className={inp} type="number" value={item.width || ''} onChange={e => f('width', Number(e.target.value))} /></div>
+                <div><label className="text-xs text-gray-500">Drop (mm)</label><Input className={inp} type="number" value={item.drop || ''} onChange={e => f('drop', Number(e.target.value))} /></div>
+                <div><label className="text-xs text-gray-500">Roll</label>
+                    <select className={sel} value={item.roll || 'Front'} onChange={e => f('roll', e.target.value)}>
+                        <option>Front</option><option>Back</option>
+                    </select>
+                </div>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div><label className="text-xs text-gray-500">Fixing</label>
+                    <select className={sel} value={item.fixing || ''} onChange={e => f('fixing', e.target.value)}>
+                        <option value="">-</option><option>Face</option><option>Recess</option>
+                    </select>
+                </div>
+                <div><label className="text-xs text-gray-500">Control Side</label>
+                    <select className={sel} value={item.controlSide || 'Left'} onChange={e => f('controlSide', e.target.value as any)}>
+                        <option>Left</option><option>Right</option>
+                    </select>
+                </div>
+                <div><label className="text-xs text-gray-500">Bracket Type</label>
+                    <select className={sel} value={item.bracketType || ''} onChange={e => f('bracketType', e.target.value)}>
+                        <option value="">-</option>
+                        {BRACKET_TYPES.map(t => <option key={t}>{t}</option>)}
+                    </select>
+                </div>
+                <div><label className="text-xs text-gray-500">Bracket Colour</label>
+                    <select className={sel} value={item.bracketColour || ''} onChange={e => f('bracketColour', e.target.value)}>
+                        <option value="">-</option>
+                        {BRACKET_COLOURS.map(c => <option key={c}>{c}</option>)}
+                    </select>
+                </div>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div><label className="text-xs text-gray-500">Material</label><Input className={inp} value={item.material || ''} onChange={e => f('material', e.target.value)} /></div>
+                <div><label className="text-xs text-gray-500">Fabric Type</label><Input className={inp} value={item.fabricType || ''} onChange={e => f('fabricType', e.target.value)} /></div>
+                <div><label className="text-xs text-gray-500">Fabric Colour</label><Input className={inp} value={item.fabricColour || ''} onChange={e => f('fabricColour', e.target.value)} /></div>
+                <div><label className="text-xs text-gray-500">Chain/Motor</label><Input className={inp} value={item.chainOrMotor || ''} onChange={e => f('chainOrMotor', e.target.value)} /></div>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div><label className="text-xs text-gray-500">Bottom Rail</label>
+                    <select className={sel} value={item.bottomRailType || ''} onChange={e => f('bottomRailType', e.target.value)}>
+                        <option value="">-</option>
+                        {RAIL_TYPES.map(t => <option key={t}>{t}</option>)}
+                    </select>
+                </div>
+                <div><label className="text-xs text-gray-500">Rail Colour</label>
+                    <select className={sel} value={item.bottomRailColour || ''} onChange={e => f('bottomRailColour', e.target.value)}>
+                        <option value="">-</option>
+                        {RAIL_COLOURS.map(c => <option key={c}>{c}</option>)}
+                    </select>
+                </div>
+                <div><label className="text-xs text-gray-500">Chain Type</label><Input className={inp} value={item.chainType || ''} onChange={e => f('chainType', e.target.value)} /></div>
+                <div><label className="text-xs text-gray-500">Price ($)</label><Input className={inp} type="number" step="0.01" value={item.price || 0} onChange={e => f('price', Number(e.target.value))} /></div>
+            </div>
+        </div>
+    );
+}
 
 interface QuoteItem {
     location: string;
@@ -62,6 +143,11 @@ export default function QuoteDetails() {
     const [quote, setQuote] = useState<QuoteDetail | null>(null);
     const [loading, setLoading] = useState(true);
     const [expandedItem, setExpandedItem] = useState<number | null>(null);
+    const [editing, setEditing] = useState(false);
+    const [editItems, setEditItems] = useState<QuoteItem[]>([]);
+    const [editNotes, setEditNotes] = useState('');
+    const [editRef, setEditRef] = useState('');
+    const [savingEdit, setSavingEdit] = useState(false);
 
     useEffect(() => {
         const fetchQuote = async () => {
@@ -92,6 +178,46 @@ export default function QuoteDetails() {
 
     const isExpired = new Date(quote.expiresAt) < new Date();
     const isConverted = !!quote.convertedToOrder;
+
+    const startEditing = () => {
+        if (!quote) return;
+        setEditItems(quote.items.map(it => ({ ...it })));
+        setEditNotes(quote.notes || '');
+        setEditRef(quote.customerReference || '');
+        setEditing(true);
+    };
+
+    const handleItemChange = (idx: number, field: keyof QuoteItem, value: any) => {
+        setEditItems(prev => prev.map((it, i) => i === idx ? { ...it, [field]: value } : it));
+    };
+
+    const handleRemoveItem = (idx: number) => {
+        setEditItems(prev => prev.filter((_, i) => i !== idx));
+    };
+
+    const handleAddItem = () => {
+        setEditItems(prev => [...prev, { location: '', width: 1000, drop: 1500, roll: 'Front', controlSide: 'Left', price: 0 }]);
+    };
+
+    const handleSaveEdit = async () => {
+        if (!quote) return;
+        if (editItems.length === 0) { gooeyToast.error('At least one item required'); return; }
+        setSavingEdit(true);
+        try {
+            const updated = await quoteApi.updateQuote(quote.id, {
+                items: editItems,
+                notes: editNotes,
+                customerReference: editRef || null,
+            });
+            setQuote({ ...quote, ...updated, items: editItems, notes: editNotes, customerReference: editRef });
+            setEditing(false);
+            gooeyToast.success('Quote updated');
+        } catch (err: any) {
+            gooeyToast.error(err.response?.data?.message || 'Failed to save changes');
+        } finally {
+            setSavingEdit(false);
+        }
+    };
 
     const handleConvertToOrder = async () => {
         if (!await confirmToast({ title: 'Convert to Order', message: 'Convert this quote to an order?', confirmText: 'Convert', variant: 'info' })) return;
@@ -128,12 +254,20 @@ export default function QuoteDetails() {
                         </p>
                     </div>
                 </div>
-                {!isConverted && !isExpired && (
-                    <Button onClick={handleConvertToOrder} className="bg-green-600 hover:bg-green-700">
-                        <ShoppingCart className="mr-2 h-4 w-4" />
-                        Convert to Order
-                    </Button>
-                )}
+                <div className="flex gap-2">
+                    {!isConverted && !isExpired && !editing && (
+                        <Button variant="outline" onClick={startEditing}>
+                            <Pencil className="mr-2 h-4 w-4" />
+                            Edit Quote
+                        </Button>
+                    )}
+                    {!isConverted && !isExpired && (
+                        <Button onClick={handleConvertToOrder} className="bg-green-600 hover:bg-green-700">
+                            <ShoppingCart className="mr-2 h-4 w-4" />
+                            Convert to Order
+                        </Button>
+                    )}
+                </div>
             </div>
 
             {/* Quote Info Cards */}
@@ -185,6 +319,45 @@ export default function QuoteDetails() {
                     </CardContent>
                 </Card>
             </div>
+
+            {/* Edit Mode */}
+            {editing && (
+                <Card className="border-blue-300">
+                    <CardHeader className="flex flex-row items-center justify-between pb-3">
+                        <CardTitle className="text-lg text-blue-800">Edit Quote</CardTitle>
+                        <div className="flex gap-2">
+                            <Button size="sm" onClick={handleSaveEdit} disabled={savingEdit} className="bg-blue-600 hover:bg-blue-700">
+                                {savingEdit ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Save className="mr-1 h-3 w-3" />}
+                                Save Changes
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>Cancel</Button>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label className="text-sm font-medium text-gray-700">Customer Reference</label>
+                                <Input className="mt-1" value={editRef} onChange={e => setEditRef(e.target.value)} placeholder="Optional reference" />
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium text-gray-700">Notes</label>
+                                <Input className="mt-1" value={editNotes} onChange={e => setEditNotes(e.target.value)} placeholder="Quote notes" />
+                            </div>
+                        </div>
+                        <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                                <span className="text-sm font-semibold text-gray-700">Blind Items ({editItems.length})</span>
+                                <Button size="sm" variant="outline" onClick={handleAddItem}>
+                                    <Plus className="mr-1 h-3 w-3" />Add Item
+                                </Button>
+                            </div>
+                            {editItems.map((item, idx) => (
+                                <EditQuoteItem key={idx} item={item} index={idx} onChange={handleItemChange} onRemove={handleRemoveItem} />
+                            ))}
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
 
             {/* Items Table with Expandable Blind Details */}
             <Card>

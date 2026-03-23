@@ -4,13 +4,14 @@ import { useAuth } from '../../context/AuthContext';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Label } from '../ui/Label';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { RegisterCredentials } from '../../types/auth';
+import { Clock } from 'lucide-react';
 
 export function RegisterForm() {
     const { register: registerUser } = useAuth();
-    const navigate = useNavigate();
     const [isLoading, setIsLoading] = useState(false);
+    const [pendingApproval, setPendingApproval] = useState(false);
 
     const { register, handleSubmit, formState: { errors }, watch } = useForm<RegisterCredentials & { confirmPassword: string }>();
     const password = watch('password');
@@ -18,14 +19,39 @@ export function RegisterForm() {
     const onSubmit = async (data: RegisterCredentials & { confirmPassword: string }) => {
         setIsLoading(true);
         try {
-            await registerUser(data);
-            navigate('/dashboard');
+            const result = await registerUser(data);
+            if (result.pendingApproval) {
+                setPendingApproval(true);
+            }
         } catch (error) {
             console.error('Registration failed', error);
         } finally {
             setIsLoading(false);
         }
     };
+
+    if (pendingApproval) {
+        return (
+            <div className="w-full max-w-md space-y-6 bg-white p-8 rounded-lg shadow-md text-center">
+                <div className="flex justify-center">
+                    <div className="h-16 w-16 rounded-full bg-amber-100 flex items-center justify-center">
+                        <Clock className="h-8 w-8 text-amber-600" />
+                    </div>
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900">Account Pending Approval</h2>
+                <p className="text-gray-600">
+                    Your account has been created and is waiting for admin approval.
+                    You'll be able to sign in once your account has been approved.
+                </p>
+                <p className="text-sm text-gray-500">
+                    Please contact your administrator if you need immediate access.
+                </p>
+                <Link to="/login">
+                    <Button variant="outline" className="w-full">Back to Sign In</Button>
+                </Link>
+            </div>
+        );
+    }
 
     return (
         <div className="w-full max-w-md space-y-8 bg-white p-8 rounded-lg shadow-md">

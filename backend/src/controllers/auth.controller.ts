@@ -49,7 +49,7 @@ export const register = async (
         const bcryptRounds = parseInt(process.env.BCRYPT_ROUNDS || '10');
         const hashedPassword = await bcrypt.hash(validatedData.password, bcryptRounds);
 
-        // Create user
+        // Create user — isApproved: false until admin approves
         const user = await prisma.user.create({
             data: {
                 name: validatedData.name,
@@ -58,8 +58,9 @@ export const register = async (
                 phone: validatedData.phone,
                 address: validatedData.address,
                 company: validatedData.company || null,
-                role: 'CUSTOMER', // Default role
+                role: 'CUSTOMER',
                 isActive: true,
+                isApproved: false,
             },
             select: {
                 id: true,
@@ -73,23 +74,14 @@ export const register = async (
             },
         });
 
-        // Generate JWT token
-        const token = generateToken({
-            id: user.id,
-            email: user.email,
-            role: user.role,
-            name: user.name,
-        });
+        logger.info(`New user registered (pending approval): ${user.email}`);
 
-        logger.info(`New user registered: ${user.email}`);
-
+        // Do NOT issue a token — account requires admin approval first
         res.status(201).json({
             success: true,
-            message: 'Registration successful',
-            data: {
-                user,
-                token,
-            },
+            pendingApproval: true,
+            message: 'Registration successful. Your account is pending admin approval.',
+            data: { user },
         });
     } catch (error) {
         if (error instanceof z.ZodError) {
@@ -124,6 +116,11 @@ export const login = async (
         // Check if account is active
         if (!user.isActive) {
             throw new AppError(403, 'Account has been deactivated. Please contact admin.');
+        }
+
+        // Check if account has been approved by admin
+        if (!user.isApproved) {
+            throw new AppError(403, 'Your account is awaiting admin approval. Please check back later.');
         }
 
         // Verify password
