@@ -1,26 +1,111 @@
 import { useState } from 'react';
-import { WorksheetPreviewResponse } from '../../types/order';
+import { BlindItem, FabricGroupData, WorksheetPreviewResponse } from '../../types/order';
 import { adminOrderApi } from '../../services/api';
 import { Button } from '../ui/Button';
 import FabricCutWorksheet from './FabricCutWorksheet';
 import TubeCutWorksheet from './TubeCutWorksheet';
 import { gooeyToast } from 'goey-toast';
 import { confirmToast } from '../../utils/confirmToast';
-import { X, Download, Check, AlertTriangle } from 'lucide-react';
+import { X, Download, Check, AlertTriangle, Printer } from 'lucide-react';
 
 interface Props {
     orderId: string;
     orderNumber: string;
+    customerName: string;
+    customerReference?: string;
+    notes?: string;
+    createdAt: string;
     data: WorksheetPreviewResponse;
     onClose: () => void;
     onAccepted: () => void;
 }
 
-export default function WorksheetPreview({ orderId, orderNumber, data, onClose, onAccepted }: Props) {
+/** Collect all blind items from fabricCutData, sorted by blind number */
+function getAllBlindsForLabels(fabricCutData: Record<string, FabricGroupData>): Array<{ blindNumber: number; item: BlindItem }> {
+    const seen = new Set<number>();
+    const result: Array<{ blindNumber: number; item: BlindItem }> = [];
+    for (const groupData of Object.values(fabricCutData)) {
+        for (const sheet of groupData.optimization.sheets) {
+            for (const panel of sheet.panels) {
+                const itemId = (panel as any).orderItemId;
+                if (panel.blindNumber && itemId && !seen.has(itemId)) {
+                    const item = groupData.items.find((it: any) => it.id === itemId);
+                    if (item) {
+                        seen.add(itemId);
+                        result.push({ blindNumber: panel.blindNumber, item });
+                    }
+                }
+            }
+        }
+    }
+    return result.sort((a, b) => a.blindNumber - b.blindNumber);
+}
+
+export default function WorksheetPreview({ orderId, orderNumber, customerName, customerReference, notes: _notes, createdAt, data, onClose, onAccepted }: Props) {
     const [activeTab, setActiveTab] = useState<'fabric' | 'tube'>('fabric');
     const [accepting, setAccepting] = useState(false);
     const [previewData] = useState(data);
     const [downloading, setDownloading] = useState<string | null>(null);
+
+    const cxRef = customerReference ? `${customerName}-${customerReference}` : customerName;
+
+    const handlePrintLabels = () => {
+        const allBlinds = getAllBlindsForLabels(previewData.worksheetData.fabricCutData);
+        const total = allBlinds.length;
+        if (total === 0) { gooeyToast.error('No blind items found'); return; }
+
+        const logoUrl = `${window.location.origin}/logo.png`;
+        const ordDate = createdAt ? new Date(createdAt).toLocaleDateString('en-AU') : '';
+
+        const labelsHtml = allBlinds.map(({ blindNumber, item }) => `
+            <div class="label">
+                <div class="label-header">
+                    <img src="${logoUrl}" class="label-logo" alt="Signature Shades" onerror="this.style.display='none'" />
+                    <span class="blind-count">${blindNumber} of ${total}</span>
+                </div>
+                <div class="order-info">
+                    <div><b>Order ref:</b> ${orderNumber}</div>
+                    <div><b>Cx Ref:</b> ${cxRef}</div>
+                    ${ordDate ? `<div><b>Date:</b> ${ordDate}</div>` : ''}
+                </div>
+                <div class="divider"></div>
+                <div class="blind-details">
+                    <div><b>Location:</b> ${item.location || '-'}</div>
+                    <div><b>W &times; H:</b> ${item.width} &times; ${item.drop}</div>
+                    <div><b>Roll:</b> ${item.roll || '-'}</div>
+                    <div><b>Fabric:</b> ${item.fabricType || '-'} / ${item.fabricColour || '-'}</div>
+                    <div><b>BR Colour:</b> ${item.bottomRailColour || '-'}</div>
+                    <div><b>Bracket:</b> ${item.bracketType || '-'}</div>
+                </div>
+            </div>
+        `).join('');
+
+        const printWindow = window.open('', '_blank', 'width=500,height=700');
+        if (!printWindow) { gooeyToast.error('Popup blocked — allow popups to print labels'); return; }
+
+        printWindow.document.write(`<!DOCTYPE html>
+<html><head>
+<meta charset="utf-8">
+<title>Labels - ${orderNumber}</title>
+<style>
+  @page { size: 62mm 100mm; margin: 2mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, Helvetica, sans-serif; font-size: 7.5pt; background: #fff; }
+  .label { width: 58mm; height: 96mm; padding: 1.5mm; display: flex; flex-direction: column; gap: 1mm; page-break-after: always; overflow: hidden; }
+  .label:last-child { page-break-after: avoid; }
+  .label-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 1mm; border-bottom: 0.5pt solid #333; }
+  .label-logo { height: 10mm; max-width: 32mm; object-fit: contain; }
+  .blind-count { font-size: 9pt; font-weight: bold; white-space: nowrap; }
+  .order-info { font-size: 7pt; line-height: 1.4; }
+  .divider { border-top: 0.4pt solid #bbb; margin: 0.5mm 0; }
+  .blind-details div { font-size: 7.5pt; line-height: 1.45; }
+  b { font-weight: bold; }
+</style>
+</head><body>${labelsHtml}</body></html>`);
+        printWindow.document.close();
+        printWindow.focus();
+        setTimeout(() => { printWindow.print(); }, 500);
+    };
 
     const isAccepted = !!previewData.worksheetData.acceptedAt;
     const hasInsufficientStock = !previewData.inventoryCheck.available;
@@ -100,26 +185,37 @@ export default function WorksheetPreview({ orderId, orderNumber, data, onClose, 
                     </div>
                 )}
 
-                {/* Tabs */}
-                <div className="flex border-b px-6">
-                    <button
-                        className={`px-4 py-3 text-sm font-medium border-b-2 ${activeTab === 'fabric'
-                                ? 'border-blue-500 text-blue-600'
-                                : 'border-transparent text-gray-500 hover:text-gray-700'
-                            }`}
-                        onClick={() => setActiveTab('fabric')}
+                {/* Tabs + Print Labels */}
+                <div className="flex items-center justify-between border-b px-6">
+                    <div className="flex">
+                        <button
+                            className={`px-4 py-3 text-sm font-medium border-b-2 ${activeTab === 'fabric'
+                                    ? 'border-blue-500 text-blue-600'
+                                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                                }`}
+                            onClick={() => setActiveTab('fabric')}
+                        >
+                            Fabric Cut Worksheet
+                        </button>
+                        <button
+                            className={`px-4 py-3 text-sm font-medium border-b-2 ${activeTab === 'tube'
+                                    ? 'border-green-500 text-green-600'
+                                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                                }`}
+                            onClick={() => setActiveTab('tube')}
+                        >
+                            Tube Cut Worksheet
+                        </button>
+                    </div>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handlePrintLabels}
+                        className="flex items-center gap-1.5 text-purple-700 border-purple-300 hover:bg-purple-50"
                     >
-                        Fabric Cut Worksheet
-                    </button>
-                    <button
-                        className={`px-4 py-3 text-sm font-medium border-b-2 ${activeTab === 'tube'
-                                ? 'border-green-500 text-green-600'
-                                : 'border-transparent text-gray-500 hover:text-gray-700'
-                            }`}
-                        onClick={() => setActiveTab('tube')}
-                    >
-                        Tube Cut Worksheet
-                    </button>
+                        <Printer className="h-3.5 w-3.5" />
+                        Print Labels
+                    </Button>
                 </div>
 
                 {/* Content */}

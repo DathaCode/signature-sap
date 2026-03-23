@@ -22,6 +22,10 @@ export default function OrderManagement() {
     const [worksheetPreview, setWorksheetPreview] = useState<{
         orderId: string;
         orderNumber: string;
+        customerName: string;
+        customerReference?: string;
+        notes?: string;
+        createdAt: string;
         data: WorksheetPreviewResponse;
     } | null>(null);
     const [sendingToProduction, setSendingToProduction] = useState<string | null>(null);
@@ -61,13 +65,13 @@ export default function OrderManagement() {
         }
     };
 
-    const handleSendToProduction = async (id: string, orderNumber: string) => {
+    const handleSendToProduction = async (order: Order) => {
         if (!await confirmToast({ title: 'Send to Production', message: 'This will run fabric cut optimization. Continue?', confirmText: 'Send', variant: 'warning' })) return;
-        setSendingToProduction(id);
+        setSendingToProduction(order.id);
         try {
-            const result = await adminOrderApi.sendToProduction(id);
+            const result = await adminOrderApi.sendToProduction(order.id);
             gooeyToast.success('Optimization complete');
-            setWorksheetPreview({ orderId: id, orderNumber, data: result });
+            setWorksheetPreview({ orderId: order.id, orderNumber: order.orderNumber, customerName: order.customerName, customerReference: order.customerReference, notes: order.notes, createdAt: order.createdAt, data: result });
             fetchOrders();
         } catch (error) {
             console.error(error);
@@ -77,10 +81,10 @@ export default function OrderManagement() {
         }
     };
 
-    const handleViewWorksheets = async (id: string, orderNumber: string) => {
+    const handleViewWorksheets = async (order: Order) => {
         try {
-            const result = await adminOrderApi.getWorksheetPreview(id);
-            setWorksheetPreview({ orderId: id, orderNumber, data: result });
+            const result = await adminOrderApi.getWorksheetPreview(order.id);
+            setWorksheetPreview({ orderId: order.id, orderNumber: order.orderNumber, customerName: order.customerName, customerReference: order.customerReference, notes: order.notes, createdAt: order.createdAt, data: result });
         } catch (error) {
             console.error(error);
             gooeyToast.error('No worksheet data available');
@@ -320,7 +324,7 @@ export default function OrderManagement() {
                                                         {order.status === 'CONFIRMED' && (
                                                             <Button
                                                                 size="sm"
-                                                                onClick={() => handleSendToProduction(order.id, order.orderNumber)}
+                                                                onClick={() => handleSendToProduction(order)}
                                                                 disabled={sendingToProduction === order.id}
                                                             >
                                                                 {sendingToProduction === order.id ? (
@@ -336,7 +340,7 @@ export default function OrderManagement() {
                                                             <Button
                                                                 size="sm"
                                                                 variant="outline"
-                                                                onClick={() => handleViewWorksheets(order.id, order.orderNumber)}
+                                                                onClick={() => handleViewWorksheets(order)}
                                                             >
                                                                 <FileText className="mr-2 h-4 w-4" />
                                                                 Worksheets
@@ -366,6 +370,10 @@ export default function OrderManagement() {
                 <WorksheetPreview
                     orderId={worksheetPreview.orderId}
                     orderNumber={worksheetPreview.orderNumber}
+                    customerName={worksheetPreview.customerName}
+                    customerReference={worksheetPreview.customerReference}
+                    notes={worksheetPreview.notes}
+                    createdAt={worksheetPreview.createdAt}
                     data={worksheetPreview.data}
                     onClose={() => setWorksheetPreview(null)}
                     onAccepted={() => {

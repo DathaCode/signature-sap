@@ -1,12 +1,17 @@
 // @ts-ignore - pdfkit types may not be available in all environments
 import PDFDocument from 'pdfkit';
+import path from 'path';
 import { OptimizationResult } from './cutlistOptimizer.service';
 import { TubeCutResult } from './tubeCutOptimizer.service';
+
+const LOGO_PATH = path.join(__dirname, '../assets/logo.png');
 
 interface OrderInfo {
     orderNumber: string;
     customerName: string;
     orderDate: Date;
+    customerReference?: string;
+    notes?: string;
 }
 
 /**
@@ -377,18 +382,77 @@ export class WorksheetExportService {
         // DETAIL TABLE PAGE(S) — landscape A4 with wider columns
         // ====================================================================
         doc.addPage();
-        doc.fontSize(16).font('Helvetica-Bold').fillColor('#1B2B3A')
-            .text('Fabric Cut Worksheet — Detail Table', 30, 25, { align: 'center' });
-        doc.fontSize(9).font('Helvetica').fillColor('#555')
-            .text(
-                `Order: ${orderInfo.orderNumber}  |  Customer: ${orderInfo.customerName}  |  Date: ${orderInfo.orderDate.toISOString().split('T')[0]}`,
-                30, 42, { align: 'center' }
-            );
-        doc.y = 62;
 
-        // Column widths sized for landscape A4 (841pt wide). Total ~757pt from x=30.
-        const colWidths = [38, 75, 58, 55, 40, 55, 130, 35, 70, 60, 60, 50, 26];
-        const headers = ['Blind#', 'Location', 'Fab Cut W', 'Calc D', 'Ctrl', 'Ctrl Col', 'Chain/Motor', 'Roll', 'Fabric', 'Colour', 'BR Colour', 'Chain', 'Rot'];
+        // ── Header info box (Logo + Order details + Bay) ──────────────────────
+        const HDR_X = 30;
+        const HDR_Y = 20;
+        const HDR_W = 781;
+        const HDR_H = 80;
+        const LOGO_BOX_W = 155;
+        const MID_BOX_W = 380;
+        const RIGHT_BOX_W = HDR_W - LOGO_BOX_W - MID_BOX_W;
+
+        // Outer border
+        doc.lineWidth(1).strokeColor('#333').rect(HDR_X, HDR_Y, HDR_W, HDR_H).stroke();
+        // Vertical dividers
+        doc.lineWidth(0.5).strokeColor('#777')
+            .moveTo(HDR_X + LOGO_BOX_W, HDR_Y).lineTo(HDR_X + LOGO_BOX_W, HDR_Y + HDR_H).stroke();
+        doc.lineWidth(0.5).strokeColor('#777')
+            .moveTo(HDR_X + LOGO_BOX_W + MID_BOX_W, HDR_Y).lineTo(HDR_X + LOGO_BOX_W + MID_BOX_W, HDR_Y + HDR_H).stroke();
+
+        // Logo (left box)
+        try {
+            doc.image(LOGO_PATH, HDR_X + 4, HDR_Y + 6, { fit: [LOGO_BOX_W - 8, 60] });
+        } catch {
+            doc.fontSize(10).font('Helvetica-Bold').fillColor('#1B2B3A')
+                .text('SIGNATURE SHADES', HDR_X + 4, HDR_Y + 28, { width: LOGO_BOX_W - 8, lineBreak: false });
+        }
+        doc.fontSize(6.5).font('Helvetica').fillColor('#666')
+            .text('Blinds | Curtains | Shutters', HDR_X + 4, HDR_Y + 65, { lineBreak: false });
+
+        // Middle box — order details
+        const MID_X = HDR_X + LOGO_BOX_W + 6;
+        const cxRef = orderInfo.customerReference
+            ? `${orderInfo.customerName}-${orderInfo.customerReference}`
+            : orderInfo.customerName;
+        const ordRecvd = orderInfo.orderDate.toLocaleDateString('en-AU');
+        const datePrinted = new Date().toLocaleDateString('en-AU');
+        const midRows: [string, string][] = [
+            ['Order #:', orderInfo.orderNumber],
+            ['Cx Ref:', cxRef],
+            ['Ord Rec\'d:', ordRecvd],
+            ['Date Printed:', datePrinted],
+            ['Remarks:', orderInfo.notes || ''],
+        ];
+        midRows.forEach(([label, val], idx) => {
+            const ry = HDR_Y + 8 + idx * 13.5;
+            doc.fontSize(7).font('Helvetica-Bold').fillColor('#444').text(label, MID_X, ry, { lineBreak: false });
+            doc.fontSize(7).font('Helvetica').fillColor('#000').text(val, MID_X + 72, ry, { lineBreak: false });
+        });
+
+        // Right box — Customer Name + BAY
+        const RGT_X = HDR_X + LOGO_BOX_W + MID_BOX_W + 6;
+        const RGT_W = RIGHT_BOX_W - 8;
+        const BAY_SPLIT_Y = HDR_Y + Math.round(HDR_H * 0.52);
+        doc.lineWidth(0.5).strokeColor('#777')
+            .moveTo(HDR_X + LOGO_BOX_W + MID_BOX_W, BAY_SPLIT_Y)
+            .lineTo(HDR_X + HDR_W, BAY_SPLIT_Y).stroke();
+        // Customer Name
+        doc.fontSize(6.5).font('Helvetica-Bold').fillColor('#444').text('Customer Name', RGT_X, HDR_Y + 5, { lineBreak: false });
+        doc.fontSize(8).font('Helvetica').fillColor('#000').text(orderInfo.customerName, RGT_X, HDR_Y + 16, { width: RGT_W, lineBreak: false });
+        // BAY label + empty box
+        doc.fontSize(6.5).font('Helvetica-Bold').fillColor('#444').text('BAY', RGT_X, BAY_SPLIT_Y + 4, { lineBreak: false });
+        doc.lineWidth(0.5).strokeColor('#aaa').rect(RGT_X + 22, BAY_SPLIT_Y + 2, RGT_W - 24, 22).stroke();
+
+        // Title below header
+        doc.fontSize(14).font('Helvetica-Bold').fillColor('#1B2B3A')
+            .text('Fabric Cut Worksheet — Detail Table', 30, HDR_Y + HDR_H + 8, { align: 'center' });
+        doc.y = HDR_Y + HDR_H + 28;
+
+        // Column widths sized for landscape A4 (841pt wide). Total ~752pt from x=30.
+        // Rot column removed; Bracket Type added (70pt); Chain/Motor reduced to 86pt.
+        const colWidths = [38, 75, 58, 55, 40, 55, 86, 35, 70, 60, 60, 50, 70];
+        const headers = ['Blind#', 'Location', 'Fab Cut W', 'Calc D', 'Ctrl', 'Ctrl Col', 'Chain/Motor', 'Roll', 'Fabric', 'Colour', 'BR Colour', 'Chain', 'Bracket Type'];
         const TABLE_LEFT = 30;
         const ROW_HEIGHT = 15; // Fixed row height in pt (prevents overlap)
         const TABLE_WIDTH = colWidths.reduce((a, b) => a + b, 0);
@@ -400,18 +464,20 @@ export class WorksheetExportService {
                 .text(`Fabric: ${fabricKey}`, TABLE_LEFT, doc.y, { underline: true });
             doc.y += 18;
 
-            // Column headers
-            let hdrX = TABLE_LEFT;
+            // Column headers (with cell borders + light blue bg)
             const hdrY = doc.y;
-            doc.fontSize(8).font('Helvetica-Bold').fillColor('#333');
+            const HDR_ROW_H = 15;
+            doc.fillColor('#DBEAFE').rect(TABLE_LEFT, hdrY - 2, TABLE_WIDTH, HDR_ROW_H).fill();
+            doc.lineWidth(0.5).strokeColor('#888').rect(TABLE_LEFT, hdrY - 2, TABLE_WIDTH, HDR_ROW_H).stroke();
+            let hdrX = TABLE_LEFT;
+            doc.fontSize(7.5).font('Helvetica-Bold').fillColor('#1E3A5F');
             headers.forEach((h, i) => {
-                doc.text(h, hdrX, hdrY, { lineBreak: false });
+                doc.lineWidth(0.3).strokeColor('#aaa')
+                    .moveTo(hdrX, hdrY - 2).lineTo(hdrX, hdrY - 2 + HDR_ROW_H).stroke();
+                doc.text(h, hdrX + 2, hdrY + 1, { lineBreak: false });
                 hdrX += colWidths[i];
             });
-            doc.y = hdrY + 13;
-            doc.strokeColor('#999').lineWidth(0.5)
-                .moveTo(TABLE_LEFT, doc.y).lineTo(TABLE_LEFT + TABLE_WIDTH, doc.y).stroke();
-            doc.y += 4;
+            doc.y = hdrY + HDR_ROW_H;
 
             doc.fontSize(8).font('Helvetica').fillColor('#000');
             for (const sheet of groupData.optimization.sheets) {
@@ -429,7 +495,11 @@ export class WorksheetExportService {
                     const chainSize = calculatedDrop > 0 ? getChainSize(calculatedDrop) : '';
 
                     const rowY = doc.y;
-                    let rx = TABLE_LEFT;
+                    const bracketType = item?.bracketType || '-';
+                    const isHighlighted =
+                        /dual/i.test(bracketType) ||
+                        /extension/i.test(bracketType) ||
+                        /motor/i.test(motorType);
                     const values = [
                         String(panel.blindNumber ?? ''),
                         item?.location || panel.location || panel.label,
@@ -443,10 +513,24 @@ export class WorksheetExportService {
                         item?.fabricColour || '-',
                         item?.bottomRailColour || '-',
                         chainSize ? `${chainSize}mm` : '-',
-                        panel.rotated ? '*' : '',
+                        bracketType,
                     ];
+                    // Row background (alternating)
+                    const altBg = (sortedPanels.indexOf(panel) % 2 === 1);
+                    if (altBg) {
+                        doc.fillColor('#F8FAFC').rect(TABLE_LEFT, rowY - 1, TABLE_WIDTH, ROW_HEIGHT).fill();
+                    }
+                    // Draw cells with borders
+                    let rx = TABLE_LEFT;
+                    doc.fontSize(8).font('Helvetica').fillColor('#000');
                     values.forEach((val, i) => {
-                        doc.text(String(val), rx, rowY, { lineBreak: false });
+                        const isBracketCol = (i === values.length - 1);
+                        if (isBracketCol && isHighlighted) {
+                            doc.fillColor('#FEF08A').rect(rx, rowY - 1, colWidths[i], ROW_HEIGHT).fill();
+                        }
+                        doc.lineWidth(0.3).strokeColor('#ccc')
+                            .rect(rx, rowY - 1, colWidths[i], ROW_HEIGHT).stroke();
+                        doc.fillColor('#000').text(String(val), rx + 2, rowY + 1, { lineBreak: false });
                         rx += colWidths[i];
                     });
                     // Fixed row advancement (prevents text-wrap overlap)

@@ -1116,6 +1116,8 @@ export const downloadWorksheet = async (
             orderNumber: order.orderNumber,
             customerName: order.customerName,
             orderDate: order.orderDate,
+            customerReference: order.customerReference ?? undefined,
+            notes: order.notes ?? undefined,
         };
 
         const fabricCutData = worksheetData.fabricCutData as Record<string, any>;

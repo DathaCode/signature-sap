@@ -89,22 +89,22 @@ export default function FabricCutWorksheet({ fabricCutData }: Props) {
                         </div>
 
                         <div className="overflow-x-auto">
-                            <table className="w-full text-xs">
+                            <table className="w-full text-xs border-collapse border border-gray-300">
                                 <thead>
-                                    <tr className="bg-gray-50 border-b">
-                                        <th className="px-2 py-1.5 text-left font-medium text-gray-600">Blind #</th>
-                                        <th className="px-2 py-1.5 text-left font-medium text-gray-600">Location</th>
-                                        <th className="px-2 py-1.5 text-right font-medium text-gray-600">Fab Cut W</th>
-                                        <th className="px-2 py-1.5 text-right font-medium text-gray-600">Calc D</th>
-                                        <th className="px-2 py-1.5 text-left font-medium text-gray-600">Ctrl</th>
-                                        <th className="px-2 py-1.5 text-left font-medium text-gray-600">Ctrl Col</th>
-                                        <th className="px-2 py-1.5 text-left font-medium text-gray-600">Chain/Motor</th>
-                                        <th className="px-2 py-1.5 text-left font-medium text-gray-600">Roll</th>
-                                        <th className="px-2 py-1.5 text-left font-medium text-gray-600">Fabric</th>
-                                        <th className="px-2 py-1.5 text-left font-medium text-gray-600">Colour</th>
-                                        <th className="px-2 py-1.5 text-left font-medium text-gray-600">BR Colour</th>
-                                        <th className="px-2 py-1.5 text-right font-medium text-gray-600">Chain Size</th>
-                                        <th className="px-2 py-1.5 text-center font-medium text-gray-600">Rot</th>
+                                    <tr className="bg-blue-50">
+                                        <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold text-blue-900">Blind #</th>
+                                        <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold text-blue-900">Location</th>
+                                        <th className="border border-gray-300 px-2 py-1.5 text-right font-semibold text-blue-900">Fab Cut W</th>
+                                        <th className="border border-gray-300 px-2 py-1.5 text-right font-semibold text-blue-900">Calc D</th>
+                                        <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold text-blue-900">Ctrl</th>
+                                        <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold text-blue-900">Ctrl Col</th>
+                                        <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold text-blue-900">Chain/Motor</th>
+                                        <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold text-blue-900">Roll</th>
+                                        <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold text-blue-900">Fabric</th>
+                                        <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold text-blue-900">Colour</th>
+                                        <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold text-blue-900">BR Colour</th>
+                                        <th className="border border-gray-300 px-2 py-1.5 text-right font-semibold text-blue-900">Chain</th>
+                                        <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold text-blue-900">Bracket Type</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -116,27 +116,32 @@ export default function FabricCutWorksheet({ fabricCutData }: Props) {
                                             const fabricCutW = item?.fabricCutWidth ?? (item ? item.width - 28 : '-');
                                             const calcD = item ? item.drop + 200 : 0;
                                             const chainSize = calcD > 0 ? getChainSize(calcD) : '-';
+                                            const bracketType = item?.bracketType || '-';
+                                            const motorType = item?.chainOrMotor || '';
+                                            const needsHighlight =
+                                                /dual/i.test(bracketType) ||
+                                                /extension/i.test(bracketType) ||
+                                                /motor/i.test(motorType);
+                                            const rowBg = idx % 2 === 0 ? '' : 'bg-gray-50';
                                             return (
-                                                <tr key={`${sheet.id}-${idx}`} className="border-b hover:bg-gray-50">
-                                                    <td className="px-2 py-1.5 font-semibold">{panel.blindNumber ?? (idx + 1)}</td>
-                                                    <td className="px-2 py-1.5 font-medium">{item?.location || panel.location || panel.label}</td>
-                                                    <td className="px-2 py-1.5 text-right font-semibold text-blue-700">
-                                                        {fabricCutW}
+                                                <tr key={`${sheet.id}-${idx}`} className={`${rowBg} hover:bg-blue-50`}>
+                                                    <td className="border border-gray-300 px-2 py-1.5 font-semibold">{panel.blindNumber ?? (idx + 1)}</td>
+                                                    <td className="border border-gray-300 px-2 py-1.5 font-medium">{item?.location || panel.location || panel.label}</td>
+                                                    <td className="border border-gray-300 px-2 py-1.5 text-right font-semibold text-blue-700">{fabricCutW}</td>
+                                                    <td className="border border-gray-300 px-2 py-1.5 text-right">{calcD > 0 ? calcD : '-'}</td>
+                                                    <td className="border border-gray-300 px-2 py-1.5">{item?.controlSide || '-'}</td>
+                                                    <td className="border border-gray-300 px-2 py-1.5">{item?.bracketColour || '-'}</td>
+                                                    <td className="border border-gray-300 px-2 py-1.5 max-w-[100px] truncate">
+                                                        {motorType.replace(/_/g, ' ') || '-'}
                                                     </td>
-                                                    <td className="px-2 py-1.5 text-right">
-                                                        {calcD > 0 ? calcD : '-'}
+                                                    <td className="border border-gray-300 px-2 py-1.5">{item?.roll || '-'}</td>
+                                                    <td className="border border-gray-300 px-2 py-1.5">{item?.fabricType || '-'}</td>
+                                                    <td className="border border-gray-300 px-2 py-1.5">{item?.fabricColour || '-'}</td>
+                                                    <td className="border border-gray-300 px-2 py-1.5">{item?.bottomRailColour || '-'}</td>
+                                                    <td className="border border-gray-300 px-2 py-1.5 text-right">{chainSize !== '-' ? `${chainSize}mm` : '-'}</td>
+                                                    <td className={`border border-gray-300 px-2 py-1.5 font-medium ${needsHighlight ? 'bg-yellow-200 text-yellow-900' : ''}`}>
+                                                        {bracketType}
                                                     </td>
-                                                    <td className="px-2 py-1.5">{item?.controlSide || '-'}</td>
-                                                    <td className="px-2 py-1.5">{item?.bracketColour || '-'}</td>
-                                                    <td className="px-2 py-1.5 truncate max-w-[80px]">
-                                                        {(item?.chainOrMotor || '-').replace(/_/g, ' ')}
-                                                    </td>
-                                                    <td className="px-2 py-1.5">{item?.roll || '-'}</td>
-                                                    <td className="px-2 py-1.5">{item?.fabricType || '-'}</td>
-                                                    <td className="px-2 py-1.5">{item?.fabricColour || '-'}</td>
-                                                    <td className="px-2 py-1.5">{item?.bottomRailColour || '-'}</td>
-                                                    <td className="px-2 py-1.5 text-right">{chainSize}mm</td>
-                                                    <td className="px-2 py-1.5 text-center">{panel.rotated ? '*' : ''}</td>
                                                 </tr>
                                             );
                                         })
