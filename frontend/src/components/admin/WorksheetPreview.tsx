@@ -6,7 +6,7 @@ import FabricCutWorksheet from './FabricCutWorksheet';
 import TubeCutWorksheet from './TubeCutWorksheet';
 import { gooeyToast } from 'goey-toast';
 import { confirmToast } from '../../utils/confirmToast';
-import { X, Download, Check, AlertTriangle, Printer } from 'lucide-react';
+import { X, Download, Check, AlertTriangle } from 'lucide-react';
 
 interface Props {
     orderId: string;
@@ -75,7 +75,7 @@ export default function WorksheetPreview({ orderId, orderNumber, customerName, c
                     <div><b>Roll:</b> ${item.roll || '-'}</div>
                     <div><b>Fabric:</b> ${item.fabricType || '-'} / ${item.fabricColour || '-'}</div>
                     <div><b>BR Colour:</b> ${item.bottomRailColour || '-'}</div>
-                    <div><b>Bracket:</b> ${item.bracketType || '-'}</div>
+                    <div><b>Bracket:</b> ${item.bracketType || 'Single'}</div>
                 </div>
             </div>
         `).join('');
@@ -185,43 +185,35 @@ export default function WorksheetPreview({ orderId, orderNumber, customerName, c
                     </div>
                 )}
 
-                {/* Tabs + Print Labels */}
-                <div className="flex items-center justify-between border-b px-6">
-                    <div className="flex">
-                        <button
-                            className={`px-4 py-3 text-sm font-medium border-b-2 ${activeTab === 'fabric'
-                                    ? 'border-blue-500 text-blue-600'
-                                    : 'border-transparent text-gray-500 hover:text-gray-700'
-                                }`}
-                            onClick={() => setActiveTab('fabric')}
-                        >
-                            Fabric Cut Worksheet
-                        </button>
-                        <button
-                            className={`px-4 py-3 text-sm font-medium border-b-2 ${activeTab === 'tube'
-                                    ? 'border-green-500 text-green-600'
-                                    : 'border-transparent text-gray-500 hover:text-gray-700'
-                                }`}
-                            onClick={() => setActiveTab('tube')}
-                        >
-                            Tube Cut Worksheet
-                        </button>
-                    </div>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handlePrintLabels}
-                        className="flex items-center gap-1.5 text-purple-700 border-purple-300 hover:bg-purple-50"
+                {/* Tabs */}
+                <div className="flex border-b px-6">
+                    <button
+                        className={`px-4 py-3 text-sm font-medium border-b-2 ${activeTab === 'fabric'
+                                ? 'border-blue-500 text-blue-600'
+                                : 'border-transparent text-gray-500 hover:text-gray-700'
+                            }`}
+                        onClick={() => setActiveTab('fabric')}
                     >
-                        <Printer className="h-3.5 w-3.5" />
-                        Print Labels
-                    </Button>
+                        Fabric Cut Worksheet
+                    </button>
+                    <button
+                        className={`px-4 py-3 text-sm font-medium border-b-2 ${activeTab === 'tube'
+                                ? 'border-green-500 text-green-600'
+                                : 'border-transparent text-gray-500 hover:text-gray-700'
+                            }`}
+                        onClick={() => setActiveTab('tube')}
+                    >
+                        Tube Cut Worksheet
+                    </button>
                 </div>
 
                 {/* Content */}
                 <div className="flex-1 overflow-auto p-6">
                     {activeTab === 'fabric' ? (
-                        <FabricCutWorksheet fabricCutData={previewData.worksheetData.fabricCutData} />
+                        <FabricCutWorksheet
+                            fabricCutData={previewData.worksheetData.fabricCutData}
+                            onPrintLabels={handlePrintLabels}
+                        />
                     ) : (
                         <TubeCutWorksheet tubeCutData={previewData.worksheetData.tubeCutData} />
                     )}

@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { FabricGroupData } from '../../types/order';
 import FabricCutPreview from './FabricCutPreview';
-import { LayoutGrid, Table } from 'lucide-react';
+import { LayoutGrid, Table, Printer } from 'lucide-react';
+import { Button } from '../ui/Button';
 
 /**
  * Determine chain size (mm) from total drop (Calc D = original drop + 200)
@@ -17,14 +18,15 @@ function getChainSize(calcDrop: number): number {
 
 interface Props {
     fabricCutData: Record<string, FabricGroupData>;
+    onPrintLabels?: () => void;
 }
 
-export default function FabricCutWorksheet({ fabricCutData }: Props) {
+export default function FabricCutWorksheet({ fabricCutData, onPrintLabels }: Props) {
     const [viewMode, setViewMode] = useState<'visual' | 'table'>('visual');
 
     return (
         <div className="space-y-6">
-            {/* View Mode Toggle */}
+            {/* View Mode Toggle + Print Labels */}
             <div className="flex items-center justify-between">
                 <div className="flex gap-2 bg-gray-100 p-1 rounded-lg">
                     <button
@@ -50,6 +52,17 @@ export default function FabricCutWorksheet({ fabricCutData }: Props) {
                         Table View
                     </button>
                 </div>
+                {onPrintLabels && (
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={onPrintLabels}
+                        className="flex items-center gap-1.5 text-purple-700 border-purple-300 hover:bg-purple-50"
+                    >
+                        <Printer className="h-3.5 w-3.5" />
+                        Print Labels
+                    </Button>
+                )}
             </div>
 
             {/* Visual Layout View */}
@@ -116,12 +129,10 @@ export default function FabricCutWorksheet({ fabricCutData }: Props) {
                                             const fabricCutW = item?.fabricCutWidth ?? (item ? item.width - 28 : '-');
                                             const calcD = item ? item.drop + 200 : 0;
                                             const chainSize = calcD > 0 ? getChainSize(calcD) : '-';
-                                            const bracketType = item?.bracketType || '-';
+                                            const bracketType = item?.bracketType || 'Single';
                                             const motorType = item?.chainOrMotor || '';
-                                            const needsHighlight =
-                                                /dual/i.test(bracketType) ||
-                                                /extension/i.test(bracketType) ||
-                                                /motor/i.test(motorType);
+                                            const isBracketHighlighted = /dual/i.test(bracketType) || /extension/i.test(bracketType);
+                                            const isMotorHighlighted = /motor/i.test(motorType);
                                             const rowBg = idx % 2 === 0 ? '' : 'bg-gray-50';
                                             return (
                                                 <tr key={`${sheet.id}-${idx}`} className={`${rowBg} hover:bg-blue-50`}>
@@ -131,7 +142,7 @@ export default function FabricCutWorksheet({ fabricCutData }: Props) {
                                                     <td className="border border-gray-300 px-2 py-1.5 text-right">{calcD > 0 ? calcD : '-'}</td>
                                                     <td className="border border-gray-300 px-2 py-1.5">{item?.controlSide || '-'}</td>
                                                     <td className="border border-gray-300 px-2 py-1.5">{item?.bracketColour || '-'}</td>
-                                                    <td className="border border-gray-300 px-2 py-1.5 max-w-[100px] truncate">
+                                                    <td className={`border border-gray-300 px-2 py-1.5 max-w-[100px] truncate ${isMotorHighlighted ? 'bg-yellow-200 text-yellow-900 font-medium' : ''}`}>
                                                         {motorType.replace(/_/g, ' ') || '-'}
                                                     </td>
                                                     <td className="border border-gray-300 px-2 py-1.5">{item?.roll || '-'}</td>
@@ -139,7 +150,7 @@ export default function FabricCutWorksheet({ fabricCutData }: Props) {
                                                     <td className="border border-gray-300 px-2 py-1.5">{item?.fabricColour || '-'}</td>
                                                     <td className="border border-gray-300 px-2 py-1.5">{item?.bottomRailColour || '-'}</td>
                                                     <td className="border border-gray-300 px-2 py-1.5 text-right">{chainSize !== '-' ? `${chainSize}mm` : '-'}</td>
-                                                    <td className={`border border-gray-300 px-2 py-1.5 font-medium ${needsHighlight ? 'bg-yellow-200 text-yellow-900' : ''}`}>
+                                                    <td className={`border border-gray-300 px-2 py-1.5 font-medium ${isBracketHighlighted ? 'bg-yellow-200 text-yellow-900' : ''}`}>
                                                         {bracketType}
                                                     </td>
                                                 </tr>

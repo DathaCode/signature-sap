@@ -474,7 +474,7 @@ export class WorksheetExportService {
             headers.forEach((h, i) => {
                 doc.lineWidth(0.3).strokeColor('#aaa')
                     .moveTo(hdrX, hdrY - 2).lineTo(hdrX, hdrY - 2 + HDR_ROW_H).stroke();
-                doc.text(h, hdrX + 2, hdrY + 1, { lineBreak: false });
+                doc.text(h, hdrX + 2, hdrY + 1, { lineBreak: false, width: colWidths[i] - 4, ellipsis: true });
                 hdrX += colWidths[i];
             });
             doc.y = hdrY + HDR_ROW_H;
@@ -495,11 +495,12 @@ export class WorksheetExportService {
                     const chainSize = calculatedDrop > 0 ? getChainSize(calculatedDrop) : '';
 
                     const rowY = doc.y;
-                    const bracketType = item?.bracketType || '-';
-                    const isHighlighted =
-                        /dual/i.test(bracketType) ||
-                        /extension/i.test(bracketType) ||
-                        /motor/i.test(motorType);
+                    const bracketType = item?.bracketType || 'Single';
+                    const isBracketHighlighted = /dual/i.test(bracketType) || /extension/i.test(bracketType);
+                    const isMotorHighlighted = /motor/i.test(motorType);
+                    // CHAIN/MOTOR col = index 6, BRACKET TYPE col = last (index 12)
+                    const CHAIN_MOTOR_COL = 6;
+                    const BRACKET_TYPE_COL = 12;
                     const values = [
                         String(panel.blindNumber ?? ''),
                         item?.location || panel.location || panel.label,
@@ -520,17 +521,24 @@ export class WorksheetExportService {
                     if (altBg) {
                         doc.fillColor('#F8FAFC').rect(TABLE_LEFT, rowY - 1, TABLE_WIDTH, ROW_HEIGHT).fill();
                     }
-                    // Draw cells with borders
+                    // Draw cells with borders and highlights
                     let rx = TABLE_LEFT;
-                    doc.fontSize(8).font('Helvetica').fillColor('#000');
+                    doc.fontSize(7.5).font('Helvetica').fillColor('#000');
                     values.forEach((val, i) => {
-                        const isBracketCol = (i === values.length - 1);
-                        if (isBracketCol && isHighlighted) {
+                        const shouldHighlight =
+                            (i === BRACKET_TYPE_COL && isBracketHighlighted) ||
+                            (i === CHAIN_MOTOR_COL && isMotorHighlighted);
+                        if (shouldHighlight) {
                             doc.fillColor('#FEF08A').rect(rx, rowY - 1, colWidths[i], ROW_HEIGHT).fill();
                         }
                         doc.lineWidth(0.3).strokeColor('#ccc')
                             .rect(rx, rowY - 1, colWidths[i], ROW_HEIGHT).stroke();
-                        doc.fillColor('#000').text(String(val), rx + 2, rowY + 1, { lineBreak: false });
+                        // Constrain text to cell width to prevent overflow
+                        doc.fillColor('#000').text(String(val), rx + 2, rowY + 1, {
+                            lineBreak: false,
+                            width: colWidths[i] - 4,
+                            ellipsis: true,
+                        });
                         rx += colWidths[i];
                     });
                     // Fixed row advancement (prevents text-wrap overlap)
