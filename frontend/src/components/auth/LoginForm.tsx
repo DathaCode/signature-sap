@@ -6,11 +6,13 @@ import { Input } from '../ui/Input';
 import { Label } from '../ui/Label';
 import { Link, useNavigate } from 'react-router-dom';
 import { LoginCredentials } from '../../types/auth';
+import { Clock } from 'lucide-react';
 
 export function LoginForm() {
     const { login } = useAuth();
     const navigate = useNavigate();
     const [isLoading, setIsLoading] = useState(false);
+    const [pendingApproval, setPendingApproval] = useState(false);
 
     const { register, handleSubmit, formState: { errors } } = useForm<LoginCredentials>();
 
@@ -18,13 +20,40 @@ export function LoginForm() {
         setIsLoading(true);
         try {
             await login(data);
-            navigate('/dashboard'); // User dashboard
-        } catch (error) {
+            navigate('/dashboard');
+        } catch (error: any) {
+            const message: string = error?.response?.data?.message || '';
+            if (error?.response?.status === 403 && message.toLowerCase().includes('approval')) {
+                setPendingApproval(true);
+            }
             console.error('Login failed', error);
         } finally {
             setIsLoading(false);
         }
     };
+
+    if (pendingApproval) {
+        return (
+            <div className="w-full max-w-md space-y-6 bg-white p-8 rounded-lg shadow-md text-center">
+                <div className="flex justify-center">
+                    <div className="h-16 w-16 rounded-full bg-amber-100 flex items-center justify-center">
+                        <Clock className="h-8 w-8 text-amber-600" />
+                    </div>
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900">Account Awaiting Approval</h2>
+                <p className="text-gray-600">
+                    Your account has been registered but is waiting for administrator approval.
+                    You'll be able to sign in once your account is approved.
+                </p>
+                <p className="text-sm text-gray-500">
+                    Please contact your administrator if you need immediate access.
+                </p>
+                <Button variant="outline" className="w-full" onClick={() => setPendingApproval(false)}>
+                    Back to Sign In
+                </Button>
+            </div>
+        );
+    }
 
     return (
         <div className="w-full max-w-md space-y-8 bg-white p-8 rounded-lg shadow-md">

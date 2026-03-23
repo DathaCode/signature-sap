@@ -9,11 +9,19 @@ import { format } from 'date-fns';
 import { gooeyToast } from 'goey-toast';
 import { confirmToast } from '../../utils/confirmToast';
 import api, { quoteApi } from '../../services/api';
+import { FABRIC_DATA } from '../../utils/pricing';
 
 const BRACKET_TYPES = ['Single', 'Single Extension', 'Dual Left', 'Dual Right'];
 const BRACKET_COLOURS = ['White', 'Black', 'Dune', 'Bone', 'Anodised'];
 const RAIL_TYPES = ['D30', 'Oval'];
 const RAIL_COLOURS = ['White', 'Black', 'Dune', 'Bone', 'Anodised'];
+const MOTOR_OPTIONS = [
+    'TBS winder-32mm', 'Acmeda winder-29mm',
+    'Automate 1.1NM Li-Ion Quiet Motor', 'Automate 0.7NM Li-Ion Quiet Motor',
+    'Automate 2NM Li-Ion Quiet Motor', 'Automate 3NM Li-Ion Motor', 'Automate E6 6NM Motor',
+    'Alpha 1NM Battery Motor', 'Alpha 2NM Battery Motor', 'Alpha 3NM Battery Motor', 'Alpha AC 5NM Motor',
+];
+const CHAIN_TYPE_OPTIONS = ['Stainless Steel', 'Plastic Pure White'];
 
 function EditQuoteItem({ item, index, onChange, onRemove }: {
     item: QuoteItem;
@@ -65,10 +73,43 @@ function EditQuoteItem({ item, index, onChange, onRemove }: {
                 </div>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                <div><label className="text-xs text-gray-500">Material</label><Input className={inp} value={item.material || ''} onChange={e => f('material', e.target.value)} /></div>
-                <div><label className="text-xs text-gray-500">Fabric Type</label><Input className={inp} value={item.fabricType || ''} onChange={e => f('fabricType', e.target.value)} /></div>
-                <div><label className="text-xs text-gray-500">Fabric Colour</label><Input className={inp} value={item.fabricColour || ''} onChange={e => f('fabricColour', e.target.value)} /></div>
-                <div><label className="text-xs text-gray-500">Chain/Motor</label><Input className={inp} value={item.chainOrMotor || ''} onChange={e => f('chainOrMotor', e.target.value)} /></div>
+                <div><label className="text-xs text-gray-500">Material</label>
+                    <select className={sel} value={item.material || ''} onChange={e => {
+                        f('material', e.target.value);
+                        f('fabricType', '');
+                        f('fabricColour', '');
+                    }}>
+                        <option value="">-</option>
+                        {Object.keys(FABRIC_DATA).map(brand => <option key={brand}>{brand}</option>)}
+                    </select>
+                </div>
+                <div><label className="text-xs text-gray-500">Fabric Type</label>
+                    <select className={sel} value={item.fabricType || ''} onChange={e => {
+                        f('fabricType', e.target.value);
+                        f('fabricColour', '');
+                    }}>
+                        <option value="">-</option>
+                        {item.material && FABRIC_DATA[item.material]
+                            ? Object.keys(FABRIC_DATA[item.material]).map(t => <option key={t}>{t}</option>)
+                            : null
+                        }
+                    </select>
+                </div>
+                <div><label className="text-xs text-gray-500">Fabric Colour</label>
+                    <select className={sel} value={item.fabricColour || ''} onChange={e => f('fabricColour', e.target.value)}>
+                        <option value="">-</option>
+                        {item.material && item.fabricType && FABRIC_DATA[item.material]?.[item.fabricType]
+                            ? FABRIC_DATA[item.material][item.fabricType].colors.map(c => <option key={c}>{c}</option>)
+                            : null
+                        }
+                    </select>
+                </div>
+                <div><label className="text-xs text-gray-500">Chain/Motor</label>
+                    <select className={sel} value={item.chainOrMotor || ''} onChange={e => f('chainOrMotor', e.target.value)}>
+                        <option value="">-</option>
+                        {MOTOR_OPTIONS.map(m => <option key={m}>{m}</option>)}
+                    </select>
+                </div>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 <div><label className="text-xs text-gray-500">Bottom Rail</label>
@@ -83,7 +124,12 @@ function EditQuoteItem({ item, index, onChange, onRemove }: {
                         {RAIL_COLOURS.map(c => <option key={c}>{c}</option>)}
                     </select>
                 </div>
-                <div><label className="text-xs text-gray-500">Chain Type</label><Input className={inp} value={item.chainType || ''} onChange={e => f('chainType', e.target.value)} /></div>
+                <div><label className="text-xs text-gray-500">Chain Type</label>
+                    <select className={sel} value={item.chainType || ''} onChange={e => f('chainType', e.target.value)}>
+                        <option value="">-</option>
+                        {CHAIN_TYPE_OPTIONS.map(c => <option key={c}>{c}</option>)}
+                    </select>
+                </div>
                 <div><label className="text-xs text-gray-500">Price ($)</label><Input className={inp} type="number" step="0.01" value={item.price || 0} onChange={e => f('price', Number(e.target.value))} /></div>
             </div>
         </div>

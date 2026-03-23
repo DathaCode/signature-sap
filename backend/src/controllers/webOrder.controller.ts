@@ -148,15 +148,15 @@ const OrderItemSchema = z.object({
     bottomRailType: z.string().optional(),
     bottomRailColour: z.string().optional(),
     // Frontend may send pricing fields - accept but ignore (recalculated server-side)
-    price: z.number().optional(),
-    fabricGroup: z.number().optional(),
-    discountPercent: z.number().optional(),
-    fabricPrice: z.number().optional(),
-    motorPrice: z.number().optional(),
-    bracketPrice: z.number().optional(),
-    chainPrice: z.number().optional(),
-    clipsPrice: z.number().optional(),
-    componentPrice: z.number().optional(),
+    price: z.coerce.number().optional(),
+    fabricGroup: z.coerce.number().optional(),
+    discountPercent: z.coerce.number().optional(),
+    fabricPrice: z.coerce.number().optional(),
+    motorPrice: z.coerce.number().optional(),
+    bracketPrice: z.coerce.number().optional(),
+    chainPrice: z.coerce.number().optional(),
+    clipsPrice: z.coerce.number().optional(),
+    componentPrice: z.coerce.number().optional(),
 });
 
 const CreateOrderSchema = z.object({

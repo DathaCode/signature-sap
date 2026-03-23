@@ -29,23 +29,26 @@ const prisma = new PrismaClient();
 // Validation schemas (reuse from webOrder.controller.ts)
 const QuoteItemSchema = z.object({
     location: z.string().min(1, 'Location is required'),
-    width: z.number().min(100, 'Width must be at least 100mm'),
-    drop: z.number().min(100, 'Drop must be at least 100mm'),
+    width: z.coerce.number().min(100, 'Width must be at least 100mm'),
+    drop: z.coerce.number().min(100, 'Drop must be at least 100mm'),
     fixing: z.string().optional(),
     bracketType: z.string().optional(),
     bracketColour: z.string().optional(),
     controlSide: z.string().optional(),
     chainOrMotor: z.string().optional(),
-    chainType: z.string().optional(),
+    chainType: z.string().optional().nullable(),
     roll: z.string().optional(),
     material: z.string().optional(),
     fabricType: z.string().optional(),
     fabricColour: z.string().optional(),
     bottomRailType: z.string().optional(),
     bottomRailColour: z.string().optional(),
-    price: z.number().optional(),
-    fabricGroup: z.number().optional(),
-    discountPercent: z.number().optional(),
+    price: z.coerce.number().optional(),
+    fabricGroup: z.coerce.number().optional(),
+    discountPercent: z.coerce.number().optional(),
+    fabricPrice: z.coerce.number().optional(),
+    motorPrice: z.coerce.number().optional(),
+    bracketPrice: z.coerce.number().optional(),
 });
 
 const CreateQuoteSchema = z.object({

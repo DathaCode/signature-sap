@@ -263,7 +263,11 @@ export default function OrderManagement() {
                                         const statusActions = getStatusActions(order);
                                         return (
                                             <tr key={order.id} className="border-b transition-colors hover:bg-muted/50">
-                                                <td className="p-4 align-middle font-medium">{order.orderNumber}</td>
+                                                <td className="p-4 align-middle font-medium">
+                                                    <Link to={`/admin/orders/${order.id}`} className="text-blue-700 hover:underline">
+                                                        {order.orderNumber}
+                                                    </Link>
+                                                </td>
                                                 <td className="p-4 align-middle">{format(new Date(order.createdAt), 'MMM d, yyyy')}</td>
                                                 <td className="p-4 align-middle">
                                                     <div className="flex flex-col">
@@ -273,9 +277,9 @@ export default function OrderManagement() {
                                                 </td>
                                                 <td className="p-4 align-middle">
                                                     {order.customerReference ? (
-                                                        <span className="text-sm font-medium text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded">
+                                                        <Link to={`/admin/orders/${order.id}`} className="text-sm font-medium text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded hover:bg-indigo-100">
                                                             {order.customerReference}
-                                                        </span>
+                                                        </Link>
                                                     ) : (
                                                         <span className="text-xs text-muted-foreground">—</span>
                                                     )}
