@@ -281,7 +281,7 @@ export default function AdminOrderDetails() {
         if (!order) return;
         setDownloadingLabels(true);
         try {
-            const blob = await webOrderApi.downloadLabels(order.id);
+            const blob = await adminOrderApi.downloadLabels(order.id);
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
