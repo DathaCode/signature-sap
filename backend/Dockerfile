@@ -47,7 +47,7 @@ RUN npx prisma generate
 COPY . .
 
 # Compile migration/seed/admin scripts
-RUN npx tsc prisma/seed.ts scripts/create-admin.ts --outDir dist --skipLibCheck --module commonjs --target es2020 --esModuleInterop
+RUN npx tsc prisma/seed.ts scripts/create-admin.ts scripts/create-warehouse-user.ts --outDir dist --skipLibCheck --module commonjs --target es2020 --esModuleInterop
 
 RUN npm run build && npm prune --production
 

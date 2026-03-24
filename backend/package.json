@@ -17,6 +17,7 @@
         "seed:pricing": "tsx scripts/seed-pricing.ts",
         "seed:prod": "node dist/prisma/seed.js",
         "create-admin:prod": "node dist/scripts/create-admin.js",
+        "create:warehouse:prod": "node dist/scripts/create-warehouse-user.js",
         "lint": "eslint src/**/*.ts",
         "test": "jest"
     },
