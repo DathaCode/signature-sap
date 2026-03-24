@@ -54,6 +54,34 @@ export default function TubeCutWorksheet({ tubeCutData }: Props) {
                             </tfoot>
                         </table>
                     </div>
+
+                    {/* Cutting Order */}
+                    {group.cuttingOrder && group.cuttingOrder.length > 0 && (
+                        <div className="border-t bg-gray-50 px-4 py-3">
+                            <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">
+                                Cutting Order — {group.piecesToDeduct} × {group.stockLength}mm stock pieces
+                            </h4>
+                            <div className="space-y-2">
+                                {group.cuttingOrder.map((piece) => (
+                                    <div key={piece.pieceNumber} className="flex items-start gap-3 text-xs">
+                                        <span className="shrink-0 font-bold text-green-700 w-14">
+                                            Piece {piece.pieceNumber}
+                                        </span>
+                                        <div className="flex flex-wrap gap-1 flex-1">
+                                            {piece.cuts.map((cut, ci) => (
+                                                <span key={ci} className="bg-green-100 text-green-800 px-2 py-0.5 rounded font-medium">
+                                                    {cut.location} — {cut.width}mm
+                                                </span>
+                                            ))}
+                                        </div>
+                                        <span className="shrink-0 text-gray-400 whitespace-nowrap">
+                                            Used {piece.totalUsed}mm · Waste {piece.waste}mm
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
             ))}
 

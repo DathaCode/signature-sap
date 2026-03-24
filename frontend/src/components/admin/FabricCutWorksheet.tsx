@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { FabricGroupData } from '../../types/order';
 import FabricCutPreview from './FabricCutPreview';
-import { LayoutGrid, Table, Printer } from 'lucide-react';
+import { LayoutGrid, Table, Printer, Loader2 } from 'lucide-react';
 import { Button } from '../ui/Button';
 
 /**
@@ -19,9 +19,10 @@ function getChainSize(calcDrop: number): number {
 interface Props {
     fabricCutData: Record<string, FabricGroupData>;
     onPrintLabels?: () => void;
+    printingLabels?: boolean;
 }
 
-export default function FabricCutWorksheet({ fabricCutData, onPrintLabels }: Props) {
+export default function FabricCutWorksheet({ fabricCutData, onPrintLabels, printingLabels }: Props) {
     const [viewMode, setViewMode] = useState<'visual' | 'table'>('visual');
 
     return (
@@ -57,10 +58,13 @@ export default function FabricCutWorksheet({ fabricCutData, onPrintLabels }: Pro
                         variant="outline"
                         size="sm"
                         onClick={onPrintLabels}
+                        disabled={printingLabels}
                         className="flex items-center gap-1.5 text-purple-700 border-purple-300 hover:bg-purple-50"
                     >
-                        <Printer className="h-3.5 w-3.5" />
-                        Print Labels
+                        {printingLabels
+                            ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            : <Printer className="h-3.5 w-3.5" />}
+                        {printingLabels ? 'Generating...' : 'Print Labels'}
                     </Button>
                 )}
             </div>

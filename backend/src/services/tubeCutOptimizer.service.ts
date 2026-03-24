@@ -6,6 +6,13 @@ export interface TubeBlindInput {
     orderItemId?: number;
 }
 
+export interface CutPiece {
+    pieceNumber: number;
+    cuts: { location: string; width: number }[];
+    totalUsed: number;
+    waste: number;
+}
+
 export interface TubeGroup {
     bottomRailType: string;
     bottomRailColour: string;
@@ -16,6 +23,7 @@ export interface TubeGroup {
     finalQuantity: number;
     piecesToDeduct: number;
     stockLength: number;
+    cuttingOrder: CutPiece[];
 }
 
 export interface TubeCutResult {
@@ -50,6 +58,9 @@ export class TubeCutOptimizer {
             const finalQuantity = baseQuantity + wastage;
             const piecesToDeduct = Math.ceil(finalQuantity);
 
+            // Build cutting order: greedy first-fit bin packing using tube cut widths (originalWidth - 28)
+            const cuttingOrder = buildCuttingOrder(groupBlinds, BOTTOM_BAR_STOCK_LENGTH);
+
             groups.push({
                 bottomRailType: first.bottomRailType,
                 bottomRailColour: first.bottomRailColour,
@@ -64,6 +75,7 @@ export class TubeCutOptimizer {
                 finalQuantity: Math.round(finalQuantity * 1000) / 1000,
                 piecesToDeduct,
                 stockLength: BOTTOM_BAR_STOCK_LENGTH,
+                cuttingOrder,
             });
 
             totalPiecesNeeded += piecesToDeduct;
@@ -71,4 +83,34 @@ export class TubeCutOptimizer {
 
         return { groups, totalPiecesNeeded };
     }
+}
+
+/**
+ * Greedy first-fit bin packing for tube cutting.
+ * Sorts blinds by width descending, then fills each stock piece.
+ * Uses tube cut width = originalWidth - 28mm.
+ */
+function buildCuttingOrder(blinds: TubeBlindInput[], stockLength: number): CutPiece[] {
+    const sorted = [...blinds].sort((a, b) => b.originalWidth - a.originalWidth);
+    const pieces: CutPiece[] = [];
+
+    for (const blind of sorted) {
+        const cutW = blind.originalWidth - 28;
+        // Find first piece with enough remaining space
+        const piece = pieces.find(p => p.totalUsed + cutW <= stockLength);
+        if (piece) {
+            piece.cuts.push({ location: blind.location, width: cutW });
+            piece.totalUsed += cutW;
+            piece.waste = stockLength - piece.totalUsed;
+        } else {
+            pieces.push({
+                pieceNumber: pieces.length + 1,
+                cuts: [{ location: blind.location, width: cutW }],
+                totalUsed: cutW,
+                waste: stockLength - cutW,
+            });
+        }
+    }
+
+    return pieces;
 }

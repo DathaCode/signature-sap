@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BlindItem, FabricGroupData, WorksheetPreviewResponse } from '../../types/order';
+import { WorksheetPreviewResponse } from '../../types/order';
 import { adminOrderApi } from '../../services/api';
 import { Button } from '../ui/Button';
 import FabricCutWorksheet from './FabricCutWorksheet';
@@ -11,100 +11,42 @@ import { X, Download, Check, AlertTriangle } from 'lucide-react';
 interface Props {
     orderId: string;
     orderNumber: string;
-    customerName: string;
+    customerName?: string;
     customerReference?: string;
     notes?: string;
-    createdAt: string;
+    createdAt?: string;
     data: WorksheetPreviewResponse;
     onClose: () => void;
     onAccepted: () => void;
 }
 
-/** Collect all blind items from fabricCutData, sorted by blind number */
-function getAllBlindsForLabels(fabricCutData: Record<string, FabricGroupData>): Array<{ blindNumber: number; item: BlindItem }> {
-    const seen = new Set<number>();
-    const result: Array<{ blindNumber: number; item: BlindItem }> = [];
-    for (const groupData of Object.values(fabricCutData)) {
-        for (const sheet of groupData.optimization.sheets) {
-            for (const panel of sheet.panels) {
-                const itemId = (panel as any).orderItemId;
-                if (panel.blindNumber && itemId && !seen.has(itemId)) {
-                    const item = groupData.items.find((it: any) => it.id === itemId);
-                    if (item) {
-                        seen.add(itemId);
-                        result.push({ blindNumber: panel.blindNumber, item });
-                    }
-                }
-            }
-        }
-    }
-    return result.sort((a, b) => a.blindNumber - b.blindNumber);
-}
-
-export default function WorksheetPreview({ orderId, orderNumber, customerName, customerReference, notes: _notes, createdAt, data, onClose, onAccepted }: Props) {
+export default function WorksheetPreview({ orderId, orderNumber, data, onClose, onAccepted }: Props) {
     const [activeTab, setActiveTab] = useState<'fabric' | 'tube'>('fabric');
     const [accepting, setAccepting] = useState(false);
     const [previewData] = useState(data);
     const [downloading, setDownloading] = useState<string | null>(null);
+    const [printingLabels, setPrintingLabels] = useState(false);
 
-    const cxRef = customerReference ? `${customerName}-${customerReference}` : customerName;
-
-    const handlePrintLabels = () => {
-        const allBlinds = getAllBlindsForLabels(previewData.worksheetData.fabricCutData);
-        const total = allBlinds.length;
-        if (total === 0) { gooeyToast.error('No blind items found'); return; }
-
-        const logoUrl = `${window.location.origin}/logo.png`;
-        const ordDate = createdAt ? new Date(createdAt).toLocaleDateString('en-AU') : '';
-
-        const labelsHtml = allBlinds.map(({ blindNumber, item }) => `
-            <div class="label">
-                <div class="label-header">
-                    <img src="${logoUrl}" class="label-logo" alt="Signature Shades" onerror="this.style.display='none'" />
-                    <span class="blind-count">${blindNumber} of ${total}</span>
-                </div>
-                <div class="order-info">
-                    <div><b>Order ref:</b> ${orderNumber}</div>
-                    <div><b>Cx Ref:</b> ${cxRef}</div>
-                    ${ordDate ? `<div><b>Date:</b> ${ordDate}</div>` : ''}
-                </div>
-                <div class="divider"></div>
-                <div class="blind-details">
-                    <div><b>Location:</b> ${item.location || '-'}</div>
-                    <div><b>W &times; H:</b> ${item.width} &times; ${item.drop}</div>
-                    <div><b>Roll:</b> ${item.roll || '-'}</div>
-                    <div><b>Fabric:</b> ${item.fabricType || '-'} / ${item.fabricColour || '-'}</div>
-                    <div><b>BR Colour:</b> ${item.bottomRailColour || '-'}</div>
-                    <div><b>Bracket:</b> ${item.bracketType || 'Single'}</div>
-                </div>
-            </div>
-        `).join('');
-
-        const printWindow = window.open('', '_blank', 'width=500,height=700');
-        if (!printWindow) { gooeyToast.error('Popup blocked — allow popups to print labels'); return; }
-
-        printWindow.document.write(`<!DOCTYPE html>
-<html><head>
-<meta charset="utf-8">
-<title>Labels - ${orderNumber}</title>
-<style>
-  @page { size: 62mm 100mm; margin: 2mm; }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: Arial, Helvetica, sans-serif; font-size: 7.5pt; background: #fff; }
-  .label { width: 58mm; height: 96mm; padding: 1.5mm; display: flex; flex-direction: column; gap: 1mm; page-break-after: always; overflow: hidden; }
-  .label:last-child { page-break-after: avoid; }
-  .label-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 1mm; border-bottom: 0.5pt solid #333; }
-  .label-logo { height: 10mm; max-width: 32mm; object-fit: contain; }
-  .blind-count { font-size: 9pt; font-weight: bold; white-space: nowrap; }
-  .order-info { font-size: 7pt; line-height: 1.4; }
-  .divider { border-top: 0.4pt solid #bbb; margin: 0.5mm 0; }
-  .blind-details div { font-size: 7.5pt; line-height: 1.45; }
-  b { font-weight: bold; }
-</style>
-</head><body>${labelsHtml}</body></html>`);
-        printWindow.document.close();
-        printWindow.focus();
-        setTimeout(() => { printWindow.print(); }, 500);
+    const handlePrintLabels = async () => {
+        setPrintingLabels(true);
+        try {
+            const blob = await adminOrderApi.downloadLabels(orderId);
+            const url = URL.createObjectURL(blob);
+            const win = window.open(url, '_blank');
+            if (!win) {
+                // Fallback: trigger download if popup blocked
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `labels-${orderNumber}.pdf`;
+                a.click();
+                gooeyToast.info('Labels downloaded — open and print from your PDF viewer');
+            }
+            setTimeout(() => URL.revokeObjectURL(url), 10000);
+        } catch {
+            gooeyToast.error('Failed to generate labels');
+        } finally {
+            setPrintingLabels(false);
+        }
     };
 
     const isAccepted = !!previewData.worksheetData.acceptedAt;
@@ -132,7 +74,10 @@ export default function WorksheetPreview({ orderId, orderNumber, customerName, c
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `${orderNumber}-${type}`;
+            // Ensure correct file extension
+            const ext = type.endsWith('-csv') ? 'csv' : 'pdf';
+            const baseName = type.replace(/-csv$/, '').replace(/-pdf$/, '');
+            a.download = `${orderNumber}-${baseName}.${ext}`;
             a.click();
             URL.revokeObjectURL(url);
         } catch (error) {
@@ -213,6 +158,7 @@ export default function WorksheetPreview({ orderId, orderNumber, customerName, c
                         <FabricCutWorksheet
                             fabricCutData={previewData.worksheetData.fabricCutData}
                             onPrintLabels={handlePrintLabels}
+                            printingLabels={printingLabels}
                         />
                     ) : (
                         <TubeCutWorksheet tubeCutData={previewData.worksheetData.tubeCutData} />

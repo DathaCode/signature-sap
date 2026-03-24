@@ -131,6 +131,13 @@ export interface FabricGroupData {
     items: BlindItem[];
 }
 
+export interface CutPiece {
+    pieceNumber: number;
+    cuts: { location: string; width: number }[];
+    totalUsed: number;
+    waste: number;
+}
+
 export interface TubeGroup {
     bottomRailType: string;
     bottomRailColour: string;
@@ -141,6 +148,7 @@ export interface TubeGroup {
     finalQuantity: number;
     piecesToDeduct: number;
     stockLength: number;
+    cuttingOrder?: CutPiece[];
 }
 
 export interface TubeCutData {

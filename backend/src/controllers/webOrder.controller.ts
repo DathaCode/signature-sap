@@ -4,6 +4,7 @@ import { AuthRequest } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
 import { logger } from '../config/logger';
 import { z } from 'zod';
+import path from 'path';
 import pricingService from '../services/pricing.service';
 import comprehensivePricingService from '../services/comprehensivePricing.service';
 
@@ -1448,15 +1449,17 @@ function isWinder(chainOrMotor: string | null | undefined): boolean {
  * Download blind labels as PDF for an order (ADMIN / WAREHOUSE)
  * GET /api/web-orders/:id/labels/download
  *
- * Label format (per blind, one page each):
- *   [Signature Shades]                [N of Total]
- *   Order Ref: YYNNNN.S
- *   Cx Ref: <customerReference>
+ * Label format (per blind, one page each) — 62mm × 100mm (QL-800 DK roll):
+ *   [Logo]                              [N of Total]
+ *   ─────────────────────────────────────────────
+ *   Order ref: YYNNNN.S
+ *   Cx Ref: Company-customerReference
  *
  *   W: 0000   H: 0000
- *   <Location>
- *   <Fabric> - <Colour>
- *   <ControlSide> <Roll> <ChainOrMotor> <ChainSizemm if chain>
+ *   {Location}
+ *   {Fabric} - {Colour}
+ *   {ControlSide} {Roll} Chain {Xmm}  ← winder
+ *   {ControlSide} {Roll} {MotorName}  ← motor
  */
 export const downloadLabels = async (
     req: Request,
@@ -1468,102 +1471,107 @@ export const downloadLabels = async (
 
         const order = await prisma.order.findUnique({
             where: { id, deletedAt: null },
-            include: { items: { orderBy: { itemNumber: 'asc' } } },
+            include: {
+                items: { orderBy: { itemNumber: 'asc' } },
+                customer: true,
+            },
         });
 
         if (!order) throw new AppError(404, 'Order not found');
 
-        // Dynamic import of pdfkit (CommonJS interop)
         const PDFDocument = (await import('pdfkit' as any)).default ?? (await import('pdfkit' as any));
 
-        // Label dimensions: 100mm × 80mm in points (1pt = 1/72 inch; 1mm = 2.835pt)
-        const MM = 2.835;
-        const LBL_W = 100 * MM; // ~283pt
-        const LBL_H = 80 * MM;  // ~227pt
+        // 62mm × 100mm portrait (QL-800 DK roll width = 62mm)
+        const MM = 2.835; // 1mm in PDF points
+        const LBL_W = 62 * MM;  // ≈ 175.8pt
+        const LBL_H = 100 * MM; // ≈ 283.5pt
+        const PAD = 3 * MM;     // 3mm margin on each side
+        const innerW = LBL_W - PAD * 2;
 
         const doc = new PDFDocument({ size: [LBL_W, LBL_H], margin: 0, autoFirstPage: false });
 
         res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader(
-            'Content-Disposition',
-            `attachment; filename="labels-${order.orderNumber}.pdf"`
-        );
+        res.setHeader('Content-Disposition', `attachment; filename="labels-${order.orderNumber}.pdf"`);
         doc.pipe(res);
 
-        const total = order.items.length;
-        const PAD = 8 * MM; // 8mm padding
+        // Logo path — copied to backend/assets/ in Docker build
+        const logoPath = path.join(__dirname, '../../assets/logo.png');
 
-        order.items.forEach((item, idx) => {
+        // Customer company for Cx Ref line
+        const customerCompany = (order.customer as any)?.company || (order.customer as any)?.name || order.customerName;
+        const cxRefLine = order.customerReference
+            ? `${customerCompany}-${order.customerReference}`
+            : customerCompany;
+
+        const total = order.items.length;
+
+        for (let idx = 0; idx < order.items.length; idx++) {
+            const item = order.items[idx];
             doc.addPage();
 
             const chainOrMotor = item.chainOrMotor ?? '';
             const drop = item.drop ?? 0;
 
-            // Chain size label (only for winder-type)
-            let controlLine = [
-                item.controlSide ?? '',
-                item.roll ?? '',
-            ].filter(Boolean).join(' ');
-
+            // Control line: "Left Back Chain 1200mm" or "Left Back Automate 1.1NM..."
+            const controlParts = [item.controlSide ?? '', item.roll ?? ''].filter(Boolean);
             if (isWinder(chainOrMotor)) {
-                const chainLen = getChainLength(drop);
-                controlLine += ` Chain ${chainLen}mm`;
+                controlParts.push(`Chain ${getChainLength(drop)}mm`);
             } else if (chainOrMotor) {
-                controlLine += ` ${chainOrMotor}`;
+                controlParts.push(chainOrMotor);
             }
+            const controlLine = controlParts.join(' ');
 
-            const x = PAD;
             let y = PAD;
-            const innerW = LBL_W - PAD * 2;
 
-            // ── Header row: company name (left) + blind number (right) ──
-            doc.fontSize(9).font('Helvetica-Bold')
-               .text('Signature Shades', x, y, { continued: false, width: innerW * 0.6 });
-
+            // ── Header: Logo (left) + "N of M" (right) ──────────────────────
             const blindNo = `${idx + 1} of ${total}`;
-            doc.fontSize(9).font('Helvetica-Bold')
-               .text(blindNo, x, y, { align: 'right', width: innerW });
+            const logoH = 9 * MM;
+            const logoW = 22 * MM;
+            try {
+                doc.image(logoPath, PAD, y, { height: logoH, width: logoW, fit: [logoW, logoH] });
+            } catch {
+                doc.fontSize(7).font('Helvetica-Bold').fillColor('#000')
+                   .text('Signature Shades', PAD, y + 2 * MM, { width: logoW });
+            }
+            doc.fontSize(10).font('Helvetica-Bold').fillColor('#000')
+               .text(blindNo, PAD, y + 2.5 * MM, { align: 'right', width: innerW });
 
-            y += 11 * MM;
+            y += logoH + 1.5 * MM;
 
-            // ── Separator ──
-            doc.moveTo(x, y).lineTo(LBL_W - PAD, y).strokeColor('#000').stroke();
+            // ── Separator ────────────────────────────────────────────────────
+            doc.moveTo(PAD, y).lineTo(LBL_W - PAD, y).lineWidth(0.5).strokeColor('#000').stroke();
             y += 2 * MM;
 
-            // ── Order ref ──
+            // ── Order ref ────────────────────────────────────────────────────
+            doc.fontSize(7.5).font('Helvetica').fillColor('#000')
+               .text(`Order ref: ${order.orderNumber}`, PAD, y, { width: innerW });
+            y += 4.5 * MM;
+
+            // ── Cx Ref ───────────────────────────────────────────────────────
             doc.fontSize(7.5).font('Helvetica')
-               .text(`Order Ref: ${order.orderNumber}`, x, y, { width: innerW });
-            y += 5 * MM;
-
-            // ── Customer ref (if any) ──
-            if (order.customerReference) {
-                doc.fontSize(7.5).font('Helvetica')
-                   .text(`Cx Ref: ${order.customerReference}`, x, y, { width: innerW });
-                y += 5 * MM;
-            }
-
-            y += 2 * MM; // small gap
-
-            // ── Dimensions ──
-            doc.fontSize(8.5).font('Helvetica-Bold')
-               .text(`W: ${item.width ?? 0}   H: ${item.drop ?? 0}`, x, y, { width: innerW });
-            y += 6 * MM;
-
-            // ── Location ──
-            doc.fontSize(8).font('Helvetica')
-               .text(item.location ?? '', x, y, { width: innerW });
+               .text(`Cx Ref: ${cxRefLine}`, PAD, y, { width: innerW });
             y += 5.5 * MM;
 
-            // ── Fabric - Colour ──
+            // ── W × H (large bold) ───────────────────────────────────────────
+            doc.fontSize(12).font('Helvetica-Bold')
+               .text(`W: ${item.width ?? 0}   H: ${item.drop ?? 0}`, PAD, y, { width: innerW });
+            y += 8 * MM;
+
+            // ── Location ─────────────────────────────────────────────────────
+            doc.fontSize(9).font('Helvetica')
+               .text(item.location ?? '', PAD, y, { width: innerW });
+            y += 5.5 * MM;
+
+            // ── Fabric - Colour ──────────────────────────────────────────────
             const fabricLine = [item.fabricType, item.fabricColour].filter(Boolean).join(' - ');
-            doc.fontSize(8).font('Helvetica')
-               .text(fabricLine, x, y, { width: innerW });
+            doc.fontSize(9).font('Helvetica')
+               .text(fabricLine, PAD, y, { width: innerW });
             y += 5.5 * MM;
 
-            // ── Control line ──
-            doc.fontSize(7.5).font('Helvetica')
-               .text(controlLine, x, y, { width: innerW });
-        });
+            // ── Control line ─────────────────────────────────────────────────
+            doc.fontSize(9).font('Helvetica')
+               .text(controlLine, PAD, y, { width: innerW });
+        }
 
         doc.end();
     } catch (error) {

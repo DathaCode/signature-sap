@@ -66,6 +66,7 @@ COPY --from=build /app/dist ./dist
 COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/package*.json ./
 COPY --from=build /app/fabrics_filtered_with_groups.json ./
+COPY --from=build /app/assets ./assets
 
 EXPOSE 5000
 

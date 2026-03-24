@@ -171,6 +171,15 @@ export class WorksheetExportService {
                 ].join(','));
             }
             rows.push(`# Group Total: ${group.totalWidth}mm, Base: ${group.baseQuantity}, +10% wastage = ${group.finalQuantity}, Pieces: ${group.piecesToDeduct}`);
+
+            // Cutting order
+            if (group.cuttingOrder && group.cuttingOrder.length > 0) {
+                rows.push('# Cutting Order:');
+                for (const piece of group.cuttingOrder) {
+                    const cuts = piece.cuts.map(c => `${c.location}(${c.width}mm)`).join(' | ');
+                    rows.push(`#   Piece ${piece.pieceNumber}: ${cuts} — Used: ${piece.totalUsed}mm, Waste: ${piece.waste}mm`);
+                }
+            }
             rows.push('');
         }
 
@@ -720,6 +729,23 @@ export class WorksheetExportService {
             doc.moveDown(0.2);
             doc.fontSize(8).font('Helvetica-Bold')
                 .text(`Total Width: ${group.totalWidth}mm  |  Base Qty: ${group.baseQuantity}  |  +10% = ${group.finalQuantity}  |  Pieces to Deduct: ${group.piecesToDeduct}`);
+
+            // Cutting order section
+            if (group.cuttingOrder && group.cuttingOrder.length > 0) {
+                doc.moveDown(0.4);
+                doc.fontSize(9).font('Helvetica-Bold').text('Cutting Order:');
+                doc.moveDown(0.2);
+
+                for (const piece of group.cuttingOrder) {
+                    if (doc.y > 750) doc.addPage();
+                    const cuts = piece.cuts.map(c => `${c.location} (${c.width}mm)`).join('  →  ');
+                    doc.fontSize(8).font('Helvetica')
+                        .text(`Piece ${piece.pieceNumber}:  ${cuts}`, 50, doc.y, { width: 480 });
+                    doc.fontSize(7.5).font('Helvetica').fillColor('#666')
+                        .text(`Used: ${piece.totalUsed}mm  |  Waste: ${piece.waste}mm  |  Stock: 5800mm`, 50, doc.y, { width: 480 });
+                    doc.fillColor('#000').moveDown(0.3);
+                }
+            }
             doc.moveDown();
         }
 
