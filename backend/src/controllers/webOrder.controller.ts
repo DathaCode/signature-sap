@@ -1480,10 +1480,10 @@ export const downloadLabels = async (
 
         const PDFDocument = (await import('pdfkit' as any)).default ?? (await import('pdfkit' as any));
 
-        // 62mm × 100mm portrait (QL-800 DK roll width = 62mm)
+        // 100mm × 62mm landscape (QL-800 DK roll width = 62mm)
         const MM = 2.835; // 1mm in PDF points
-        const LBL_W = 62 * MM;  // ≈ 175.8pt
-        const LBL_H = 100 * MM; // ≈ 283.5pt
+        const LBL_W = 100 * MM; // ≈ 283.5pt (landscape width)
+        const LBL_H = 62 * MM;  // ≈ 175.8pt (landscape height)
         const PAD = 3 * MM;     // 3mm margin on each side
         const innerW = LBL_W - PAD * 2;
 
