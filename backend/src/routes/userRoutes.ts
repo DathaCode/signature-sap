@@ -4,7 +4,6 @@ import {
     getAllUsers,
     getUserById,
     updateUser,
-    deactivateUser,
     deleteUser,
     setUserDiscounts,
 } from '../controllers/user.controller';
