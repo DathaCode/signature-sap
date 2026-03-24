@@ -234,7 +234,7 @@ export default function NewOrderPage() {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    // Save current blind and clear ALL fields
+    // Save current blind and clear ALL fields (or return to review if editing)
     const handleUpdateAndContinueAdding = async () => {
         if (!validateCurrentBlind()) {
             gooeyToast.error('Please fill all required fields before saving');
@@ -247,12 +247,15 @@ export default function NewOrderPage() {
             const updated = [...savedBlinds];
             updated[editingIndex] = item;
             setSavedBlinds(updated);
-            gooeyToast.success(`Blind #${editingIndex + 1} updated! Ready for next blind.`);
+            gooeyToast.success(`Blind #${editingIndex + 1} updated!`);
             setEditingIndex(null);
-        } else {
-            setSavedBlinds([...savedBlinds, item]);
-            gooeyToast.success(`Blind #${savedBlinds.length + 1} saved! Ready for next blind.`);
+            reset({ productType: 'BLINDS', items: [{ ...emptyBlind }] });
+            setShowSummary(true);
+            return;
         }
+
+        setSavedBlinds([...savedBlinds, item]);
+        gooeyToast.success(`Blind #${savedBlinds.length + 1} saved! Ready for next blind.`);
 
         // Clear ALL fields
         reset({
@@ -308,6 +311,39 @@ export default function NewOrderPage() {
         }
     };
 
+    // Bulk delete multiple blinds
+    const handleBulkDelete = async (indices: number[]) => {
+        if (!await confirmToast({
+            title: 'Delete Blinds',
+            message: `Delete ${indices.length} selected blind(s)? This cannot be undone.`,
+            confirmText: 'Delete',
+            variant: 'danger',
+        })) return;
+        const indexSet = new Set(indices);
+        const updated = savedBlinds.filter((_, i) => !indexSet.has(i));
+        setSavedBlinds(updated);
+        gooeyToast.success(`${indices.length} blind(s) deleted`);
+        if (updated.length === 0) setShowSummary(false);
+    };
+
+    // Bulk update fields on multiple blinds, then recalculate prices
+    const handleBulkUpdate = async (indices: number[], fields: Partial<BlindItem>) => {
+        // Apply fields immediately
+        const updated = savedBlinds.map((blind, i) =>
+            indices.includes(i) ? { ...blind, ...fields, price: 0 } : blind
+        );
+        setSavedBlinds(updated);
+        gooeyToast.info(`Recalculating prices for ${indices.length} blind(s)...`);
+
+        // Recalculate prices async
+        const recalculated = [...updated];
+        for (const idx of indices) {
+            recalculated[idx] = await forceCalculatePrice(recalculated[idx]);
+        }
+        setSavedBlinds(recalculated);
+        gooeyToast.success(`${indices.length} blind(s) updated!`);
+    };
+
     // Submit as order
     const handleSubmitOrder = async () => {
         setIsSubmitting(true);
@@ -359,6 +395,8 @@ export default function NewOrderPage() {
                     blinds={savedBlinds}
                     onEdit={handleEditBlind}
                     onDelete={handleDeleteBlind}
+                    onBulkDelete={handleBulkDelete}
+                    onBulkUpdate={handleBulkUpdate}
                     onBackToForm={() => setShowSummary(false)}
                     onSubmitOrder={handleSubmitOrder}
                     onSaveAsQuote={handleSaveAsQuote}
