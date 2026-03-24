@@ -8,7 +8,7 @@ import { Input } from '../../components/ui/Input';
 import { Label } from '../../components/ui/Label';
 import {
     Loader2, UserX, UserCheck, X,
-    Phone, MapPin, Building2, Calendar, Pencil, Save, ShieldCheck
+    Phone, MapPin, Building2, Calendar, Pencil, Save, ShieldCheck, Trash2
 } from 'lucide-react';
 import { gooeyToast } from 'goey-toast';
 import { confirmToast } from '../../utils/confirmToast';
@@ -443,6 +443,24 @@ export default function UserManagement() {
         }
     };
 
+    const deleteUser = async (user: UserWithCounts, e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!await confirmToast({
+            title: 'Delete User',
+            message: `Permanently delete ${user.name}? This cannot be undone. Users with existing orders cannot be deleted.`,
+            confirmText: 'Delete',
+            variant: 'danger',
+        })) return;
+        try {
+            await adminUserApi.deleteUser(user.id);
+            gooeyToast.success('User deleted');
+            setUsers(users.filter(u => u.id !== user.id));
+        } catch (err: any) {
+            const msg = err?.response?.data?.message || 'Failed to delete user';
+            gooeyToast.error(msg);
+        }
+    };
+
     const handleUserUpdated = (userId: string, updates: Partial<UserWithCounts>) => {
         setUsers(users.map(u => u.id === userId ? { ...u, ...updates } : u));
     };
@@ -526,21 +544,32 @@ export default function UserManagement() {
                                             </td>
                                             <td className="p-4 text-right">
                                                 {user.role !== 'ADMIN' && (
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={(e) => toggleStatus(user, e)}
-                                                        className={user.isActive
-                                                            ? "text-red-600 hover:text-red-700 hover:bg-red-50"
-                                                            : "text-green-600 hover:text-green-700 hover:bg-green-50"
-                                                        }
-                                                    >
-                                                        {user.isActive ? (
-                                                            <><UserX className="mr-2 h-4 w-4" />Deactivate</>
-                                                        ) : (
-                                                            <><UserCheck className="mr-2 h-4 w-4" />Activate</>
-                                                        )}
-                                                    </Button>
+                                                    <div className="flex items-center justify-end gap-1">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={(e) => toggleStatus(user, e)}
+                                                            className={user.isActive
+                                                                ? "text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                                : "text-green-600 hover:text-green-700 hover:bg-green-50"
+                                                            }
+                                                        >
+                                                            {user.isActive ? (
+                                                                <><UserX className="mr-2 h-4 w-4" />Deactivate</>
+                                                            ) : (
+                                                                <><UserCheck className="mr-2 h-4 w-4" />Activate</>
+                                                            )}
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={(e) => deleteUser(user, e)}
+                                                            className="text-gray-400 hover:text-red-600 hover:bg-red-50"
+                                                            title="Delete user permanently"
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    </div>
                                                 )}
                                             </td>
                                         </tr>

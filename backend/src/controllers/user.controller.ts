@@ -310,6 +310,50 @@ export const setUserDiscounts = async (
 };
 
 /**
+ * Delete user permanently (admin only)
+ * Blocked if user has any orders or quotes
+ */
+export const deleteUser = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> => {
+    try {
+        const authReq = req as AuthRequest;
+
+        const user = await prisma.user.findUnique({
+            where: { id: req.params.id as string },
+            include: {
+                _count: { select: { orders: true, quotes: true } },
+            },
+        });
+
+        if (!user) {
+            throw new AppError(404, 'User not found');
+        }
+
+        if (user.role === 'ADMIN') {
+            throw new AppError(400, 'Cannot delete admin users');
+        }
+
+        if (user._count.orders > 0 || user._count.quotes > 0) {
+            throw new AppError(400, `Cannot delete user with existing orders or quotes. Deactivate the account instead.`);
+        }
+
+        await prisma.user.delete({ where: { id: req.params.id as string } });
+
+        logger.info(`User deleted: ${user.email} by ${authReq.user?.email}`);
+
+        res.json({
+            success: true,
+            message: 'User deleted successfully',
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
  * Deactivate user (admin only - soft delete)
  */
 export const deactivateUser = async (

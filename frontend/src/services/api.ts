@@ -428,7 +428,14 @@ export const adminUserApi = {
         G4: { acmeda: number; tbs: number; motorised: number };
     }): Promise<void> => {
         await api.patch(`/users/${id}/discounts`, discounts)
-    }
+    },
+
+    /**
+     * Permanently delete a user (blocked if user has orders/quotes)
+     */
+    deleteUser: async (id: string): Promise<void> => {
+        await api.delete(`/users/${id}`)
+    },
 }
 
 export const quoteApi = {
