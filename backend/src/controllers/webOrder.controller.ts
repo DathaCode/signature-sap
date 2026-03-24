@@ -1473,7 +1473,6 @@ export const downloadLabels = async (
             where: { id, deletedAt: null },
             include: {
                 items: { orderBy: { itemNumber: 'asc' } },
-                customer: true,
             },
         });
 
@@ -1498,7 +1497,7 @@ export const downloadLabels = async (
         const logoPath = path.join(__dirname, '../../assets/logo.png');
 
         // Customer company for Cx Ref line
-        const customerCompany = (order.customer as any)?.company || (order.customer as any)?.name || order.customerName;
+        const customerCompany = order.customerCompany || order.customerName;
         const cxRefLine = order.customerReference
             ? `${customerCompany}-${order.customerReference}`
             : customerCompany;
