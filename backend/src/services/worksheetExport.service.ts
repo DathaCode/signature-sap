@@ -758,58 +758,83 @@ export class WorksheetExportService {
             if (group.cuttingOrder && group.cuttingOrder.length > 0) {
                 doc.moveDown(0.5);
 
-                // Section header bar background
                 const boxX = 40;
-                const boxY = doc.y;
                 const boxW = 495;
-                const boxH = 14;
-                doc.rect(boxX, boxY, boxW, boxH).fill('#f0fdf4');
+                const chipH = 12;
+                const chipPadX = 5;
+                const pieceColW = 46; // width reserved for "Piece N" label
+                const wasteColW = 120; // width reserved for waste info on right
+
+                // Section header bar
+                const hdrY = doc.y;
+                const hdrH = 14;
+                doc.rect(boxX, hdrY, boxW, hdrH).fill('#f0fdf4');
                 doc.fontSize(8).font('Helvetica-Bold').fillColor('#166534')
                     .text(
                         `CUTTING ORDER — ${group.piecesToDeduct} × ${group.stockLength}MM STOCK PIECES`,
-                        boxX + 6, boxY + 3,
-                        { width: boxW - 12 }
+                        boxX + 6, hdrY + 3,
+                        { width: boxW - 12, lineBreak: false }
                     );
                 doc.fillColor('#000');
-                doc.moveDown(0.3);
+
+                // Use fully explicit Y tracking — never rely on doc.y inside a row
+                let curY = hdrY + hdrH + 4;
 
                 for (const piece of group.cuttingOrder) {
-                    if (doc.y > 740) doc.addPage();
+                    if (curY > 740) {
+                        doc.addPage();
+                        curY = 40;
+                    }
 
-                    const pieceY = doc.y;
-                    // "Piece N" label
+                    const rowStartY = curY;
+
+                    // "Piece N" label (left column, same row as first chip line)
                     doc.fontSize(8).font('Helvetica-Bold').fillColor('#166534')
-                        .text(`Piece ${piece.pieceNumber}`, boxX, pieceY, { width: 42 });
+                        .text(`Piece ${piece.pieceNumber}`, boxX, rowStartY, {
+                            width: pieceColW,
+                            lineBreak: false,
+                        });
 
-                    // Cut chips — render each cut as a green-background badge
-                    let chipX = boxX + 46;
-                    const chipH = 12;
-                    const chipPadX = 5;
-                    doc.fontSize(7.5).font('Helvetica-Bold').fillColor('#166534');
+                    // Draw chips using fully explicit positions
+                    let chipX = boxX + pieceColW;
+                    let chipLineY = rowStartY;
+                    const maxChipRight = boxX + boxW - wasteColW - 4;
+
+                    doc.fontSize(7.5).font('Helvetica-Bold');
 
                     for (const cut of piece.cuts) {
                         const label = `${cut.location} — ${cut.width}mm`;
                         const labelW = doc.widthOfString(label) + chipPadX * 2;
-                        if (chipX + labelW > boxX + boxW - 10) {
-                            chipX = boxX + 46;
-                            doc.moveDown(0.8);
+
+                        if (chipX + labelW > maxChipRight) {
+                            // Wrap to next chip line
+                            chipX = boxX + pieceColW;
+                            chipLineY += chipH + 3;
                         }
-                        const chipY = doc.y;
-                        doc.roundedRect(chipX, chipY, labelW, chipH, 3).fill('#dcfce7');
-                        doc.fillColor('#166534').text(label, chipX + chipPadX, chipY + 2, { lineBreak: false });
+
+                        doc.roundedRect(chipX, chipLineY, labelW, chipH, 3).fill('#dcfce7');
+                        doc.fillColor('#166534')
+                            .text(label, chipX + chipPadX, chipLineY + 2, { lineBreak: false });
                         chipX += labelW + 4;
                     }
 
-                    // Waste info at end of row (right-aligned)
+                    // Waste info — right column, anchored to rowStartY
                     doc.fontSize(7).font('Helvetica').fillColor('#9ca3af')
                         .text(
                             `Used ${piece.totalUsed}mm · Waste ${piece.waste}mm`,
-                            boxX, pieceY,
-                            { width: boxW, align: 'right' }
+                            boxX + boxW - wasteColW, rowStartY,
+                            { width: wasteColW, align: 'right', lineBreak: false }
                         );
 
-                    doc.fillColor('#000').moveDown(0.6);
+                    doc.fillColor('#000');
+
+                    // Advance to below the tallest row (chips may wrap)
+                    const rowH = (chipLineY - rowStartY) + chipH + 5;
+                    curY = rowStartY + Math.max(rowH, 16);
                 }
+
+                // Restore pdfkit cursor to where we finished
+                doc.text('', boxX, curY);
             }
             doc.moveDown();
         }
