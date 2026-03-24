@@ -1522,54 +1522,54 @@ export const downloadLabels = async (
 
             let y = PAD;
 
-            // ── Header: Logo (left) + "N of M" (right) ──────────────────────
-            const blindNo = `${idx + 1} of ${total}`;
+            // ── Header: Logo (left) + "N OF M" (right) ───────────────────────
+            const blindNo = `${idx + 1} OF ${total}`;
             const logoH = 9 * MM;
             const logoW = 22 * MM;
             try {
                 doc.image(logoPath, PAD, y, { height: logoH, width: logoW, fit: [logoW, logoH] });
             } catch {
-                doc.fontSize(7).font('Helvetica-Bold').fillColor('#000')
-                   .text('Signature Shades', PAD, y + 2 * MM, { width: logoW });
+                doc.fontSize(12).font('Helvetica-Bold').fillColor('#000')
+                   .text('SIGNATURE SHADES', PAD, y + 2 * MM, { width: logoW });
             }
-            doc.fontSize(10).font('Helvetica-Bold').fillColor('#000')
-               .text(blindNo, PAD, y + 2.5 * MM, { align: 'right', width: innerW });
+            doc.fontSize(12).font('Helvetica-Bold').fillColor('#000')
+               .text(blindNo, PAD, y + 2 * MM, { align: 'right', width: innerW });
 
             y += logoH + 1.5 * MM;
 
             // ── Separator ────────────────────────────────────────────────────
             doc.moveTo(PAD, y).lineTo(LBL_W - PAD, y).lineWidth(0.5).strokeColor('#000').stroke();
-            y += 2 * MM;
+            y += 2.5 * MM;
 
             // ── Order ref ────────────────────────────────────────────────────
-            doc.fontSize(7.5).font('Helvetica').fillColor('#000')
-               .text(`Order ref: ${order.orderNumber}`, PAD, y, { width: innerW });
-            y += 4.5 * MM;
+            doc.fontSize(12).font('Helvetica').fillColor('#000')
+               .text(`ORDER REF: ${order.orderNumber.toUpperCase()}`, PAD, y, { width: innerW });
+            y += 6.5 * MM;
 
             // ── Cx Ref ───────────────────────────────────────────────────────
-            doc.fontSize(7.5).font('Helvetica')
-               .text(`Cx Ref: ${cxRefLine}`, PAD, y, { width: innerW });
-            y += 5.5 * MM;
+            doc.fontSize(12).font('Helvetica')
+               .text(`CX REF: ${cxRefLine.toUpperCase()}`, PAD, y, { width: innerW });
+            y += 7 * MM;
 
-            // ── W × H (large bold) ───────────────────────────────────────────
+            // ── W × H (bold) ─────────────────────────────────────────────────
             doc.fontSize(12).font('Helvetica-Bold')
                .text(`W: ${item.width ?? 0}   H: ${item.drop ?? 0}`, PAD, y, { width: innerW });
-            y += 8 * MM;
+            y += 7 * MM;
 
             // ── Location ─────────────────────────────────────────────────────
-            doc.fontSize(9).font('Helvetica')
-               .text(item.location ?? '', PAD, y, { width: innerW });
-            y += 5.5 * MM;
+            doc.fontSize(12).font('Helvetica')
+               .text((item.location ?? '').toUpperCase(), PAD, y, { width: innerW });
+            y += 6.5 * MM;
 
             // ── Fabric - Colour ──────────────────────────────────────────────
             const fabricLine = [item.fabricType, item.fabricColour].filter(Boolean).join(' - ');
-            doc.fontSize(9).font('Helvetica')
-               .text(fabricLine, PAD, y, { width: innerW });
-            y += 5.5 * MM;
+            doc.fontSize(12).font('Helvetica')
+               .text(fabricLine.toUpperCase(), PAD, y, { width: innerW });
+            y += 6.5 * MM;
 
             // ── Control line ─────────────────────────────────────────────────
-            doc.fontSize(9).font('Helvetica')
-               .text(controlLine, PAD, y, { width: innerW });
+            doc.fontSize(12).font('Helvetica')
+               .text(controlLine.toUpperCase(), PAD, y, { width: innerW });
         }
 
         doc.end();
