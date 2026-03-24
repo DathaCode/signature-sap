@@ -1541,37 +1541,38 @@ export const downloadLabels = async (
             doc.moveTo(PAD, y).lineTo(LBL_W - PAD, y).lineWidth(0.5).strokeColor('#000').stroke();
             y += 3 * MM;
 
-            // ── ORDER REF ────────────────────────────────────────────────────
-            doc.fontSize(10).font('Helvetica').fillColor('#000')
+            // Line 1 — ORDER REF
+            doc.fontSize(12).font('Helvetica-Bold').fillColor('#000')
                .text(`ORDER REF: ${order.orderNumber.toUpperCase()}`, PAD, y, { width: innerW });
-            y = doc.y + 2 * MM;
+            y = doc.y + 1 * MM;
 
-            // ── CX REF (may wrap — use doc.y for dynamic spacing) ────────────
-            doc.fontSize(10).font('Helvetica')
+            // Line 2 — CX REF (may wrap to next line naturally)
+            doc.fontSize(12).font('Helvetica-Bold')
                .text(`CX REF: ${cxRefLine.toUpperCase()}`, PAD, y, { width: innerW });
-            y = doc.y + 3 * MM;
+            // Line 3 — blank line gap between info block and dimensions block
+            y = doc.y + 5 * MM;
 
-            // ── W × H (bold) ─────────────────────────────────────────────────
+            // Line 4 — W / H
             doc.fontSize(12).font('Helvetica-Bold')
                .text(`W: ${item.width ?? 0}   H: ${item.drop ?? 0}`, PAD, y, { width: innerW });
-            y = doc.y + 1.5 * MM;
+            y = doc.y + 1 * MM;
 
-            // ── Location ─────────────────────────────────────────────────────
-            doc.fontSize(10).font('Helvetica')
+            // Line 5 — Location
+            doc.fontSize(12).font('Helvetica-Bold')
                .text((item.location ?? '').toUpperCase(), PAD, y, { width: innerW });
-            y = doc.y + 1.5 * MM;
+            y = doc.y + 1 * MM;
 
-            // ── Material FabricType - Colour ─────────────────────────────────
+            // Line 6 — Material FabricType - Colour
             const matFabric = [item.material, item.fabricType].filter(Boolean).join(' ');
             const fabricLine = matFabric
                 ? `${matFabric}${item.fabricColour ? ` - ${item.fabricColour}` : ''}`
                 : (item.fabricColour ?? '');
-            doc.fontSize(10).font('Helvetica')
+            doc.fontSize(12).font('Helvetica-Bold')
                .text(fabricLine.toUpperCase(), PAD, y, { width: innerW });
-            y = doc.y + 1.5 * MM;
+            y = doc.y + 1 * MM;
 
-            // ── Control line (may wrap) ───────────────────────────────────────
-            doc.fontSize(10).font('Helvetica')
+            // Lines 7-8 — Control (may wrap naturally e.g. "RIGHT BACK\nCHAIN 1500MM")
+            doc.fontSize(12).font('Helvetica-Bold')
                .text(controlLine.toUpperCase(), PAD, y, { width: innerW });
         }
 
