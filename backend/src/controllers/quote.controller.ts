@@ -59,34 +59,30 @@ const CreateQuoteSchema = z.object({
 });
 
 /**
- * Generate unique quote number: QT-YYMMDD-XXXX
+ * Generate unique quote number: YYNNNN.QT (e.g. 260001.QT)
  */
 async function generateQuoteNumber(): Promise<string> {
     const now = new Date();
     const yy = String(now.getFullYear()).slice(-2);
-    const mm = String(now.getMonth() + 1).padStart(2, '0');
-    const dd = String(now.getDate()).padStart(2, '0');
-    const datePrefix = `QT-${yy}${mm}${dd}`;
 
-    // Find the last quote number for today
     const lastQuote = await prisma.quote.findFirst({
         where: {
             quoteNumber: {
-                startsWith: datePrefix,
+                startsWith: yy,
+                endsWith: '.QT',
             },
         },
-        orderBy: {
-            quoteNumber: 'desc',
-        },
+        orderBy: { quoteNumber: 'desc' },
     });
 
     let sequence = 1;
     if (lastQuote) {
-        const lastSequence = parseInt(lastQuote.quoteNumber.split('-').pop() || '0');
-        sequence = lastSequence + 1;
+        const numPart = lastQuote.quoteNumber.replace('.QT', '').slice(2);
+        const lastSeq = parseInt(numPart, 10);
+        if (!isNaN(lastSeq)) sequence = lastSeq + 1;
     }
 
-    return `${datePrefix}-${String(sequence).padStart(4, '0')}`;
+    return `${yy}${String(sequence).padStart(4, '0')}.QT`;
 }
 
 /**
