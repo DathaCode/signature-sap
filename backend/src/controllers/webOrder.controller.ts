@@ -1529,46 +1529,49 @@ export const downloadLabels = async (
             try {
                 doc.image(logoPath, PAD, y, { height: logoH, width: logoW, fit: [logoW, logoH] });
             } catch {
-                doc.fontSize(12).font('Helvetica-Bold').fillColor('#000')
+                doc.fontSize(9).font('Helvetica-Bold').fillColor('#000')
                    .text('SIGNATURE SHADES', PAD, y + 2 * MM, { width: logoW });
             }
-            doc.fontSize(12).font('Helvetica-Bold').fillColor('#000')
-               .text(blindNo, PAD, y + 2 * MM, { align: 'right', width: innerW });
+            doc.fontSize(11).font('Helvetica-Bold').fillColor('#000')
+               .text(blindNo, PAD, y + 2.5 * MM, { align: 'right', width: innerW });
 
             y += logoH + 1.5 * MM;
 
             // ── Separator ────────────────────────────────────────────────────
             doc.moveTo(PAD, y).lineTo(LBL_W - PAD, y).lineWidth(0.5).strokeColor('#000').stroke();
-            y += 2.5 * MM;
+            y += 3 * MM;
 
-            // ── Order ref ────────────────────────────────────────────────────
-            doc.fontSize(12).font('Helvetica').fillColor('#000')
+            // ── ORDER REF ────────────────────────────────────────────────────
+            doc.fontSize(10).font('Helvetica').fillColor('#000')
                .text(`ORDER REF: ${order.orderNumber.toUpperCase()}`, PAD, y, { width: innerW });
-            y += 6.5 * MM;
+            y = doc.y + 2 * MM;
 
-            // ── Cx Ref ───────────────────────────────────────────────────────
-            doc.fontSize(12).font('Helvetica')
+            // ── CX REF (may wrap — use doc.y for dynamic spacing) ────────────
+            doc.fontSize(10).font('Helvetica')
                .text(`CX REF: ${cxRefLine.toUpperCase()}`, PAD, y, { width: innerW });
-            y += 7 * MM;
+            y = doc.y + 3 * MM;
 
             // ── W × H (bold) ─────────────────────────────────────────────────
             doc.fontSize(12).font('Helvetica-Bold')
                .text(`W: ${item.width ?? 0}   H: ${item.drop ?? 0}`, PAD, y, { width: innerW });
-            y += 7 * MM;
+            y = doc.y + 1.5 * MM;
 
             // ── Location ─────────────────────────────────────────────────────
-            doc.fontSize(12).font('Helvetica')
+            doc.fontSize(10).font('Helvetica')
                .text((item.location ?? '').toUpperCase(), PAD, y, { width: innerW });
-            y += 6.5 * MM;
+            y = doc.y + 1.5 * MM;
 
-            // ── Fabric - Colour ──────────────────────────────────────────────
-            const fabricLine = [item.fabricType, item.fabricColour].filter(Boolean).join(' - ');
-            doc.fontSize(12).font('Helvetica')
+            // ── Material FabricType - Colour ─────────────────────────────────
+            const matFabric = [item.material, item.fabricType].filter(Boolean).join(' ');
+            const fabricLine = matFabric
+                ? `${matFabric}${item.fabricColour ? ` - ${item.fabricColour}` : ''}`
+                : (item.fabricColour ?? '');
+            doc.fontSize(10).font('Helvetica')
                .text(fabricLine.toUpperCase(), PAD, y, { width: innerW });
-            y += 6.5 * MM;
+            y = doc.y + 1.5 * MM;
 
-            // ── Control line ─────────────────────────────────────────────────
-            doc.fontSize(12).font('Helvetica')
+            // ── Control line (may wrap) ───────────────────────────────────────
+            doc.fontSize(10).font('Helvetica')
                .text(controlLine.toUpperCase(), PAD, y, { width: innerW });
         }
 

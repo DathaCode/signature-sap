@@ -150,7 +150,7 @@ export class WorksheetExportService {
     ): string {
         const headers = [
             'Location', 'Original Width (mm)', 'Tube Cut Width (mm)',
-            'Bottom Rail Type', 'Bottom Rail Colour'
+            'Bottom Rail Type', 'Bottom Rail Colour', 'Cutting Order'
         ];
 
         const rows: string[] = [];
@@ -161,25 +161,32 @@ export class WorksheetExportService {
         rows.push(headers.join(','));
 
         for (const group of tubeCutData.groups) {
+            // Build piece number lookup
+            const locationPieceMap = new Map<string, number[]>();
+            for (const piece of group.cuttingOrder ?? []) {
+                for (const cut of piece.cuts) {
+                    const list = locationPieceMap.get(cut.location) ?? [];
+                    list.push(piece.pieceNumber);
+                    locationPieceMap.set(cut.location, list);
+                }
+            }
+            const locationUsedCount = new Map<string, number>();
+
             for (const blind of group.blinds) {
+                const usedCount = locationUsedCount.get(blind.location) ?? 0;
+                locationUsedCount.set(blind.location, usedCount + 1);
+                const pieces = locationPieceMap.get(blind.location) ?? [];
+                const pieceNum = pieces[usedCount];
                 rows.push([
                     `"${blind.location}"`,
                     blind.originalWidth,
                     blind.originalWidth - 28,
                     `"${group.bottomRailType}"`,
                     `"${group.bottomRailColour}"`,
+                    pieceNum != null ? `"Piece ${pieceNum}"` : '""',
                 ].join(','));
             }
             rows.push(`# Group Total: ${group.totalWidth}mm, Base: ${group.baseQuantity}, +10% wastage = ${group.finalQuantity}, Pieces: ${group.piecesToDeduct}`);
-
-            // Cutting order
-            if (group.cuttingOrder && group.cuttingOrder.length > 0) {
-                rows.push('# Cutting Order:');
-                for (const piece of group.cuttingOrder) {
-                    const cuts = piece.cuts.map(c => `${c.location}(${c.width}mm)`).join(' | ');
-                    rows.push(`#   Piece ${piece.pieceNumber}: ${cuts} — Used: ${piece.totalUsed}mm, Waste: ${piece.waste}mm`);
-                }
-            }
             rows.push('');
         }
 
@@ -682,13 +689,24 @@ export class WorksheetExportService {
             .text(`Order: ${orderInfo.orderNumber}  |  Customer: ${orderInfo.customerName}  |  Date: ${orderInfo.orderDate.toISOString().split('T')[0]}`, { align: 'center' });
         doc.moveDown();
 
-        const colWidths = [130, 90, 90, 90, 90];
-        const headers = ['Location', 'Orig Width', 'Tube Cut W', 'Rail Type', 'Rail Colour'];
+        const colWidths = [115, 75, 75, 75, 75, 70];
+        const headers = ['Location', 'Orig Width', 'Tube Cut W', 'Rail Type', 'Rail Colour', 'Cut Order'];
 
         for (const group of tubeCutData.groups) {
             doc.fontSize(11).font('Helvetica-Bold')
                 .text(`${group.bottomRailType} - ${group.bottomRailColour}`, { underline: true });
             doc.moveDown(0.3);
+
+            // Build piece number lookup for this group
+            const locationPieceMap = new Map<string, number[]>();
+            for (const piece of group.cuttingOrder ?? []) {
+                for (const cut of piece.cuts) {
+                    const list = locationPieceMap.get(cut.location) ?? [];
+                    list.push(piece.pieceNumber);
+                    locationPieceMap.set(cut.location, list);
+                }
+            }
+            const locationUsedCount = new Map<string, number>();
 
             // Table header
             let x = 40;
@@ -708,6 +726,11 @@ export class WorksheetExportService {
                     doc.addPage();
                 }
 
+                const usedCount = locationUsedCount.get(blind.location) ?? 0;
+                locationUsedCount.set(blind.location, usedCount + 1);
+                const pieces = locationPieceMap.get(blind.location) ?? [];
+                const pieceNum = pieces[usedCount];
+
                 const rowY = doc.y;
                 let rx = 40;
                 const values = [
@@ -716,6 +739,7 @@ export class WorksheetExportService {
                     `${blind.originalWidth - 28}mm`,
                     group.bottomRailType,
                     group.bottomRailColour,
+                    pieceNum != null ? `Piece ${pieceNum}` : '',
                 ];
 
                 values.forEach((val, i) => {
@@ -729,23 +753,6 @@ export class WorksheetExportService {
             doc.moveDown(0.2);
             doc.fontSize(8).font('Helvetica-Bold')
                 .text(`Total Width: ${group.totalWidth}mm  |  Base Qty: ${group.baseQuantity}  |  +10% = ${group.finalQuantity}  |  Pieces to Deduct: ${group.piecesToDeduct}`);
-
-            // Cutting order section
-            if (group.cuttingOrder && group.cuttingOrder.length > 0) {
-                doc.moveDown(0.4);
-                doc.fontSize(9).font('Helvetica-Bold').text('Cutting Order:');
-                doc.moveDown(0.2);
-
-                for (const piece of group.cuttingOrder) {
-                    if (doc.y > 750) doc.addPage();
-                    const cuts = piece.cuts.map(c => `${c.location} (${c.width}mm)`).join('  →  ');
-                    doc.fontSize(8).font('Helvetica')
-                        .text(`Piece ${piece.pieceNumber}:  ${cuts}`, 50, doc.y, { width: 480 });
-                    doc.fontSize(7.5).font('Helvetica').fillColor('#666')
-                        .text(`Used: ${piece.totalUsed}mm  |  Waste: ${piece.waste}mm  |  Stock: 5800mm`, 50, doc.y, { width: 480 });
-                    doc.fillColor('#000').moveDown(0.3);
-                }
-            }
             doc.moveDown();
         }
 
