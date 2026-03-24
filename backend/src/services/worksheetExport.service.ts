@@ -753,6 +753,64 @@ export class WorksheetExportService {
             doc.moveDown(0.2);
             doc.fontSize(8).font('Helvetica-Bold')
                 .text(`Total Width: ${group.totalWidth}mm  |  Base Qty: ${group.baseQuantity}  |  +10% = ${group.finalQuantity}  |  Pieces to Deduct: ${group.piecesToDeduct}`);
+
+            // Cutting Order section (styled like UI preview)
+            if (group.cuttingOrder && group.cuttingOrder.length > 0) {
+                doc.moveDown(0.5);
+
+                // Section header bar background
+                const boxX = 40;
+                const boxY = doc.y;
+                const boxW = 495;
+                const boxH = 14;
+                doc.rect(boxX, boxY, boxW, boxH).fill('#f0fdf4');
+                doc.fontSize(8).font('Helvetica-Bold').fillColor('#166534')
+                    .text(
+                        `CUTTING ORDER — ${group.piecesToDeduct} × ${group.stockLength}MM STOCK PIECES`,
+                        boxX + 6, boxY + 3,
+                        { width: boxW - 12 }
+                    );
+                doc.fillColor('#000');
+                doc.moveDown(0.3);
+
+                for (const piece of group.cuttingOrder) {
+                    if (doc.y > 740) doc.addPage();
+
+                    const pieceY = doc.y;
+                    // "Piece N" label
+                    doc.fontSize(8).font('Helvetica-Bold').fillColor('#166534')
+                        .text(`Piece ${piece.pieceNumber}`, boxX, pieceY, { width: 42 });
+
+                    // Cut chips — render each cut as a green-background badge
+                    let chipX = boxX + 46;
+                    const chipH = 12;
+                    const chipPadX = 5;
+                    doc.fontSize(7.5).font('Helvetica-Bold').fillColor('#166534');
+
+                    for (const cut of piece.cuts) {
+                        const label = `${cut.location} — ${cut.width}mm`;
+                        const labelW = doc.widthOfString(label) + chipPadX * 2;
+                        if (chipX + labelW > boxX + boxW - 10) {
+                            chipX = boxX + 46;
+                            doc.moveDown(0.8);
+                        }
+                        const chipY = doc.y;
+                        doc.roundedRect(chipX, chipY, labelW, chipH, 3).fill('#dcfce7');
+                        doc.fillColor('#166534').text(label, chipX + chipPadX, chipY + 2, { lineBreak: false });
+                        chipX += labelW + 4;
+                    }
+
+                    // Waste info at end of row (right-aligned)
+                    doc.fontSize(7).font('Helvetica').fillColor('#9ca3af')
+                        .text(
+                            `Used ${piece.totalUsed}mm · Waste ${piece.waste}mm`,
+                            boxX, pieceY,
+                            { width: boxW, align: 'right' }
+                        );
+
+                    doc.fillColor('#000').moveDown(0.6);
+                }
+            }
             doc.moveDown();
         }
 
