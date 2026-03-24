@@ -61,6 +61,7 @@ enum WorksheetType {
 enum UserRole {
   CUSTOMER
   ADMIN
+  WAREHOUSE
 }
 
 enum OrderStatus {

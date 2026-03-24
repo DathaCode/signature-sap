@@ -2,11 +2,12 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { webOrderApi, adminOrderApi } from '../../services/api';
 import { Order, BlindItem } from '../../types/order';
+import { useAuth } from '../../context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
-import { Loader2, ArrowLeft, ChevronDown, ChevronUp, Check, Trash2, Factory, Pencil, Save, X, Plus } from 'lucide-react';
+import { Loader2, ArrowLeft, ChevronDown, ChevronUp, Check, Trash2, Factory, Pencil, Save, X, Plus, Printer } from 'lucide-react';
 import { format } from 'date-fns';
 import { gooeyToast } from 'goey-toast';
 import { confirmToast } from '../../utils/confirmToast';
@@ -141,10 +142,13 @@ function EditItemRow({ item, index, onChange, onRemove }: {
 export default function AdminOrderDetails() {
     const { orderId } = useParams<{ orderId: string }>();
     const navigate = useNavigate();
+    const { user } = useAuth();
+    const ordersPath = user?.role === 'WAREHOUSE' ? '/warehouse/orders' : '/admin/orders';
     const [order, setOrder] = useState<Order | null>(null);
     const [loading, setLoading] = useState(true);
     const [expandedItem, setExpandedItem] = useState<number | null>(null);
     const [actionLoading, setActionLoading] = useState(false);
+    const [downloadingLabels, setDownloadingLabels] = useState(false);
     const [editing, setEditing] = useState(false);
     const [editItems, setEditItems] = useState<BlindItem[]>([]);
     const [editNotes, setEditNotes] = useState('');
@@ -163,7 +167,7 @@ export default function AdminOrderDetails() {
             } catch (error) {
                 console.error('Failed to fetch order:', error);
                 gooeyToast.error('Order not found');
-                navigate('/admin/orders');
+                navigate(ordersPath);
             } finally {
                 setLoading(false);
             }
@@ -273,13 +277,32 @@ export default function AdminOrderDetails() {
         }
     };
 
+    const handleDownloadLabels = async () => {
+        if (!order) return;
+        setDownloadingLabels(true);
+        try {
+            const blob = await webOrderApi.downloadLabels(order.id);
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `labels-${order.orderNumber}.pdf`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+            gooeyToast.success('Labels downloaded');
+        } catch {
+            gooeyToast.error('Failed to download labels');
+        } finally {
+            setDownloadingLabels(false);
+        }
+    };
+
     const handleTrash = async () => {
         if (!await confirmToast({ title: 'Move to Trash', message: 'Move this order to trash? It will be permanently deleted after 10 days.', confirmText: 'Trash', variant: 'danger' })) return;
         setActionLoading(true);
         try {
             await api.delete(`/web-orders/${order.id}/trash`);
             gooeyToast.success('Order moved to trash');
-            navigate('/admin/orders');
+            navigate(ordersPath);
         } catch (error) {
             gooeyToast.error('Failed to trash order');
         } finally {
@@ -292,7 +315,7 @@ export default function AdminOrderDetails() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                    <Button variant="ghost" size="icon" onClick={() => navigate('/admin/orders')}>
+                    <Button variant="ghost" size="icon" onClick={() => navigate(ordersPath)}>
                         <ArrowLeft className="h-5 w-5" />
                     </Button>
                     <div>
@@ -308,13 +331,13 @@ export default function AdminOrderDetails() {
                     </div>
                 </div>
                 <div className="flex gap-2 flex-wrap">
-                    {(order.status === 'PENDING' || order.status === 'CONFIRMED') && !editing && (
+                    {user?.role !== 'WAREHOUSE' && (order.status === 'PENDING' || order.status === 'CONFIRMED') && !editing && (
                         <Button variant="outline" onClick={startEditing} disabled={actionLoading}>
                             <Pencil className="mr-2 h-4 w-4" />
                             Edit Order
                         </Button>
                     )}
-                    {order.status === 'PENDING' && (
+                    {user?.role !== 'WAREHOUSE' && order.status === 'PENDING' && (
                         <Button
                             onClick={handleApprove}
                             disabled={actionLoading}
@@ -324,18 +347,31 @@ export default function AdminOrderDetails() {
                             Approve
                         </Button>
                     )}
-                    {order.status === 'CONFIRMED' && (
+                    {user?.role !== 'WAREHOUSE' && order.status === 'CONFIRMED' && (
                         <Button onClick={handleSendToProduction} disabled={actionLoading}>
                             <Factory className="mr-2 h-4 w-4" />
                             Send to Production
                         </Button>
                     )}
-                    {order.status === 'PRODUCTION' && (
+                    {user?.role !== 'WAREHOUSE' && order.status === 'PRODUCTION' && (
                         <Button onClick={handleComplete} disabled={actionLoading} variant="outline">
                             Mark Completed
                         </Button>
                     )}
-                    {order.status !== 'CANCELLED' && (
+                    {order.status === 'PRODUCTION' && (
+                        <Button
+                            variant="outline"
+                            onClick={handleDownloadLabels}
+                            disabled={downloadingLabels}
+                            className="text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+                        >
+                            {downloadingLabels
+                                ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                : <Printer className="mr-2 h-4 w-4" />}
+                            Print Labels
+                        </Button>
+                    )}
+                    {user?.role !== 'WAREHOUSE' && order.status !== 'CANCELLED' && (
                         <Button
                             variant="outline"
                             onClick={handleTrash}

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import multer from 'multer';
 import { InventoryController } from '../controllers/inventory.controller';
-import { authenticateToken, requireAdmin } from '../middleware/auth';
+import { authenticateToken, requireAdmin, requireAdminOrWarehouse } from '../middleware/auth';
 
 const router = Router();
 
@@ -44,8 +44,9 @@ router.post('/bulk-import', authenticateToken, requireAdmin, csvUpload.single('f
 /**
  * GET /api/inventory?category=FABRIC&search=silver
  * Get all inventory items (with optional category filter and search)
+ * WAREHOUSE: read-only access allowed
  */
-router.get('/', authenticateToken, requireAdmin, InventoryController.getInventoryItems);
+router.get('/', authenticateToken, requireAdminOrWarehouse, InventoryController.getInventoryItems);
 
 /**
  * POST /api/inventory
@@ -56,8 +57,9 @@ router.post('/', authenticateToken, requireAdmin, InventoryController.addInvento
 /**
  * GET /api/inventory/:itemId
  * Get single inventory item with transaction history
+ * WAREHOUSE: read-only access allowed
  */
-router.get('/:itemId', authenticateToken, requireAdmin, InventoryController.getInventoryItem);
+router.get('/:itemId', authenticateToken, requireAdminOrWarehouse, InventoryController.getInventoryItem);
 
 /**
  * PUT /api/inventory/:itemId

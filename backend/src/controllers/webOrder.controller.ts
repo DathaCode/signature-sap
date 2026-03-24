@@ -512,15 +512,21 @@ export const getAllOrders = async (
     next: NextFunction
 ): Promise<void> => {
     try {
+        const user = (req as AuthRequest).user;
         const { status, productType, userId, customerName, dateFrom, dateTo } = req.query;
+
+        // Warehouse agents can only see PRODUCTION orders
+        const statusFilter = user?.role === 'WAREHOUSE'
+            ? 'PRODUCTION' as OrderStatus
+            : status as OrderStatus | undefined;
 
         const orders = await prisma.order.findMany({
             where: {
                 deletedAt: null, // Exclude trashed orders
-                ...(status && { status: status as OrderStatus }),
+                ...(statusFilter && { status: statusFilter }),
                 ...(productType && { productType: productType as any }),
-                ...(userId && { userId: userId as string }),
-                ...(customerName && {
+                ...(user?.role !== 'WAREHOUSE' && userId && { userId: userId as string }),
+                ...(user?.role !== 'WAREHOUSE' && customerName && {
                     user: {
                         name: { contains: customerName as string, mode: 'insensitive' as const },
                     },
@@ -1428,5 +1434,138 @@ export const editOrderDetails = async (
         } else {
             next(error);
         }
+    }
+};
+
+// ─── Winder (chain-operated) detection ───────────────────────────────────────
+function isWinder(chainOrMotor: string | null | undefined): boolean {
+    if (!chainOrMotor) return false;
+    return chainOrMotor === 'TBS winder-32mm' || chainOrMotor === 'Acmeda winder-29mm';
+}
+
+/**
+ * Download blind labels as PDF for an order (ADMIN / WAREHOUSE)
+ * GET /api/web-orders/:id/labels/download
+ *
+ * Label format (per blind, one page each):
+ *   [Signature Shades]                [N of Total]
+ *   Order Ref: SS-YYMMDD-XXXX
+ *   Cx Ref: <customerReference>
+ *
+ *   W: 0000   H: 0000
+ *   <Location>
+ *   <Fabric> - <Colour>
+ *   <ControlSide> <Roll> <ChainOrMotor> <ChainSizemm if chain>
+ */
+export const downloadLabels = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> => {
+    try {
+        const id = req.params.id as string;
+
+        const order = await prisma.order.findUnique({
+            where: { id, deletedAt: null },
+            include: { items: { orderBy: { itemNumber: 'asc' } } },
+        });
+
+        if (!order) throw new AppError(404, 'Order not found');
+
+        // Dynamic import of pdfkit (CommonJS interop)
+        const PDFDocument = (await import('pdfkit' as any)).default ?? (await import('pdfkit' as any));
+
+        // Label dimensions: 100mm × 80mm in points (1pt = 1/72 inch; 1mm = 2.835pt)
+        const MM = 2.835;
+        const LBL_W = 100 * MM; // ~283pt
+        const LBL_H = 80 * MM;  // ~227pt
+
+        const doc = new PDFDocument({ size: [LBL_W, LBL_H], margin: 0, autoFirstPage: false });
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader(
+            'Content-Disposition',
+            `attachment; filename="labels-${order.orderNumber}.pdf"`
+        );
+        doc.pipe(res);
+
+        const total = order.items.length;
+        const PAD = 8 * MM; // 8mm padding
+
+        order.items.forEach((item, idx) => {
+            doc.addPage();
+
+            const chainOrMotor = item.chainOrMotor ?? '';
+            const drop = item.drop ?? 0;
+
+            // Chain size label (only for winder-type)
+            let controlLine = [
+                item.controlSide ?? '',
+                item.roll ?? '',
+            ].filter(Boolean).join(' ');
+
+            if (isWinder(chainOrMotor)) {
+                const chainLen = getChainLength(drop);
+                controlLine += ` Chain ${chainLen}mm`;
+            } else if (chainOrMotor) {
+                controlLine += ` ${chainOrMotor}`;
+            }
+
+            const x = PAD;
+            let y = PAD;
+            const innerW = LBL_W - PAD * 2;
+
+            // ── Header row: company name (left) + blind number (right) ──
+            doc.fontSize(9).font('Helvetica-Bold')
+               .text('Signature Shades', x, y, { continued: false, width: innerW * 0.6 });
+
+            const blindNo = `${idx + 1} of ${total}`;
+            doc.fontSize(9).font('Helvetica-Bold')
+               .text(blindNo, x, y, { align: 'right', width: innerW });
+
+            y += 11 * MM;
+
+            // ── Separator ──
+            doc.moveTo(x, y).lineTo(LBL_W - PAD, y).strokeColor('#000').stroke();
+            y += 2 * MM;
+
+            // ── Order ref ──
+            doc.fontSize(7.5).font('Helvetica')
+               .text(`Order Ref: ${order.orderNumber}`, x, y, { width: innerW });
+            y += 5 * MM;
+
+            // ── Customer ref (if any) ──
+            if (order.customerReference) {
+                doc.fontSize(7.5).font('Helvetica')
+                   .text(`Cx Ref: ${order.customerReference}`, x, y, { width: innerW });
+                y += 5 * MM;
+            }
+
+            y += 2 * MM; // small gap
+
+            // ── Dimensions ──
+            doc.fontSize(8.5).font('Helvetica-Bold')
+               .text(`W: ${item.width ?? 0}   H: ${item.drop ?? 0}`, x, y, { width: innerW });
+            y += 6 * MM;
+
+            // ── Location ──
+            doc.fontSize(8).font('Helvetica')
+               .text(item.location ?? '', x, y, { width: innerW });
+            y += 5.5 * MM;
+
+            // ── Fabric - Colour ──
+            const fabricLine = [item.fabricType, item.fabricColour].filter(Boolean).join(' - ');
+            doc.fontSize(8).font('Helvetica')
+               .text(fabricLine, x, y, { width: innerW });
+            y += 5.5 * MM;
+
+            // ── Control line ──
+            doc.fontSize(7.5).font('Helvetica')
+               .text(controlLine, x, y, { width: innerW });
+        });
+
+        doc.end();
+    } catch (error) {
+        next(error);
     }
 };

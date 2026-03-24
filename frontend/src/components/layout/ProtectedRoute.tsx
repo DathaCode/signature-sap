@@ -24,7 +24,9 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
     }
 
     if (allowedRoles && user && !allowedRoles.includes(user.role)) {
-        return <Navigate to="/dashboard" replace />; // Unauthorized redirect
+        // Warehouse agents go to their own section
+        if (user.role === 'WAREHOUSE') return <Navigate to="/warehouse/orders" replace />;
+        return <Navigate to="/dashboard" replace />;
     }
 
     return <>{children}</>;

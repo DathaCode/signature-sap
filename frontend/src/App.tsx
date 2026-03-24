@@ -49,6 +49,23 @@ function App() {
                 }
             />
 
+            {/* Warehouse Routes (Protected) */}
+            <Route
+                path="/warehouse/*"
+                element={
+                    <ProtectedRoute allowedRoles={['WAREHOUSE']}>
+                        <Layout>
+                            <Routes>
+                                <Route path="orders" element={<OrderManagement />} />
+                                <Route path="orders/:orderId" element={<AdminOrderDetails />} />
+                                <Route path="inventory" element={<InventoryDashboard />} />
+                                <Route path="*" element={<Navigate to="/warehouse/orders" replace />} />
+                            </Routes>
+                        </Layout>
+                    </ProtectedRoute>
+                }
+            />
+
             {/* Customer Routes (Protected) */}
             <Route
                 path="/*"

@@ -2,12 +2,14 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { AppError } from '../middleware/errorHandler';
 
+export type UserRole = 'CUSTOMER' | 'ADMIN' | 'WAREHOUSE';
+
 // Extend Express Request to include user
 export interface AuthRequest extends Request {
     user?: {
         id: string;
         email: string;
-        role: 'CUSTOMER' | 'ADMIN';
+        role: UserRole;
         name: string;
     };
 }
@@ -16,7 +18,7 @@ export interface AuthRequest extends Request {
 interface JwtPayload {
     id: string;
     email: string;
-    role: 'CUSTOMER' | 'ADMIN';
+    role: UserRole;
     name: string;
 }
 
@@ -65,7 +67,7 @@ export const authenticateToken = (
 /**
  * Require specific role
  */
-export const requireRole = (allowedRoles: ('CUSTOMER' | 'ADMIN')[]) => {
+export const requireRole = (allowedRoles: UserRole[]) => {
     return (req: Request, _res: Response, next: NextFunction): void => {
         const user = (req as AuthRequest).user;
 
@@ -87,12 +89,17 @@ export const requireRole = (allowedRoles: ('CUSTOMER' | 'ADMIN')[]) => {
 export const requireAdmin = requireRole(['ADMIN']);
 
 /**
+ * Require admin or warehouse role
+ */
+export const requireAdminOrWarehouse = requireRole(['ADMIN', 'WAREHOUSE']);
+
+/**
  * Generate JWT token
  */
 export const generateToken = (user: {
     id: string;
     email: string;
-    role: 'CUSTOMER' | 'ADMIN';
+    role: UserRole;
     name: string;
 }): string => {
     const secret = process.env.JWT_SECRET;

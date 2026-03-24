@@ -17,13 +17,14 @@ import {
     restoreOrder,
     purgeOrder,
     editOrderDetails,
+    downloadLabels,
 } from '../controllers/webOrder.controller';
-import { authenticateToken, requireAdmin } from '../middleware/auth';
+import { authenticateToken, requireAdmin, requireAdminOrWarehouse } from '../middleware/auth';
 
 const router = Router();
 
 // Admin-specific fixed routes (must come BEFORE /:id parameterised routes)
-router.get('/admin/all', authenticateToken, requireAdmin, getAllOrders);
+router.get('/admin/all', authenticateToken, requireAdminOrWarehouse, getAllOrders);
 router.get('/admin/trash', authenticateToken, requireAdmin, getTrashOrders);
 
 // Customer routes (authentication required)
@@ -46,5 +47,8 @@ router.get('/:id/worksheets/preview', authenticateToken, requireAdmin, getWorksh
 router.post('/:id/worksheets/accept', authenticateToken, requireAdmin, acceptWorksheets);
 router.post('/:id/recalculate', authenticateToken, requireAdmin, recalculateWorksheets);
 router.get('/:id/worksheets/download/:type', authenticateToken, requireAdmin, downloadWorksheet);
+
+// Label download (admin + warehouse)
+router.get('/:id/labels/download', authenticateToken, requireAdminOrWarehouse, downloadLabels);
 
 export default router;

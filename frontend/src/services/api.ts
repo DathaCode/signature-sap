@@ -372,7 +372,17 @@ export const adminOrderApi = {
     editOrder: async (id: string, data: { items?: import('../types/order').BlindItem[]; notes?: string; customerReference?: string | null }): Promise<import('../types/order').Order> => {
         const response = await api.patch(`/web-orders/${id}/details`, data)
         return response.data.data.order
-    }
+    },
+
+    /**
+     * Download blind labels PDF for an order
+     */
+    downloadLabels: async (id: string): Promise<Blob> => {
+        const response = await api.get(`/web-orders/${id}/labels/download`, {
+            responseType: 'blob',
+        })
+        return response.data
+    },
 }
 
 export const adminUserApi = {

@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { FileText, ShoppingBag, LogOut, ShieldCheck, Home, ChevronRight, ClipboardList } from 'lucide-react';
+import { FileText, ShoppingBag, LogOut, ShieldCheck, Home, ChevronRight, ClipboardList, Warehouse, Package } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 interface LayoutProps {
@@ -12,6 +12,7 @@ export default function Layout({ children }: LayoutProps) {
 
     const isActive = (path: string) => location.pathname.startsWith(path);
     const isAdmin = user?.role === 'ADMIN';
+    const isWarehouse = user?.role === 'WAREHOUSE';
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -29,57 +30,85 @@ export default function Layout({ children }: LayoutProps) {
                             <div className="hidden sm:block">
                                 <h1 className="text-white text-xl font-bold">Signature Shades</h1>
                                 <p className="text-brand-gold text-sm">
-                                    {isAdmin ? 'Warehouse Management' : 'Customer Portal'}
+                                    {isAdmin ? 'Warehouse Management' : isWarehouse ? 'Production' : 'Customer Portal'}
                                 </p>
                             </div>
                         </div>
 
                         {/* Navigation */}
                         <nav className="flex items-center space-x-1">
-                            <Link
-                                to="/dashboard"
-                                className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${isActive('/dashboard')
-                                        ? 'bg-brand-gold text-white'
-                                        : 'text-white hover:bg-brand-navy-light'
-                                    }`}
-                            >
-                                <Home className="h-5 w-5" />
-                                <span className="hidden sm:inline">Dashboard</span>
-                            </Link>
+                            {/* Warehouse-only nav */}
+                            {isWarehouse ? (
+                                <>
+                                    <Link
+                                        to="/warehouse/orders"
+                                        className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${isActive('/warehouse/orders')
+                                                ? 'bg-brand-gold text-white'
+                                                : 'text-white hover:bg-brand-navy-light'
+                                            }`}
+                                    >
+                                        <ClipboardList className="h-5 w-5" />
+                                        <span className="hidden sm:inline">Orders</span>
+                                    </Link>
+                                    <Link
+                                        to="/warehouse/inventory"
+                                        className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${isActive('/warehouse/inventory')
+                                                ? 'bg-brand-gold text-white'
+                                                : 'text-white hover:bg-brand-navy-light'
+                                            }`}
+                                    >
+                                        <Package className="h-5 w-5" />
+                                        <span className="hidden sm:inline">Inventory</span>
+                                    </Link>
+                                </>
+                            ) : (
+                                <>
+                                    <Link
+                                        to="/dashboard"
+                                        className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${isActive('/dashboard')
+                                                ? 'bg-brand-gold text-white'
+                                                : 'text-white hover:bg-brand-navy-light'
+                                            }`}
+                                    >
+                                        <Home className="h-5 w-5" />
+                                        <span className="hidden sm:inline">Dashboard</span>
+                                    </Link>
 
-                            <Link
-                                to="/new-order"
-                                className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${isActive('/new-order')
-                                        ? 'bg-brand-gold text-white'
-                                        : 'text-white hover:bg-brand-navy-light'
-                                    }`}
-                            >
-                                <ShoppingBag className="h-5 w-5" />
-                                <span className="hidden sm:inline">New Order</span>
-                            </Link>
+                                    <Link
+                                        to="/new-order"
+                                        className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${isActive('/new-order')
+                                                ? 'bg-brand-gold text-white'
+                                                : 'text-white hover:bg-brand-navy-light'
+                                            }`}
+                                    >
+                                        <ShoppingBag className="h-5 w-5" />
+                                        <span className="hidden sm:inline">New Order</span>
+                                    </Link>
 
-                            <Link
-                                to="/quotes"
-                                className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${isActive('/quotes')
-                                        ? 'bg-brand-gold text-white'
-                                        : 'text-white hover:bg-brand-navy-light'
-                                    }`}
-                            >
-                                <FileText className="h-5 w-5" />
-                                <span className="hidden sm:inline">My Quotes</span>
-                            </Link>
+                                    <Link
+                                        to="/quotes"
+                                        className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${isActive('/quotes')
+                                                ? 'bg-brand-gold text-white'
+                                                : 'text-white hover:bg-brand-navy-light'
+                                            }`}
+                                    >
+                                        <FileText className="h-5 w-5" />
+                                        <span className="hidden sm:inline">My Quotes</span>
+                                    </Link>
 
-                            {isAdmin && (
-                                <Link
-                                    to="/admin/orders"
-                                    className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${isActive('/admin/orders')
-                                            ? 'bg-brand-gold text-white'
-                                            : 'text-white hover:bg-brand-navy-light'
-                                        }`}
-                                >
-                                    <ClipboardList className="h-5 w-5" />
-                                    <span className="hidden sm:inline">Orders</span>
-                                </Link>
+                                    {isAdmin && (
+                                        <Link
+                                            to="/admin/orders"
+                                            className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${isActive('/admin/orders')
+                                                    ? 'bg-brand-gold text-white'
+                                                    : 'text-white hover:bg-brand-navy-light'
+                                                }`}
+                                        >
+                                            <ClipboardList className="h-5 w-5" />
+                                            <span className="hidden sm:inline">Orders</span>
+                                        </Link>
+                                    )}
+                                </>
                             )}
 
                             <button
@@ -94,6 +123,12 @@ export default function Layout({ children }: LayoutProps) {
                                 <div className="ml-2 px-3 py-1 bg-yellow-500 text-black text-xs font-bold rounded-full flex items-center gap-1">
                                     <ShieldCheck className="h-3 w-3" />
                                     ADMIN
+                                </div>
+                            )}
+                            {isWarehouse && (
+                                <div className="ml-2 px-3 py-1 bg-blue-500 text-white text-xs font-bold rounded-full flex items-center gap-1">
+                                    <Warehouse className="h-3 w-3" />
+                                    WAREHOUSE
                                 </div>
                             )}
                         </nav>

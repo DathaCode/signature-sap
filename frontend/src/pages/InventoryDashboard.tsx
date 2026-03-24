@@ -6,6 +6,7 @@ import {
     History, Edit2, ShieldCheck, X
 } from 'lucide-react'
 import { inventoryApi } from '../services/api'
+import { useAuth } from '../context/AuthContext'
 import AddInventoryModal from '../components/inventory/AddInventoryModal'
 import AdjustQuantityModal from '../components/inventory/AdjustQuantityModal'
 import ItemHistoryModal from '../components/inventory/ItemHistoryModal'
@@ -52,6 +53,8 @@ interface ItemGroup {
 }
 
 export default function InventoryDashboard() {
+    const { user } = useAuth()
+    const isWarehouse = user?.role === 'WAREHOUSE'
     const [search, setSearch] = useState('')
     const [activeTab, setActiveTab] = useState<TabId>('ALL')
     const [showLowStock, setShowLowStock] = useState(false)
@@ -199,16 +202,18 @@ export default function InventoryDashboard() {
                     </div>
                 </div>
 
-                <div
-                    className="card p-5 flex flex-col justify-center items-center text-center cursor-pointer hover:bg-gray-50 transition-colors border-2 border-dashed border-gray-200"
-                    onClick={() => setIsAddModalOpen(true)}
-                >
-                    <div className="bg-brand-gold bg-opacity-10 p-3 rounded-full mb-2">
-                        <Plus className="h-6 w-6 text-brand-gold" />
+                {!isWarehouse && (
+                    <div
+                        className="card p-5 flex flex-col justify-center items-center text-center cursor-pointer hover:bg-gray-50 transition-colors border-2 border-dashed border-gray-200"
+                        onClick={() => setIsAddModalOpen(true)}
+                    >
+                        <div className="bg-brand-gold bg-opacity-10 p-3 rounded-full mb-2">
+                            <Plus className="h-6 w-6 text-brand-gold" />
+                        </div>
+                        <span className="font-medium text-brand-navy">Add / Restock Item</span>
+                        <span className="text-xs text-gray-400 mt-0.5">New item or top-up existing stock</span>
                     </div>
-                    <span className="font-medium text-brand-navy">Add / Restock Item</span>
-                    <span className="text-xs text-gray-400 mt-0.5">New item or top-up existing stock</span>
-                </div>
+                )}
             </div>
 
             {/* ── Main Card ── */}
@@ -476,13 +481,15 @@ export default function InventoryDashboard() {
                                             {/* Actions */}
                                             <td className="py-3 px-4">
                                                 <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <button
-                                                        onClick={() => handleAdjust(selected)}
-                                                        className="p-1.5 text-gray-400 hover:text-brand-navy hover:bg-gray-100 rounded-lg transition-colors"
-                                                        title="Adjust Quantity"
-                                                    >
-                                                        <Edit2 className="h-4 w-4" />
-                                                    </button>
+                                                    {!isWarehouse && (
+                                                        <button
+                                                            onClick={() => handleAdjust(selected)}
+                                                            className="p-1.5 text-gray-400 hover:text-brand-navy hover:bg-gray-100 rounded-lg transition-colors"
+                                                            title="Adjust Quantity"
+                                                        >
+                                                            <Edit2 className="h-4 w-4" />
+                                                        </button>
+                                                    )}
                                                     <button
                                                         onClick={() => handleHistory(selected)}
                                                         className="p-1.5 text-gray-400 hover:text-brand-navy hover:bg-gray-100 rounded-lg transition-colors"
