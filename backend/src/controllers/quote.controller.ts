@@ -269,31 +269,28 @@ export const convertQuoteToOrder = async (
             throw new AppError(400, 'Quote has expired');
         }
 
-        // Generate order number (same logic as webOrder.controller.ts)
+        // Generate order number: YYNNNN.S (same logic as webOrder.controller.ts)
         const now = new Date();
         const yy = String(now.getFullYear()).slice(-2);
-        const mm = String(now.getMonth() + 1).padStart(2, '0');
-        const dd = String(now.getDate()).padStart(2, '0');
-        const datePrefix = `SS-${yy}${mm}${dd}`;
 
         const lastOrder = await prisma.order.findFirst({
             where: {
                 orderNumber: {
-                    startsWith: datePrefix,
+                    startsWith: yy,
+                    endsWith: '.S',
                 },
             },
-            orderBy: {
-                orderNumber: 'desc',
-            },
+            orderBy: { orderNumber: 'desc' },
         });
 
         let sequence = 1;
         if (lastOrder) {
-            const lastSequence = parseInt(lastOrder.orderNumber.split('-').pop() || '0');
-            sequence = lastSequence + 1;
+            const numPart = lastOrder.orderNumber.replace('.S', '').slice(2);
+            const lastSeq = parseInt(numPart, 10);
+            if (!isNaN(lastSeq)) sequence = lastSeq + 1;
         }
 
-        const orderNumber = `${datePrefix}-${String(sequence).padStart(4, '0')}`;
+        const orderNumber = `${yy}${String(sequence).padStart(4, '0')}.S`;
 
         // Get full user details for order
         const fullUser = await prisma.user.findUnique({ where: { id: user.id } });

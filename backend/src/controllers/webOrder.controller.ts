@@ -169,30 +169,31 @@ const CreateOrderSchema = z.object({
 });
 
 /**
- * Generate unique order number: SS-YYMMDD-XXXX
+ * Generate unique order number: YYNNNN.S (e.g. 260001.S)
+ * Sequential per year, resets each calendar year.
  */
 async function generateOrderNumber(): Promise<string> {
-    const date = new Date();
-    const year = date.getFullYear().toString().slice(-2);
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const day = date.getDate().toString().padStart(2, '0');
-    const dateStr = `${year}${month}${day}`;
+    const yy = new Date().getFullYear().toString().slice(-2); // "26"
 
-    // Count orders today
-    const startOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-    const endOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1);
-
-    const count = await prisma.order.count({
+    // Find the highest sequence number for this year
+    const lastOrder = await prisma.order.findFirst({
         where: {
-            createdAt: {
-                gte: startOfDay,
-                lt: endOfDay,
+            orderNumber: {
+                startsWith: yy,
+                endsWith: '.S',
             },
         },
+        orderBy: { orderNumber: 'desc' },
     });
 
-    const sequence = (count + 1).toString().padStart(4, '0');
-    return `SS-${dateStr}-${sequence}`;
+    let sequence = 1;
+    if (lastOrder) {
+        const numPart = lastOrder.orderNumber.replace('.S', '').slice(2);
+        const lastSeq = parseInt(numPart, 10);
+        if (!isNaN(lastSeq)) sequence = lastSeq + 1;
+    }
+
+    return `${yy}${sequence.toString().padStart(4, '0')}.S`;
 }
 
 /**
@@ -1449,7 +1450,7 @@ function isWinder(chainOrMotor: string | null | undefined): boolean {
  *
  * Label format (per blind, one page each):
  *   [Signature Shades]                [N of Total]
- *   Order Ref: SS-YYMMDD-XXXX
+ *   Order Ref: YYNNNN.S
  *   Cx Ref: <customerReference>
  *
  *   W: 0000   H: 0000
