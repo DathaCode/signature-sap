@@ -18,8 +18,8 @@ interface OrderInfo {
  * Motor-specific width deduction mapping
  */
 const MOTOR_DEDUCTIONS: Record<string, number> = {
-    'TBS winder-32mm': 28,
-    'Acmeda winder-29mm': 28,
+    'TBS winder-32mm': 32,
+    'Acmeda winder-29mm': 29,
     'Automate 1.1NM Li-Ion Quiet Motor': 29,
     'Automate 0.7NM Li-Ion Quiet Motor': 29,
     'Automate 2NM Li-Ion Quiet Motor': 29,
@@ -149,7 +149,7 @@ export class WorksheetExportService {
         tubeCutData: TubeCutResult
     ): string {
         const headers = [
-            'Location', 'Original Width (mm)', 'Tube Cut Width (mm)',
+            'Location', 'Tube Cut Width (mm)',
             'Bottom Rail Type', 'Bottom Rail Colour', 'Cutting Order'
         ];
 
@@ -179,7 +179,6 @@ export class WorksheetExportService {
                 const pieceNum = pieces[usedCount];
                 rows.push([
                     `"${blind.location}"`,
-                    blind.originalWidth,
                     blind.originalWidth - 28,
                     `"${group.bottomRailType}"`,
                     `"${group.bottomRailColour}"`,
@@ -689,8 +688,8 @@ export class WorksheetExportService {
             .text(`Order: ${orderInfo.orderNumber}  |  Customer: ${orderInfo.customerName}  |  Date: ${orderInfo.orderDate.toISOString().split('T')[0]}`, { align: 'center' });
         doc.moveDown();
 
-        const colWidths = [115, 75, 75, 75, 75, 70];
-        const headers = ['Location', 'Orig Width', 'Tube Cut W', 'Rail Type', 'Rail Colour', 'Cut Order'];
+        const colWidths = [130, 90, 90, 90, 70];
+        const headers = ['Location', 'Tube Cut W', 'Rail Type', 'Rail Colour', 'Cut Order'];
 
         for (const group of tubeCutData.groups) {
             doc.fontSize(11).font('Helvetica-Bold')
@@ -735,7 +734,6 @@ export class WorksheetExportService {
                 let rx = 40;
                 const values = [
                     blind.location,
-                    `${blind.originalWidth}mm`,
                     `${blind.originalWidth - 28}mm`,
                     group.bottomRailType,
                     group.bottomRailColour,

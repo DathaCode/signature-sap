@@ -9,8 +9,8 @@ const prisma = new PrismaClient();
  */
 const MOTOR_DEDUCTIONS: Record<string, number> = {
     // Winders (28mm deduction)
-    'TBS winder-32mm': 28,
-    'Acmeda winder-29mm': 28,
+    'TBS winder-32mm': 32,
+    'Acmeda winder-29mm': 29,
 
     // Automate motors (29mm deduction)
     'Automate 1.1NM Li-Ion Quiet Motor': 29,

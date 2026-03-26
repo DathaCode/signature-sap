@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { webOrderApi, adminOrderApi } from '../../services/api';
-import { Order, BlindItem } from '../../types/order';
+import { Order, BlindItem, WorksheetPreviewResponse } from '../../types/order';
+import WorksheetPreview from '../../components/admin/WorksheetPreview';
 import { useAuth } from '../../context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
-import { Loader2, ArrowLeft, ChevronDown, ChevronUp, Check, Trash2, Factory, Pencil, Save, X, Plus, Printer } from 'lucide-react';
+import { Loader2, ArrowLeft, ChevronDown, ChevronUp, Check, Trash2, Factory, Pencil, Save, X, Plus, Printer, FileSpreadsheet } from 'lucide-react';
 import { format } from 'date-fns';
 import { gooeyToast } from 'goey-toast';
 import { confirmToast } from '../../utils/confirmToast';
@@ -154,6 +155,8 @@ export default function AdminOrderDetails() {
     const [editNotes, setEditNotes] = useState('');
     const [editRef, setEditRef] = useState('');
     const [savingEdit, setSavingEdit] = useState(false);
+    const [worksheetPreview, setWorksheetPreview] = useState<{ data: WorksheetPreviewResponse } | null>(null);
+    const [viewingWorksheets, setViewingWorksheets] = useState(false);
 
     const hasPriceBreakdown = (item: BlindItem) =>
         item.fabricPrice != null || item.motorPrice != null || item.bracketPrice != null;
@@ -213,13 +216,26 @@ export default function AdminOrderDetails() {
         if (!await confirmToast({ title: 'Send to Production', message: 'This will run fabric cut optimization. Continue?', confirmText: 'Send', variant: 'warning' })) return;
         setActionLoading(true);
         try {
-            await adminOrderApi.sendToProduction(order.id);
-            gooeyToast.success('Sent to production');
+            const result = await adminOrderApi.sendToProduction(order.id);
+            gooeyToast.success('Optimization complete');
             setOrder({ ...order, status: 'PRODUCTION' });
+            setWorksheetPreview({ data: result });
         } catch (error) {
             gooeyToast.error('Failed to send to production');
         } finally {
             setActionLoading(false);
+        }
+    };
+
+    const handleViewWorksheets = async () => {
+        setViewingWorksheets(true);
+        try {
+            const result = await adminOrderApi.getWorksheetPreview(order.id);
+            setWorksheetPreview({ data: result });
+        } catch (error) {
+            gooeyToast.error('No worksheet data available');
+        } finally {
+            setViewingWorksheets(false);
         }
     };
 
@@ -311,6 +327,7 @@ export default function AdminOrderDetails() {
     };
 
     return (
+        <>
         <div className="space-y-6 p-6 max-w-5xl mx-auto pb-24">
             {/* Header */}
             <div className="flex items-center justify-between">
@@ -356,6 +373,19 @@ export default function AdminOrderDetails() {
                     {user?.role !== 'WAREHOUSE' && order.status === 'PRODUCTION' && (
                         <Button onClick={handleComplete} disabled={actionLoading} variant="outline">
                             Mark Completed
+                        </Button>
+                    )}
+                    {order.status === 'PRODUCTION' && (
+                        <Button
+                            variant="outline"
+                            onClick={handleViewWorksheets}
+                            disabled={viewingWorksheets}
+                            className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                        >
+                            {viewingWorksheets
+                                ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                : <FileSpreadsheet className="mr-2 h-4 w-4" />}
+                            Worksheets
                         </Button>
                     )}
                     {order.status === 'PRODUCTION' && (
@@ -579,5 +609,20 @@ export default function AdminOrderDetails() {
                 </CardContent>
             </Card>
         </div>
+
+        {worksheetPreview && (
+            <WorksheetPreview
+                orderId={order.id}
+                orderNumber={order.orderNumber}
+                customerName={order.customerName}
+                customerReference={(order as any).customerReference}
+                notes={(order as any).notes}
+                createdAt={order.createdAt}
+                data={worksheetPreview.data}
+                onClose={() => setWorksheetPreview(null)}
+                onAccepted={() => setWorksheetPreview(null)}
+            />
+        )}
+        </>
     );
 }

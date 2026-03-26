@@ -43,7 +43,6 @@ export default function TubeCutWorksheet({ tubeCutData }: Props) {
                                 <thead>
                                     <tr className="bg-gray-50 border-b">
                                         <th className="px-4 py-2 text-left font-medium text-gray-600">Location</th>
-                                        <th className="px-4 py-2 text-right font-medium text-gray-600">Original Width (mm)</th>
                                         <th className="px-4 py-2 text-right font-medium text-gray-600">Tube Cut Width (mm)</th>
                                         <th className="px-4 py-2 text-left font-medium text-gray-600">Bottom Rail Type</th>
                                         <th className="px-4 py-2 text-left font-medium text-gray-600">Bottom Rail Colour</th>
@@ -54,7 +53,6 @@ export default function TubeCutWorksheet({ tubeCutData }: Props) {
                                     {group.blinds.map((blind, bIdx) => (
                                         <tr key={bIdx} className="border-b hover:bg-gray-50">
                                             <td className="px-4 py-2 font-medium">{blind.location}</td>
-                                            <td className="px-4 py-2 text-right">{blind.originalWidth}</td>
                                             <td className="px-4 py-2 text-right font-semibold text-green-700">
                                                 {blind.originalWidth - 28}
                                             </td>
@@ -73,9 +71,8 @@ export default function TubeCutWorksheet({ tubeCutData }: Props) {
                                 <tfoot>
                                     <tr className="bg-green-50 font-medium text-sm">
                                         <td className="px-4 py-2">Group Total</td>
-                                        <td className="px-4 py-2 text-right">{group.totalWidth}mm</td>
                                         <td colSpan={4} className="px-4 py-2 text-right">
-                                            Base: {group.baseQuantity} + 10% wastage ({group.wastage}) = {group.finalQuantity} → <span className="font-bold">{group.piecesToDeduct} pieces</span>
+                                            Total: {group.totalWidth}mm — Base: {group.baseQuantity} + 10% wastage ({group.wastage}) = {group.finalQuantity} → <span className="font-bold">{group.piecesToDeduct} pieces</span>
                                         </td>
                                     </tr>
                                 </tfoot>
