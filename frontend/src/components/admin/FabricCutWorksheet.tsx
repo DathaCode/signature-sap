@@ -8,6 +8,28 @@ import { Button } from '../ui/Button';
  * Determine chain size (mm) from total drop (Calc D = original drop + 200)
  * Matches backend worksheetExport.service.ts and inventory chain lengths
  */
+/**
+ * Motor-specific width deductions (must match backend MOTOR_DEDUCTIONS)
+ */
+const MOTOR_DEDUCTIONS: Record<string, number> = {
+    'TBS winder-32mm': 32,
+    'Acmeda winder-29mm': 29,
+    'Automate 1.1NM Li-Ion Quiet Motor': 29,
+    'Automate 0.7NM Li-Ion Quiet Motor': 29,
+    'Automate 2NM Li-Ion Quiet Motor': 29,
+    'Automate 3NM Li-Ion Motor': 29,
+    'Automate E6 6NM Motor': 29,
+    'Alpha 1NM Battery Motor': 30,
+    'Alpha 2NM Battery Motor': 30,
+    'Alpha 3NM Battery Motor': 30,
+    'Alpha AC 5NM Motor': 35,
+};
+
+function getMotorDeduction(motorType: string | undefined): number {
+    if (!motorType) return 28;
+    return MOTOR_DEDUCTIONS[motorType] || 28;
+}
+
 function getChainSize(calcDrop: number): number {
     if (calcDrop <= 850) return 500;
     if (calcDrop <= 1200) return 900;
@@ -130,7 +152,7 @@ export default function FabricCutWorksheet({ fabricCutData, onPrintLabels, print
                                             const item = groupData.items.find(
                                                 (it: any) => it.id === panel.orderItemId
                                             );
-                                            const fabricCutW = item?.fabricCutWidth ?? (item ? item.width - 28 : '-');
+                                            const fabricCutW = item?.fabricCutWidth ?? (item ? item.width - getMotorDeduction(item.chainOrMotor) : '-');
                                             const calcD = item ? item.drop + 200 : 0;
                                             const chainSize = calcD > 0 ? getChainSize(calcD) : '-';
                                             const bracketType = item?.bracketType || 'Single';

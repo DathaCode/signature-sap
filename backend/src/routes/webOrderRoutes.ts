@@ -18,6 +18,7 @@ import {
     purgeOrder,
     editOrderDetails,
     downloadLabels,
+    previewWorksheets,
 } from '../controllers/webOrder.controller';
 import { authenticateToken, requireAdmin, requireAdminOrWarehouse } from '../middleware/auth';
 
@@ -44,6 +45,7 @@ router.delete('/:id/purge', authenticateToken, requireAdmin, purgeOrder);
 
 // Worksheet routes (admin)
 router.get('/:id/worksheets/preview', authenticateToken, requireAdmin, getWorksheetPreview);
+router.get('/:id/worksheets/preview-confirmed', authenticateToken, requireAdmin, previewWorksheets);
 router.post('/:id/worksheets/accept', authenticateToken, requireAdmin, acceptWorksheets);
 router.post('/:id/recalculate', authenticateToken, requireAdmin, recalculateWorksheets);
 router.get('/:id/worksheets/download/:type', authenticateToken, requireAdmin, downloadWorksheet);

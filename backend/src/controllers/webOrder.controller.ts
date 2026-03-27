@@ -832,6 +832,8 @@ function serializeFabricCutData(fabricCutData: Record<string, any>): any {
                 fabricColour: item.fabricColour,
                 bottomRailType: item.bottomRailType,
                 bottomRailColour: item.bottomRailColour,
+                bracketType: item.bracketType,
+                fabricCutWidth: item.width - getMotorDeduction(item.chainOrMotor),
             })),
         };
     }
@@ -924,6 +926,131 @@ export const getWorksheetPreview = async (
             data: {
                 worksheetData,
                 inventoryCheck,
+            },
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Preview worksheets for a CONFIRMED order (runs optimization without saving)
+ */
+export const previewWorksheets = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> => {
+    try {
+        const order = await prisma.order.findUnique({
+            where: { id: req.params.id as string },
+            include: { items: { orderBy: { itemNumber: 'asc' } } },
+        });
+
+        if (!order) {
+            throw new AppError(404, 'Order not found');
+        }
+
+        if (order.status !== OrderStatus.CONFIRMED) {
+            throw new AppError(400, 'Preview is only available for confirmed orders');
+        }
+
+        const items = order.items;
+
+        // 1. Group items by fabric
+        const fabricGroups = new Map<string, any[]>();
+        for (const item of items) {
+            const key = `${item.material || 'Unknown'} - ${item.fabricType || 'Unknown'} - ${item.fabricColour || 'Unknown'}`;
+            if (!fabricGroups.has(key)) fabricGroups.set(key, []);
+            fabricGroups.get(key)!.push(item);
+        }
+
+        // 2. Run fabric cut optimization (without saving to DB)
+        const fabricCutData: Record<string, any> = {};
+        let totalFabricMm = 0;
+        const fabricOptimizer = new FabricCutOptimizerService();
+
+        for (const [fabricKey, groupItems] of fabricGroups) {
+            const optimizationResult = await fabricOptimizer.optimizeOrder(groupItems);
+            const result = optimizationResult.values().next().value;
+            if (!result) continue;
+
+            const sheets = result.sheets.map((sheet: any) => ({
+                id: sheet.id,
+                width: sheet.width,
+                length: sheet.actualUsedLength || sheet.length,
+                panels: sheet.panels.map((p: any) => ({
+                    id: p.id, x: p.x, y: p.y,
+                    width: p.width, length: p.length,
+                    rotated: p.rotated, label: p.label,
+                    blindNumber: p.blindNumber, location: p.location,
+                    originalIndex: 0,
+                    originalWidth: groupItems.find((it: any) => it.id === p.orderItemId)?.width,
+                    originalDrop: groupItems.find((it: any) => it.id === p.orderItemId)?.drop,
+                    orderItemId: p.orderItemId,
+                })),
+                freeRectangles: [],
+                usedArea: sheet.usedArea, wastedArea: sheet.wasteArea,
+                efficiency: sheet.efficiency, cutSequence: sheet.cutSequence || [],
+            }));
+
+            const totalPanels = sheets.reduce((sum: number, s: any) => sum + s.panels.length, 0);
+
+            fabricCutData[fabricKey] = {
+                optimization: {
+                    sheets,
+                    statistics: {
+                        usedStockSheets: result.statistics.totalSheets,
+                        stockDimensions: `3000×continuous`,
+                        totalUsedArea: result.statistics.totalUsedArea,
+                        totalWastedArea: result.statistics.totalWasteArea,
+                        wastePercentage: result.wastePercentage,
+                        efficiency: result.efficiency,
+                        totalCuts: totalPanels, totalPanels,
+                        totalFabricNeeded: result.totalFabricNeeded,
+                    },
+                    cuts: [],
+                    generationStats: result.generationStats,
+                    validation: result.validation,
+                    isGuillotineValid: result.isGuillotineValid,
+                    strategy: result.strategy,
+                },
+                items: groupItems,
+            };
+
+            totalFabricMm += result.totalFabricNeeded;
+        }
+
+        // 3. Run tube cut optimization
+        const tubeBlinds: TubeBlindInput[] = items
+            .filter((item: any) => item.bottomRailType && item.bottomRailColour)
+            .map((item: any) => ({
+                location: item.location,
+                originalWidth: item.width,
+                bottomRailType: item.bottomRailType,
+                bottomRailColour: item.bottomRailColour,
+                orderItemId: item.id,
+            }));
+
+        const tubeCutOptimizer = new TubeCutOptimizer();
+        const tubeCutData = tubeCutOptimizer.optimize(tubeBlinds);
+
+        // 4. Check inventory availability
+        const inventoryRequirements = buildInventoryRequirements(fabricCutData, tubeCutData, items);
+        const inventoryCheck = await InventoryService.checkAvailability(inventoryRequirements);
+
+        // Return preview data (NOT saved to DB)
+        res.json({
+            success: true,
+            data: {
+                worksheetData: {
+                    fabricCutData: serializeFabricCutData(fabricCutData),
+                    tubeCutData: tubeCutData as any,
+                    totalFabricMm,
+                    totalTubePieces: tubeCutData.totalPiecesNeeded,
+                },
+                inventoryCheck,
+                isPreview: true,
             },
         });
     } catch (error) {
@@ -1076,6 +1203,19 @@ export const recalculateWorksheets = async (
 
         if (existing?.acceptedAt) {
             throw new AppError(400, 'Cannot recalculate accepted worksheets');
+        }
+
+        // Update OrderItem fields with correct motor-specific deductions
+        for (const item of order.items) {
+            const motorDeduction = getMotorDeduction(item.chainOrMotor || undefined);
+            await prisma.orderItem.update({
+                where: { id: item.id },
+                data: {
+                    fabricCutWidth: item.width - motorDeduction,
+                    calculatedWidth: item.width - 28,
+                    calculatedDrop: item.drop + 200,
+                },
+            });
         }
 
         const result = await runOptimization(order);

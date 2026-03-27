@@ -304,6 +304,14 @@ export const adminOrderApi = {
     },
 
     /**
+     * Preview worksheets for a confirmed order (runs optimization without saving)
+     */
+    previewWorksheets: async (id: string): Promise<import('../types/order').WorksheetPreviewResponse> => {
+        const response = await api.get(`/web-orders/${id}/worksheets/preview-confirmed`)
+        return response.data.data
+    },
+
+    /**
      * Accept worksheets and deduct inventory
      */
     acceptWorksheets: async (id: string): Promise<any> => {

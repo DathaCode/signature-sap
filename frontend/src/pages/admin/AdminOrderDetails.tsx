@@ -239,6 +239,18 @@ export default function AdminOrderDetails() {
         }
     };
 
+    const handlePreviewWorksheets = async () => {
+        setViewingWorksheets(true);
+        try {
+            const result = await adminOrderApi.previewWorksheets(order.id);
+            setWorksheetPreview({ data: result });
+        } catch (error) {
+            gooeyToast.error('Failed to generate worksheet preview');
+        } finally {
+            setViewingWorksheets(false);
+        }
+    };
+
     const handleComplete = async () => {
         if (!await confirmToast({ title: 'Complete Order', message: 'Mark this order as completed?', confirmText: 'Complete', variant: 'info' })) return;
         setActionLoading(true);
@@ -365,10 +377,25 @@ export default function AdminOrderDetails() {
                         </Button>
                     )}
                     {user?.role !== 'WAREHOUSE' && order.status === 'CONFIRMED' && (
-                        <Button onClick={handleSendToProduction} disabled={actionLoading}>
-                            <Factory className="mr-2 h-4 w-4" />
-                            Send to Production
-                        </Button>
+                        <>
+                            <Button
+                                variant="outline"
+                                onClick={handlePreviewWorksheets}
+                                disabled={viewingWorksheets}
+                                className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                            >
+                                {viewingWorksheets
+                                    ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    : <FileSpreadsheet className="mr-2 h-4 w-4" />}
+                                Preview Worksheets
+                            </Button>
+                            <Button onClick={handleSendToProduction} disabled={actionLoading}>
+                                {actionLoading
+                                    ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    : <Factory className="mr-2 h-4 w-4" />}
+                                Send to Production
+                            </Button>
+                        </>
                     )}
                     {user?.role !== 'WAREHOUSE' && order.status === 'PRODUCTION' && (
                         <Button onClick={handleComplete} disabled={actionLoading} variant="outline">
