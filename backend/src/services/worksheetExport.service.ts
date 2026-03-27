@@ -179,7 +179,7 @@ export class WorksheetExportService {
                 const pieceNum = pieces[usedCount];
                 rows.push([
                     `"${blind.location}"`,
-                    blind.originalWidth - 28,
+                    blind.tubeCutWidth ?? (blind.originalWidth - 28),
                     `"${group.bottomRailType}"`,
                     `"${group.bottomRailColour}"`,
                     pieceNum != null ? `"Piece ${pieceNum}"` : '""',
@@ -734,7 +734,7 @@ export class WorksheetExportService {
                 let rx = 40;
                 const values = [
                     blind.location,
-                    `${blind.originalWidth - 28}mm`,
+                    `${blind.tubeCutWidth ?? (blind.originalWidth - 28)}mm`,
                     group.bottomRailType,
                     group.bottomRailColour,
                     pieceNum != null ? `Piece ${pieceNum}` : '',

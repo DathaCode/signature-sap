@@ -15,10 +15,8 @@ const MOTOR_DEDUCTIONS: Record<string, number> = {
     'Alpha AC 5NM Motor': 35,
 };
 
-const TUBE_CUT_DEDUCTION = 28;
-
-function getWidthDeduction(motorType: string, isTubeCut: boolean = false): number {
-    if (isTubeCut) return TUBE_CUT_DEDUCTION;
+function getWidthDeduction(motorType: string, _isTubeCut: boolean = false): number {
+    // Tube cut and fabric cut now use the same motor-specific deduction
     return MOTOR_DEDUCTIONS[motorType] || 28;
 }
 
@@ -74,15 +72,15 @@ describe('Motor Width Deductions', () => {
             expect(getWidthDeduction('Unknown Motor XYZ')).toBe(28);
         });
 
-        it('tube cuts should always be 28mm regardless of motor', () => {
-            expect(getWidthDeduction('Alpha AC 5NM Motor', true)).toBe(28);
-            expect(getWidthDeduction('Automate 1.1NM Li-Ion Quiet Motor', true)).toBe(28);
-            expect(getWidthDeduction('TBS winder-32mm', true)).toBe(28);
+        it('tube cuts should use same motor-specific deduction as fabric cuts', () => {
+            expect(getWidthDeduction('Alpha AC 5NM Motor', true)).toBe(35);
+            expect(getWidthDeduction('Automate 1.1NM Li-Ion Quiet Motor', true)).toBe(29);
+            expect(getWidthDeduction('TBS winder-32mm', true)).toBe(32);
         });
     });
 
-    describe('Fabric cut width calculations', () => {
-        it('should calculate correct fabric cut width for each motor type', () => {
+    describe('Width calculations', () => {
+        it('should calculate correct cut width for each motor type', () => {
             const blindWidth = 1500;
 
             expect(blindWidth - getWidthDeduction('TBS winder-32mm')).toBe(1468);
@@ -91,9 +89,10 @@ describe('Motor Width Deductions', () => {
             expect(blindWidth - getWidthDeduction('Alpha AC 5NM Motor')).toBe(1465);
         });
 
-        it('should calculate correct tube cut width (always width - 28)', () => {
+        it('tube cut width should equal fabric cut width', () => {
             const blindWidth = 1500;
-            expect(blindWidth - getWidthDeduction('Alpha AC 5NM Motor', true)).toBe(1472);
+            expect(blindWidth - getWidthDeduction('Alpha AC 5NM Motor', true)).toBe(1465);
+            expect(blindWidth - getWidthDeduction('TBS winder-32mm', true)).toBe(1468);
         });
     });
 });

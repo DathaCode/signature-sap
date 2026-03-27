@@ -54,7 +54,7 @@ export default function TubeCutWorksheet({ tubeCutData }: Props) {
                                         <tr key={bIdx} className="border-b hover:bg-gray-50">
                                             <td className="px-4 py-2 font-medium">{blind.location}</td>
                                             <td className="px-4 py-2 text-right font-semibold text-green-700">
-                                                {blind.originalWidth - 28}
+                                                {blind.tubeCutWidth ?? (blind.originalWidth - 28)}
                                             </td>
                                             <td className="px-4 py-2">{group.bottomRailType}</td>
                                             <td className="px-4 py-2">{group.bottomRailColour}</td>

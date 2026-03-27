@@ -7,7 +7,7 @@
  * - Automate motors: width - 29mm
  * - Alpha Battery motors: width - 30mm
  * - Alpha AC motors: width - 35mm
- * - Tube cut: always width - 28mm
+ * - Tube cut: same as fabric cut (motor-specific deduction)
  */
 
 // Motor categories with their respective deductions
@@ -51,10 +51,10 @@ export function calculateFabricCutWidth(width: number, motorType: string): numbe
 }
 
 /**
- * Calculate tube cut width (always width - 28mm)
+ * Calculate tube cut width (same motor-specific deduction as fabric cut)
  */
-export function calculateTubeCutWidth(width: number): number {
-    return width - TUBE_DEDUCTION;
+export function calculateTubeCutWidth(width: number, motorType?: string): number {
+    return width - getFabricCutDeduction(motorType || '');
 }
 
 /**

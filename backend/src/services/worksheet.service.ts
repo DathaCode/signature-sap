@@ -28,23 +28,11 @@ const MOTOR_DEDUCTIONS: Record<string, number> = {
     'Alpha AC 5NM Motor': 35,
 };
 
-/**
- * Default deduction for tube cuts (always 28mm regardless of motor)
- */
-const TUBE_CUT_DEDUCTION = 28;
-
 export class WorksheetService {
     /**
-     * Get width deduction based on motor type
-     * For fabric cuts - motor-specific deduction
-     * For tube cuts - always 28mm
+     * Get width deduction based on motor type (same for fabric and tube cuts)
      */
-    private static getWidthDeduction(motorType: string, isTubeCut: boolean = false): number {
-        if (isTubeCut) {
-            return TUBE_CUT_DEDUCTION;
-        }
-
-        // Return motor-specific deduction or default to 28mm if motor not found
+    private static getWidthDeduction(motorType: string, _isTubeCut: boolean = false): number {
         return MOTOR_DEDUCTIONS[motorType] || 28;
     }
     /**
@@ -112,7 +100,7 @@ export class WorksheetService {
 
     /**
      * Get tube cut worksheet data (5 columns: Blind Number, Location, Width, Bottom Rail Type, Bottom Rail Colour)
-     * Tube cut width = Blind width - 28mm (always, regardless of motor type)
+     * Tube cut width = Blind width - motor-specific deduction (same as fabric cut)
      */
     static async getTubeCutWorksheet(orderId: string) {
         const order = await prisma.order.findUnique({
@@ -136,19 +124,19 @@ export class WorksheetService {
             columns: [
                 'Blind Number',
                 'Location',
-                'Width (mm)', // This is tube cut width (blind width - 28mm)
+                'Width (mm)', // Tube cut width with motor-specific deduction
                 'Bottom Rail Type',
                 'Bottom Rail Colour',
             ],
             items: order.items.map(item => {
-                const blindWidth = item.calculatedWidth || item.width;
                 const motorType = item.chainOrMotor || '';
-                const tubeCutWidth = blindWidth - this.getWidthDeduction(motorType, true); // Always 28mm for tube
+                const motorDeduction = this.getWidthDeduction(motorType, false);
+                const tubeCutWidth = item.width - motorDeduction;
 
                 return {
                     blindNumber: item.itemNumber.toString(),
                     location: item.location,
-                    widthMm: tubeCutWidth, // Tube cut width with 28mm deduction
+                    widthMm: tubeCutWidth, // Tube cut width with motor-specific deduction
                     bottomRailType: item.bottomRailType || '-',
                     bottomRailColor: item.bottomRailColour || '-',
                     highlightFlag: item.isDuplicate,

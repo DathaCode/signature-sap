@@ -304,7 +304,7 @@ export const createOrder = async (
             processedItems.push({
                 itemNumber: i + 1,
                 ...item,
-                calculatedWidth: item.width - 28,
+                calculatedWidth: item.width - motorDeduction,
                 calculatedDrop: item.drop + 200,
                 fabricCutWidth: item.width - motorDeduction,
                 fabricGroup,
@@ -777,6 +777,7 @@ async function runOptimization(order: any) {
             bottomRailType: item.bottomRailType,
             bottomRailColour: item.bottomRailColour,
             orderItemId: item.id,
+            chainOrMotor: item.chainOrMotor,
         }));
 
     const tubeCutOptimizer = new TubeCutOptimizer();
@@ -1212,7 +1213,7 @@ export const recalculateWorksheets = async (
                 where: { id: item.id },
                 data: {
                     fabricCutWidth: item.width - motorDeduction,
-                    calculatedWidth: item.width - 28,
+                    calculatedWidth: item.width - motorDeduction,
                     calculatedDrop: item.drop + 200,
                 },
             });
@@ -1525,7 +1526,7 @@ export const editOrderDetails = async (
                     fabricColour: item.fabricColour || null,
                     bottomRailType: item.bottomRailType || null,
                     bottomRailColour: item.bottomRailColour || null,
-                    calculatedWidth: w > 0 ? w - 28 : null,
+                    calculatedWidth: w > 0 ? w - motorDeduction : null,
                     calculatedDrop: d > 0 ? d + 200 : null,
                     fabricCutWidth: w > 0 ? w - motorDeduction : null,
                     price: item.price || 0,

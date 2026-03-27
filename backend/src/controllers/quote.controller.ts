@@ -334,7 +334,7 @@ export const convertQuoteToOrder = async (
                             fabricColour: item.fabricColour || null,
                             bottomRailType: item.bottomRailType || null,
                             bottomRailColour: item.bottomRailColour || null,
-                            calculatedWidth: w > 0 ? w - 28 : null,
+                            calculatedWidth: w > 0 ? w - motorDeduction : null,
                             calculatedDrop: d > 0 ? d + 200 : null,
                             fabricCutWidth: w > 0 ? w - motorDeduction : null,
                             fabricGroup: item.fabricGroup || null,
