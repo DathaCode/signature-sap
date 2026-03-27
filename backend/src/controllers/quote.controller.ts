@@ -6,8 +6,8 @@ import { z } from 'zod';
 
 // Motor-specific width deductions for fabric cutting
 const MOTOR_DEDUCTIONS: Record<string, number> = {
-    'TBS winder-32mm': 28,
-    'Acmeda winder-29mm': 28,
+    'TBS winder-32mm': 32,
+    'Acmeda winder-29mm': 29,
     'Automate 1.1NM Li-Ion Quiet Motor': 29,
     'Automate 0.7NM Li-Ion Quiet Motor': 29,
     'Automate 2NM Li-Ion Quiet Motor': 29,
@@ -29,7 +29,7 @@ const prisma = new PrismaClient();
 // Validation schemas (reuse from webOrder.controller.ts)
 const QuoteItemSchema = z.object({
     location: z.string().min(1, 'Location is required'),
-    width: z.coerce.number().min(100, 'Width must be at least 100mm'),
+    width: z.coerce.number().min(350, 'Width must be at least 350mm').max(2950, 'Width must be at most 2950mm'),
     drop: z.coerce.number().min(100, 'Drop must be at least 100mm'),
     fixing: z.string().optional(),
     bracketType: z.string().optional(),

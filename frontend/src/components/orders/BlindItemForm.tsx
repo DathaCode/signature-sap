@@ -248,13 +248,13 @@ export function BlindItemForm({ index, onRemove, onCopy, onContinue, canRemove =
                         <Label>Width (mm)</Label>
                         <Input
                             type="number"
-                            {...register(`items.${index}.width`, { required: 'Required', valueAsNumber: true, min: 200, max: 3000 })}
+                            {...register(`items.${index}.width`, { required: 'Required', valueAsNumber: true, min: 350, max: 2950 })}
                             placeholder="Width"
                         />
-                        {Number(width) > 0 && (Number(width) < 200 || Number(width) > 3000) && (
+                        {Number(width) > 0 && (Number(width) < 350 || Number(width) > 2950) && (
                             <p className="text-xs text-amber-600 flex items-center gap-1">
                                 <AlertCircle className="h-3 w-3" />
-                                Width must be between 200mm and 3000mm
+                                Width must be between 350mm and 2950mm
                             </p>
                         )}
                     </div>

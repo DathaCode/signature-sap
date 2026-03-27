@@ -1,8 +1,9 @@
 /**
  * Width Deduction Utilities
  * 
- * Motor-specific fabric cut width deductions per UPGRADE.md spec:
- * - Winders (Acmeda/TBS): width - 28mm
+ * Motor-specific fabric cut width deductions:
+ * - TBS winder-32mm: width - 32mm
+ * - Acmeda winder-29mm: width - 29mm
  * - Automate motors: width - 29mm
  * - Alpha Battery motors: width - 30mm
  * - Alpha AC motors: width - 35mm
@@ -11,9 +12,9 @@
 
 // Motor categories with their respective deductions
 const MOTOR_DEDUCTIONS: Record<string, number> = {
-    // Winders - 28mm
-    'Acmeda winder-29mm': 28,
-    'TBS winder-32mm': 28,
+    // Winders - motor-specific
+    'Acmeda winder-29mm': 29,
+    'TBS winder-32mm': 32,
 
     // Automate motors - 29mm
     'Automate 1.1NM Li-Ion Quiet Motor': 29,
@@ -57,10 +58,10 @@ export function calculateTubeCutWidth(width: number): number {
 }
 
 /**
- * Calculate drop with standard addition (drop + 150mm)
+ * Calculate drop with standard addition (drop + 200mm)
  */
 export function calculateDrop(drop: number): number {
-    return drop + 150;
+    return drop + 200;
 }
 
 /**

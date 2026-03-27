@@ -15,8 +15,8 @@ import { WorksheetExportService } from '../services/worksheetExport.service';
 
 // Motor-specific width deductions for fabric cutting
 const MOTOR_DEDUCTIONS: Record<string, number> = {
-    'TBS winder-32mm': 28,
-    'Acmeda winder-29mm': 28,
+    'TBS winder-32mm': 32,
+    'Acmeda winder-29mm': 29,
     'Automate 1.1NM Li-Ion Quiet Motor': 29,
     'Automate 0.7NM Li-Ion Quiet Motor': 29,
     'Automate 2NM Li-Ion Quiet Motor': 29,
@@ -134,7 +134,7 @@ const prisma = new PrismaClient();
 // Use string() instead of enum() for controlSide/roll to handle empty strings
 const OrderItemSchema = z.object({
     location: z.string().min(1, 'Location is required'),
-    width: z.coerce.number().int().positive('Width must be a positive number'),
+    width: z.coerce.number().int().min(350, 'Width must be at least 350mm').max(2950, 'Width must be at most 2950mm'),
     drop: z.coerce.number().int().positive('Drop must be a positive number'),
     fixing: z.string().optional(),
     bracketType: z.string().optional(),

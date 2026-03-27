@@ -2,8 +2,8 @@
 // These mirror the MOTOR_DEDUCTIONS map in worksheet.service.ts
 
 const MOTOR_DEDUCTIONS: Record<string, number> = {
-    'TBS winder-32mm': 28,
-    'Acmeda winder-29mm': 28,
+    'TBS winder-32mm': 32,
+    'Acmeda winder-29mm': 29,
     'Automate 1.1NM Li-Ion Quiet Motor': 29,
     'Automate 0.7NM Li-Ion Quiet Motor': 29,
     'Automate 2NM Li-Ion Quiet Motor': 29,
@@ -23,13 +23,13 @@ function getWidthDeduction(motorType: string, isTubeCut: boolean = false): numbe
 }
 
 describe('Motor Width Deductions', () => {
-    describe('Winder deductions (28mm)', () => {
-        it('TBS winder-32mm should deduct 28mm', () => {
-            expect(getWidthDeduction('TBS winder-32mm')).toBe(28);
+    describe('Winder deductions (motor-specific)', () => {
+        it('TBS winder-32mm should deduct 32mm', () => {
+            expect(getWidthDeduction('TBS winder-32mm')).toBe(32);
         });
 
-        it('Acmeda winder-29mm should deduct 28mm', () => {
-            expect(getWidthDeduction('Acmeda winder-29mm')).toBe(28);
+        it('Acmeda winder-29mm should deduct 29mm', () => {
+            expect(getWidthDeduction('Acmeda winder-29mm')).toBe(29);
         });
     });
 
@@ -85,7 +85,7 @@ describe('Motor Width Deductions', () => {
         it('should calculate correct fabric cut width for each motor type', () => {
             const blindWidth = 1500;
 
-            expect(blindWidth - getWidthDeduction('TBS winder-32mm')).toBe(1472);
+            expect(blindWidth - getWidthDeduction('TBS winder-32mm')).toBe(1468);
             expect(blindWidth - getWidthDeduction('Automate 1.1NM Li-Ion Quiet Motor')).toBe(1471);
             expect(blindWidth - getWidthDeduction('Alpha 1NM Battery Motor')).toBe(1470);
             expect(blindWidth - getWidthDeduction('Alpha AC 5NM Motor')).toBe(1465);

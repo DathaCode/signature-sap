@@ -366,9 +366,7 @@ export default function AdminOrderDetails() {
                     )}
                     {user?.role !== 'WAREHOUSE' && order.status === 'CONFIRMED' && (
                         <Button onClick={handleSendToProduction} disabled={actionLoading}>
-                            {actionLoading
-                                ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                : <Factory className="mr-2 h-4 w-4" />}
+                            <Factory className="mr-2 h-4 w-4" />
                             Send to Production
                         </Button>
                     )}
