@@ -141,7 +141,7 @@ export interface CutPiece {
 export interface TubeGroup {
     bottomRailType: string;
     bottomRailColour: string;
-    blinds: { location: string; originalWidth: number }[];
+    blinds: { location: string; originalWidth: number; tubeCutWidth?: number; chainOrMotor?: string }[];
     totalWidth: number;
     baseQuantity: number;
     wastage: number;
