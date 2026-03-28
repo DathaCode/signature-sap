@@ -4,8 +4,8 @@ import { Order, WorksheetPreviewResponse } from '../../types/order';
 import { useAuth } from '../../context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
-import { Loader2, Check, Factory, RefreshCw, Eye, FileText, Search, X, CheckCircle } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Loader2, Check, Factory, RefreshCw, Eye, FileText, Search, X, CheckCircle, Tag } from 'lucide-react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import { gooeyToast } from 'goey-toast';
 import { confirmToast } from '../../utils/confirmToast';
@@ -20,9 +20,14 @@ export default function OrderManagement() {
     const basePath = isWarehouse ? '/warehouse' : '/admin';
     const tabs = isWarehouse ? WAREHOUSE_TABS : ADMIN_TABS;
 
+    const [searchParams, setSearchParams] = useSearchParams();
+    const initialTab = searchParams.get('tab') || tabs[0];
+    const [statusFilter, setStatusFilter] = useState<string>(
+        (tabs as readonly string[]).includes(initialTab) ? initialTab : tabs[0]
+    );
+
     const [orders, setOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(true);
-    const [statusFilter, setStatusFilter] = useState<string>(tabs[0]);
     const [customerSearch, setCustomerSearch] = useState('');
     const [dateFrom, setDateFrom] = useState('');
     const [dateTo, setDateTo] = useState('');
@@ -37,6 +42,12 @@ export default function OrderManagement() {
     } | null>(null);
     const [sendingToProduction, setSendingToProduction] = useState<string | null>(null);
     const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
+
+    // Keep URL in sync with tab
+    const handleTabChange = (tab: string) => {
+        setStatusFilter(tab);
+        setSearchParams({ tab });
+    };
 
     const fetchOrders = useCallback(async () => {
         setLoading(true);
@@ -119,17 +130,6 @@ export default function OrderManagement() {
         }
     };
 
-    const handleToggleFabricOrdered = async (order: Order) => {
-        try {
-            const newVal = !order.fabricOrdered;
-            await adminOrderApi.toggleFabricOrdered(order.id, newVal);
-            setOrders(prev => prev.map(o => o.id === order.id ? { ...o, fabricOrdered: newVal } : o));
-        } catch (error) {
-            console.error(error);
-            gooeyToast.error('Failed to update');
-        }
-    };
-
     const getTabStyle = (tab: string) => {
         const isActive = statusFilter === tab;
         const base = 'px-4 py-2 text-sm font-medium border-b-2 transition-colors cursor-pointer whitespace-nowrap';
@@ -163,7 +163,7 @@ export default function OrderManagement() {
                     {tabs.map(tab => (
                         <button
                             key={tab}
-                            onClick={() => setStatusFilter(tab)}
+                            onClick={() => handleTabChange(tab)}
                             className={getTabStyle(tab)}
                         >
                             {tab.charAt(0) + tab.slice(1).toLowerCase()}
@@ -226,9 +226,9 @@ export default function OrderManagement() {
                                         <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Date</th>
                                         <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Customer</th>
                                         <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Reference</th>
+                                        {!isWarehouse && <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Label</th>}
                                         <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Items</th>
                                         {!isWarehouse && <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Total</th>}
-                                        {!isWarehouse && <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Fabric</th>}
                                         <th className="h-12 px-4 align-middle font-medium text-muted-foreground text-right">Actions</th>
                                     </tr>
                                 </thead>
@@ -236,7 +236,7 @@ export default function OrderManagement() {
                                     {orders.map((order) => (
                                         <tr key={order.id} className="border-b transition-colors hover:bg-muted/50">
                                             <td className="p-4 align-middle font-medium">
-                                                <Link to={`${basePath}/orders/${order.id}`} className="text-blue-700 hover:underline">
+                                                <Link to={`${basePath}/orders/${order.id}?tab=${statusFilter}`} className="text-blue-700 hover:underline">
                                                     {order.orderNumber}
                                                 </Link>
                                             </td>
@@ -249,29 +249,30 @@ export default function OrderManagement() {
                                             </td>
                                             <td className="p-4 align-middle">
                                                 {order.customerReference ? (
-                                                    <Link to={`${basePath}/orders/${order.id}`} className="text-sm font-medium text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded hover:bg-indigo-100">
+                                                    <Link to={`${basePath}/orders/${order.id}?tab=${statusFilter}`} className="text-sm font-medium text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded hover:bg-indigo-100">
                                                         {order.customerReference}
                                                     </Link>
                                                 ) : (
-                                                    <span className="text-xs text-muted-foreground">—</span>
+                                                    <span className="text-xs text-muted-foreground">&mdash;</span>
                                                 )}
                                             </td>
-                                            <td className="p-4 align-middle">{order.items.length} items</td>
-                                            {!isWarehouse && <td className="p-4 align-middle">${Number(order.total).toFixed(2)}</td>}
                                             {!isWarehouse && (
                                                 <td className="p-4 align-middle">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={!!order.fabricOrdered}
-                                                        onChange={() => handleToggleFabricOrdered(order)}
-                                                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                                                        title={order.fabricOrdered ? 'Fabric ordered' : 'Mark fabric as ordered'}
-                                                    />
+                                                    {order.label ? (
+                                                        <span className="inline-flex items-center gap-1 text-xs font-medium bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">
+                                                            <Tag className="h-3 w-3" />
+                                                            {order.label}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-xs text-muted-foreground">&mdash;</span>
+                                                    )}
                                                 </td>
                                             )}
+                                            <td className="p-4 align-middle">{order.items.length} items</td>
+                                            {!isWarehouse && <td className="p-4 align-middle">${Number(order.total).toFixed(2)}</td>}
                                             <td className="p-4 align-middle text-right">
                                                 <div className="flex justify-end gap-2">
-                                                    <Link to={`${basePath}/orders/${order.id}`}>
+                                                    <Link to={`${basePath}/orders/${order.id}?tab=${statusFilter}`}>
                                                         <Button variant="ghost" size="icon" title="View Details">
                                                             <Eye className="h-4 w-4" />
                                                         </Button>
@@ -310,7 +311,8 @@ export default function OrderManagement() {
                                                         </Button>
                                                     )}
 
-                                                    {!isWarehouse && order.status === 'PRODUCTION' && (
+                                                    {/* Complete button — admin + warehouse for PRODUCTION */}
+                                                    {order.status === 'PRODUCTION' && (
                                                         <Button
                                                             size="sm"
                                                             variant="outline"

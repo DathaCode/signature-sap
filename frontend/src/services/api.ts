@@ -391,6 +391,14 @@ export const adminOrderApi = {
     },
 
     /**
+     * Update order label and/or admin notes
+     */
+    updateAdminFields: async (id: string, data: { label?: string; adminNotes?: string }): Promise<import('../types/order').Order> => {
+        const response = await api.patch(`/web-orders/${id}/admin-fields`, data)
+        return response.data.data.order
+    },
+
+    /**
      * Download blind labels PDF for an order
      */
     downloadLabels: async (id: string): Promise<Blob> => {

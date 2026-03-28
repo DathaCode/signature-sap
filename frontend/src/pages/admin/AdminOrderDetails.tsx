@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { webOrderApi, adminOrderApi } from '../../services/api';
 import { Order, BlindItem, WorksheetPreviewResponse } from '../../types/order';
 import WorksheetPreview from '../../components/admin/WorksheetPreview';
@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Ca
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
-import { Loader2, ArrowLeft, ChevronDown, ChevronUp, Check, Trash2, Factory, Pencil, Save, X, Plus, Printer, FileSpreadsheet } from 'lucide-react';
+import { Loader2, ArrowLeft, ChevronDown, ChevronUp, Check, Trash2, Factory, Pencil, Save, X, Plus, Printer, FileSpreadsheet, Ban, CheckCircle, Tag, StickyNote } from 'lucide-react';
 import { format } from 'date-fns';
 import { gooeyToast } from 'goey-toast';
 import { confirmToast } from '../../utils/confirmToast';
@@ -143,8 +143,13 @@ function EditItemRow({ item, index, onChange, onRemove }: {
 export default function AdminOrderDetails() {
     const { orderId } = useParams<{ orderId: string }>();
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
     const { user } = useAuth();
-    const ordersPath = user?.role === 'WAREHOUSE' ? '/warehouse/orders' : '/admin/orders';
+    const isWarehouse = user?.role === 'WAREHOUSE';
+    const basePath = isWarehouse ? '/warehouse' : '/admin';
+    const returnTab = searchParams.get('tab') || '';
+    const ordersPath = returnTab ? `${basePath}/orders?tab=${returnTab}` : `${basePath}/orders`;
+
     const [order, setOrder] = useState<Order | null>(null);
     const [loading, setLoading] = useState(true);
     const [expandedItem, setExpandedItem] = useState<number | null>(null);
@@ -157,6 +162,13 @@ export default function AdminOrderDetails() {
     const [savingEdit, setSavingEdit] = useState(false);
     const [worksheetPreview, setWorksheetPreview] = useState<{ data: WorksheetPreviewResponse } | null>(null);
     const [viewingWorksheets, setViewingWorksheets] = useState(false);
+
+    // Admin fields inline editing
+    const [editingLabel, setEditingLabel] = useState(false);
+    const [labelValue, setLabelValue] = useState('');
+    const [editingNotes, setEditingNotes] = useState(false);
+    const [adminNotesValue, setAdminNotesValue] = useState('');
+    const [savingField, setSavingField] = useState(false);
 
     const hasPriceBreakdown = (item: BlindItem) =>
         item.fabricPrice != null || item.motorPrice != null || item.bracketPrice != null;
@@ -265,6 +277,58 @@ export default function AdminOrderDetails() {
         }
     };
 
+    const handleCancel = async () => {
+        if (!await confirmToast({ title: 'Cancel Order', message: 'Are you sure you want to cancel this order? This action cannot be easily undone.', confirmText: 'Cancel Order', variant: 'danger' })) return;
+        setActionLoading(true);
+        try {
+            await adminOrderApi.updateStatus(order.id, 'CANCELLED');
+            gooeyToast.success('Order cancelled');
+            setOrder({ ...order, status: 'CANCELLED' });
+        } catch (error) {
+            gooeyToast.error('Failed to cancel order');
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    const handleToggleFabricOrdered = async () => {
+        try {
+            const newVal = !order.fabricOrdered;
+            await adminOrderApi.toggleFabricOrdered(order.id, newVal);
+            setOrder({ ...order, fabricOrdered: newVal });
+        } catch {
+            gooeyToast.error('Failed to update');
+        }
+    };
+
+    const handleSaveLabel = async () => {
+        setSavingField(true);
+        try {
+            const updated = await adminOrderApi.updateAdminFields(order.id, { label: labelValue });
+            setOrder({ ...order, label: updated.label });
+            setEditingLabel(false);
+            gooeyToast.success('Label updated');
+        } catch {
+            gooeyToast.error('Failed to update label');
+        } finally {
+            setSavingField(false);
+        }
+    };
+
+    const handleSaveAdminNotes = async () => {
+        setSavingField(true);
+        try {
+            const updated = await adminOrderApi.updateAdminFields(order.id, { adminNotes: adminNotesValue });
+            setOrder({ ...order, adminNotes: updated.adminNotes });
+            setEditingNotes(false);
+            gooeyToast.success('Notes updated');
+        } catch {
+            gooeyToast.error('Failed to update notes');
+        } finally {
+            setSavingField(false);
+        }
+    };
+
     const startEditing = () => {
         if (!order) return;
         setEditItems(order.items.map(it => ({ ...it })));
@@ -341,106 +405,201 @@ export default function AdminOrderDetails() {
     return (
         <>
         <div className="space-y-6 p-6 max-w-5xl mx-auto pb-24">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                    <Button variant="ghost" size="icon" onClick={() => navigate(ordersPath)}>
-                        <ArrowLeft className="h-5 w-5" />
-                    </Button>
-                    <div>
-                        <div className="flex items-center gap-3">
-                            <h1 className="text-3xl font-bold tracking-tight">{order.orderNumber}</h1>
-                            <Badge variant={getStatusVariant(order.status)} className="text-sm">
-                                {order.status}
-                            </Badge>
-                        </div>
-                        <p className="text-muted-foreground">
-                            Placed on {format(new Date(order.createdAt), 'MMMM d, yyyy')}
-                        </p>
+            {/* Header — Order number + status + date */}
+            <div className="flex items-start gap-4">
+                <Button variant="ghost" size="icon" className="mt-1 shrink-0" onClick={() => navigate(ordersPath)}>
+                    <ArrowLeft className="h-5 w-5" />
+                </Button>
+                <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-3 flex-wrap">
+                        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{order.orderNumber}</h1>
+                        <Badge variant={getStatusVariant(order.status)} className="text-sm">
+                            {order.status}
+                        </Badge>
+                        {order.label && (
+                            <span className="inline-flex items-center gap-1 text-xs font-medium bg-amber-100 text-amber-800 px-2.5 py-1 rounded-full">
+                                <Tag className="h-3 w-3" />
+                                {order.label}
+                            </span>
+                        )}
                     </div>
-                </div>
-                <div className="flex gap-2 flex-wrap">
-                    {user?.role !== 'WAREHOUSE' && (order.status === 'PENDING' || order.status === 'CONFIRMED') && !editing && (
-                        <Button variant="outline" onClick={startEditing} disabled={actionLoading}>
-                            <Pencil className="mr-2 h-4 w-4" />
-                            Edit Order
-                        </Button>
-                    )}
-                    {user?.role !== 'WAREHOUSE' && order.status === 'PENDING' && (
-                        <Button
-                            onClick={handleApprove}
-                            disabled={actionLoading}
-                            className="bg-green-600 hover:bg-green-700"
-                        >
-                            <Check className="mr-2 h-4 w-4" />
-                            Approve
-                        </Button>
-                    )}
-                    {user?.role !== 'WAREHOUSE' && order.status === 'CONFIRMED' && (
-                        <>
-                            <Button
-                                variant="outline"
-                                onClick={handlePreviewWorksheets}
-                                disabled={viewingWorksheets}
-                                className="text-blue-600 border-blue-200 hover:bg-blue-50"
-                            >
-                                {viewingWorksheets
-                                    ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    : <FileSpreadsheet className="mr-2 h-4 w-4" />}
-                                Preview Worksheets
-                            </Button>
-                            <Button onClick={handleSendToProduction} disabled={actionLoading}>
-                                {actionLoading
-                                    ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    : <Factory className="mr-2 h-4 w-4" />}
-                                Send to Production
-                            </Button>
-                        </>
-                    )}
-                    {user?.role !== 'WAREHOUSE' && order.status === 'PRODUCTION' && (
-                        <Button onClick={handleComplete} disabled={actionLoading} variant="outline">
-                            Mark Completed
-                        </Button>
-                    )}
-                    {(order.status === 'PRODUCTION' || order.status === 'COMPLETED') && (
-                        <Button
-                            variant="outline"
-                            onClick={handleViewWorksheets}
-                            disabled={viewingWorksheets}
-                            className="text-blue-600 border-blue-200 hover:bg-blue-50"
-                        >
-                            {viewingWorksheets
-                                ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                : <FileSpreadsheet className="mr-2 h-4 w-4" />}
-                            Worksheets
-                        </Button>
-                    )}
-                    {order.status === 'PRODUCTION' && (
-                        <Button
-                            variant="outline"
-                            onClick={handleDownloadLabels}
-                            disabled={downloadingLabels}
-                            className="text-indigo-600 border-indigo-200 hover:bg-indigo-50"
-                        >
-                            {downloadingLabels
-                                ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                : <Printer className="mr-2 h-4 w-4" />}
-                            Print Labels
-                        </Button>
-                    )}
-                    {user?.role !== 'WAREHOUSE' && order.status !== 'CANCELLED' && (
-                        <Button
-                            variant="outline"
-                            onClick={handleTrash}
-                            disabled={actionLoading}
-                            className="text-red-600 border-red-200 hover:bg-red-50"
-                        >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Move to Trash
-                        </Button>
-                    )}
+                    <p className="text-sm text-muted-foreground mt-0.5">
+                        Placed on {format(new Date(order.createdAt), 'MMMM d, yyyy')}
+                    </p>
                 </div>
             </div>
+
+            {/* Action Bar — clean row of buttons */}
+            <div className="flex flex-wrap items-center gap-2 border rounded-lg bg-gray-50/80 px-4 py-3">
+                {/* Edit (admin, PENDING/CONFIRMED) */}
+                {!isWarehouse && (order.status === 'PENDING' || order.status === 'CONFIRMED') && !editing && (
+                    <Button variant="outline" size="sm" onClick={startEditing} disabled={actionLoading}>
+                        <Pencil className="mr-1.5 h-4 w-4" />
+                        Edit Order
+                    </Button>
+                )}
+
+                {/* Approve (admin, PENDING) */}
+                {!isWarehouse && order.status === 'PENDING' && (
+                    <Button size="sm" onClick={handleApprove} disabled={actionLoading} className="bg-green-600 hover:bg-green-700">
+                        <Check className="mr-1.5 h-4 w-4" />
+                        Approve
+                    </Button>
+                )}
+
+                {/* Preview Worksheets (admin, CONFIRMED) */}
+                {!isWarehouse && order.status === 'CONFIRMED' && (
+                    <Button variant="outline" size="sm" onClick={handlePreviewWorksheets} disabled={viewingWorksheets} className="text-blue-600 border-blue-200 hover:bg-blue-50">
+                        {viewingWorksheets ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <FileSpreadsheet className="mr-1.5 h-4 w-4" />}
+                        Preview Worksheets
+                    </Button>
+                )}
+
+                {/* Send to Production (admin, CONFIRMED) */}
+                {!isWarehouse && order.status === 'CONFIRMED' && (
+                    <Button size="sm" onClick={handleSendToProduction} disabled={actionLoading}>
+                        {actionLoading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Factory className="mr-1.5 h-4 w-4" />}
+                        Send to Production
+                    </Button>
+                )}
+
+                {/* Mark Completed (admin + warehouse, PRODUCTION) */}
+                {order.status === 'PRODUCTION' && (
+                    <Button size="sm" variant="outline" onClick={handleComplete} disabled={actionLoading}>
+                        <CheckCircle className="mr-1.5 h-4 w-4" />
+                        Mark Completed
+                    </Button>
+                )}
+
+                {/* View Worksheets (admin + warehouse, PRODUCTION/COMPLETED) */}
+                {(order.status === 'PRODUCTION' || order.status === 'COMPLETED') && (
+                    <Button variant="outline" size="sm" onClick={handleViewWorksheets} disabled={viewingWorksheets} className="text-blue-600 border-blue-200 hover:bg-blue-50">
+                        {viewingWorksheets ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <FileSpreadsheet className="mr-1.5 h-4 w-4" />}
+                        Worksheets
+                    </Button>
+                )}
+
+                {/* Print Labels (admin + warehouse, PRODUCTION) */}
+                {order.status === 'PRODUCTION' && (
+                    <Button variant="outline" size="sm" onClick={handleDownloadLabels} disabled={downloadingLabels} className="text-indigo-600 border-indigo-200 hover:bg-indigo-50">
+                        {downloadingLabels ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Printer className="mr-1.5 h-4 w-4" />}
+                        Print Labels
+                    </Button>
+                )}
+
+                {/* Cancel (admin, PENDING/CONFIRMED) */}
+                {!isWarehouse && (order.status === 'PENDING' || order.status === 'CONFIRMED') && (
+                    <Button variant="outline" size="sm" onClick={handleCancel} disabled={actionLoading} className="text-red-600 border-red-200 hover:bg-red-50">
+                        <Ban className="mr-1.5 h-4 w-4" />
+                        Cancel Order
+                    </Button>
+                )}
+
+                {/* Spacer */}
+                <div className="flex-1" />
+
+                {/* Trash (admin, not cancelled) */}
+                {!isWarehouse && order.status !== 'CANCELLED' && (
+                    <Button variant="ghost" size="sm" onClick={handleTrash} disabled={actionLoading} className="text-red-500 hover:text-red-700 hover:bg-red-50">
+                        <Trash2 className="mr-1.5 h-4 w-4" />
+                        Trash
+                    </Button>
+                )}
+            </div>
+
+            {/* Admin Flags — Fabric Ordered + Label + Admin Notes (admin only, inside order) */}
+            {!isWarehouse && (
+                <div className="grid gap-4 sm:grid-cols-3">
+                    {/* Fabric Ordered (CONFIRMED only) */}
+                    {order.status === 'CONFIRMED' && (
+                        <div className="flex items-center gap-3 border rounded-lg px-4 py-3 bg-white">
+                            <input
+                                type="checkbox"
+                                checked={!!order.fabricOrdered}
+                                onChange={handleToggleFabricOrdered}
+                                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                                id="fabricOrdered"
+                            />
+                            <label htmlFor="fabricOrdered" className="text-sm font-medium text-gray-700 cursor-pointer select-none">
+                                Fabric Ordered
+                            </label>
+                        </div>
+                    )}
+
+                    {/* Label */}
+                    <div className="flex items-center gap-2 border rounded-lg px-4 py-2 bg-white">
+                        <Tag className="h-4 w-4 text-amber-500 shrink-0" />
+                        {editingLabel ? (
+                            <div className="flex items-center gap-1.5 flex-1">
+                                <Input
+                                    className="h-7 text-xs flex-1"
+                                    value={labelValue}
+                                    onChange={e => setLabelValue(e.target.value)}
+                                    placeholder="e.g. Urgent, VIP"
+                                    maxLength={100}
+                                    autoFocus
+                                    onKeyDown={e => e.key === 'Enter' && handleSaveLabel()}
+                                />
+                                <button onClick={handleSaveLabel} disabled={savingField} className="text-green-600 hover:text-green-800">
+                                    <Check className="h-4 w-4" />
+                                </button>
+                                <button onClick={() => setEditingLabel(false)} className="text-gray-400 hover:text-gray-600">
+                                    <X className="h-4 w-4" />
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                                <span className="text-sm text-gray-600 truncate">
+                                    {order.label || <span className="text-gray-400 italic">No label</span>}
+                                </span>
+                                <button
+                                    onClick={() => { setLabelValue(order.label || ''); setEditingLabel(true); }}
+                                    className="text-gray-400 hover:text-gray-600 shrink-0"
+                                >
+                                    <Pencil className="h-3.5 w-3.5" />
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Admin Notes */}
+                    <div className="flex items-start gap-2 border rounded-lg px-4 py-2 bg-white sm:col-span-1">
+                        <StickyNote className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
+                        {editingNotes ? (
+                            <div className="flex flex-col gap-1.5 flex-1">
+                                <textarea
+                                    className="text-xs border border-gray-200 rounded px-2 py-1 w-full resize-none focus:outline-none focus:ring-1 focus:ring-blue-400"
+                                    value={adminNotesValue}
+                                    onChange={e => setAdminNotesValue(e.target.value)}
+                                    placeholder="Internal notes..."
+                                    rows={2}
+                                    autoFocus
+                                />
+                                <div className="flex gap-1 justify-end">
+                                    <button onClick={handleSaveAdminNotes} disabled={savingField} className="text-green-600 hover:text-green-800">
+                                        <Check className="h-4 w-4" />
+                                    </button>
+                                    <button onClick={() => setEditingNotes(false)} className="text-gray-400 hover:text-gray-600">
+                                        <X className="h-4 w-4" />
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                                <span className="text-sm text-gray-600 truncate">
+                                    {order.adminNotes || <span className="text-gray-400 italic">No admin notes</span>}
+                                </span>
+                                <button
+                                    onClick={() => { setAdminNotesValue(order.adminNotes || ''); setEditingNotes(true); }}
+                                    className="text-gray-400 hover:text-gray-600 shrink-0"
+                                >
+                                    <Pencil className="h-3.5 w-3.5" />
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
 
             {/* Order Summary Cards */}
             <div className="grid gap-6 md:grid-cols-2">
@@ -472,7 +631,7 @@ export default function AdminOrderDetails() {
                     </CardContent>
                 </Card>
 
-                {user?.role !== 'WAREHOUSE' && (
+                {!isWarehouse && (
                     <Card>
                         <CardHeader>
                             <CardTitle className="text-lg">Order Summary</CardTitle>
@@ -551,7 +710,7 @@ export default function AdminOrderDetails() {
                                     <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Details</th>
                                     <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Dimensions</th>
                                     <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Control</th>
-                                    {user?.role !== 'WAREHOUSE' && <th className="h-12 px-4 align-middle font-medium text-muted-foreground text-right">Price</th>}
+                                    {!isWarehouse && <th className="h-12 px-4 align-middle font-medium text-muted-foreground text-right">Price</th>}
                                 </tr>
                             </thead>
                             <tbody>
@@ -561,77 +720,83 @@ export default function AdminOrderDetails() {
                                     const hasBreakdown = hasPriceBreakdown(item);
 
                                     return (
-                                        <>
-                                            <tr
-                                                key={itemKey}
-                                                className={`border-b transition-colors hover:bg-muted/50 ${hasBreakdown && user?.role !== 'WAREHOUSE' ? 'cursor-pointer' : ''}`}
-                                                onClick={() => hasBreakdown && user?.role !== 'WAREHOUSE' && setExpandedItem(isExpanded ? null : itemKey)}
-                                            >
-                                                <td className="p-4 align-middle">
-                                                    {hasBreakdown && (
-                                                        isExpanded
+                                        <tr key={itemKey} className="border-b transition-colors hover:bg-muted/50 group">
+                                            <td className="p-4 align-middle">
+                                                {hasBreakdown && !isWarehouse && (
+                                                    <button onClick={() => setExpandedItem(isExpanded ? null : itemKey)}>
+                                                        {isExpanded
                                                             ? <ChevronUp className="h-4 w-4 text-muted-foreground" />
                                                             : <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                                                    )}
-                                                </td>
-                                                <td className="p-4 align-middle font-medium">{item.location}</td>
-                                                <td className="p-4 align-middle">
-                                                    <div className="flex flex-col">
-                                                        <span className="font-semibold">{item.material} - {item.fabricType}</span>
-                                                        <span className="text-xs text-muted-foreground">{item.fabricColour}</span>
-                                                    </div>
-                                                </td>
-                                                <td className="p-4 align-middle">{item.width}mm × {item.drop}mm</td>
-                                                <td className="p-4 align-middle">{item.controlSide} / {item.roll}</td>
-                                                {user?.role !== 'WAREHOUSE' && (
-                                                    <td className="p-4 align-middle text-right font-medium">
-                                                        <span className="text-blue-700">${Number(item.price || 0).toFixed(2)}</span>
-                                                    </td>
+                                                        }
+                                                    </button>
                                                 )}
-                                            </tr>
-                                            {isExpanded && hasBreakdown && user?.role !== 'WAREHOUSE' && (
-                                                <tr key={`${itemKey}-breakdown`} className="border-b bg-blue-50">
-                                                    <td colSpan={6} className="px-8 py-4">
-                                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-1 text-sm mb-3">
-                                                            {item.fixing && <div><span className="text-muted-foreground">Fixing: </span><span className="font-medium">{item.fixing}</span></div>}
-                                                            {item.bracketType && <div><span className="text-muted-foreground">Bracket: </span><span className="font-medium">{item.bracketType}</span></div>}
-                                                            {item.bracketColour && <div><span className="text-muted-foreground">Bracket Colour: </span><span className="font-medium">{item.bracketColour}</span></div>}
-                                                            {item.chainOrMotor && <div><span className="text-muted-foreground">Motor: </span><span className="font-medium">{item.chainOrMotor}</span></div>}
-                                                            {(item as any).chainType && <div><span className="text-muted-foreground">Chain Type: </span><span className="font-medium">{(item as any).chainType}</span></div>}
-                                                            {item.bottomRailType && <div><span className="text-muted-foreground">Bottom Rail: </span><span className="font-medium">{item.bottomRailType}</span></div>}
-                                                            {item.bottomRailColour && <div><span className="text-muted-foreground">Rail Colour: </span><span className="font-medium">{item.bottomRailColour}</span></div>}
-                                                        </div>
-                                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-x-8 gap-y-1 text-sm border-t border-blue-200 pt-3">
-                                                            {item.fabricPrice != null && (
-                                                                <div className="flex justify-between">
-                                                                    <span className="text-muted-foreground">Fabric:</span>
-                                                                    <span className="flex items-center gap-2">
-                                                                        {item.discountPercent != null && Number(item.discountPercent) > 0 && (
-                                                                            <span className="text-xs text-gray-400 line-through bg-yellow-50 px-1 rounded">
-                                                                                ${(Number(item.fabricPrice) / (1 - Number(item.discountPercent) / 100)).toFixed(2)}
-                                                                            </span>
-                                                                        )}
-                                                                        <span className="font-semibold text-yellow-700">${Number(item.fabricPrice).toFixed(2)}</span>
-                                                                    </span>
-                                                                </div>
-                                                            )}
-                                                            {item.motorPrice != null && Number(item.motorPrice) > 0 && (
-                                                                <div className="flex justify-between">
-                                                                    <span className="text-muted-foreground">Motor/Chain:</span>
-                                                                    <span>+${Number(item.motorPrice).toFixed(2)}</span>
-                                                                </div>
-                                                            )}
-                                                            {item.bracketPrice != null && Number(item.bracketPrice) > 0 && (
-                                                                <div className="flex justify-between">
-                                                                    <span className="text-muted-foreground">Brackets:</span>
-                                                                    <span>+${Number(item.bracketPrice).toFixed(2)}</span>
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    </td>
-                                                </tr>
+                                            </td>
+                                            <td className="p-4 align-middle font-medium">{item.location}</td>
+                                            <td className="p-4 align-middle">
+                                                <div className="flex flex-col">
+                                                    <span className="font-semibold">{item.material} - {item.fabricType}</span>
+                                                    <span className="text-xs text-muted-foreground">{item.fabricColour}</span>
+                                                </div>
+                                            </td>
+                                            <td className="p-4 align-middle">{item.width}mm × {item.drop}mm</td>
+                                            <td className="p-4 align-middle">{item.controlSide} / {item.roll}</td>
+                                            {!isWarehouse && (
+                                                <td className="p-4 align-middle text-right font-medium">
+                                                    <span className="text-blue-700">${Number(item.price || 0).toFixed(2)}</span>
+                                                </td>
                                             )}
-                                        </>
+                                        </tr>
+                                    );
+                                })}
+                                {/* Expanded breakdown rows */}
+                                {order.items.map((item, index) => {
+                                    const itemKey = (item as any).id || index;
+                                    const isExpanded = expandedItem === itemKey;
+                                    const hasBreakdown = hasPriceBreakdown(item);
+
+                                    if (!isExpanded || !hasBreakdown || isWarehouse) return null;
+
+                                    return (
+                                        <tr key={`${itemKey}-breakdown`} className="border-b bg-blue-50">
+                                            <td colSpan={6} className="px-8 py-4">
+                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-1 text-sm mb-3">
+                                                    {item.fixing && <div><span className="text-muted-foreground">Fixing: </span><span className="font-medium">{item.fixing}</span></div>}
+                                                    {item.bracketType && <div><span className="text-muted-foreground">Bracket: </span><span className="font-medium">{item.bracketType}</span></div>}
+                                                    {item.bracketColour && <div><span className="text-muted-foreground">Bracket Colour: </span><span className="font-medium">{item.bracketColour}</span></div>}
+                                                    {item.chainOrMotor && <div><span className="text-muted-foreground">Motor: </span><span className="font-medium">{item.chainOrMotor}</span></div>}
+                                                    {(item as any).chainType && <div><span className="text-muted-foreground">Chain Type: </span><span className="font-medium">{(item as any).chainType}</span></div>}
+                                                    {item.bottomRailType && <div><span className="text-muted-foreground">Bottom Rail: </span><span className="font-medium">{item.bottomRailType}</span></div>}
+                                                    {item.bottomRailColour && <div><span className="text-muted-foreground">Rail Colour: </span><span className="font-medium">{item.bottomRailColour}</span></div>}
+                                                </div>
+                                                <div className="grid grid-cols-2 md:grid-cols-3 gap-x-8 gap-y-1 text-sm border-t border-blue-200 pt-3">
+                                                    {item.fabricPrice != null && (
+                                                        <div className="flex justify-between">
+                                                            <span className="text-muted-foreground">Fabric:</span>
+                                                            <span className="flex items-center gap-2">
+                                                                {item.discountPercent != null && Number(item.discountPercent) > 0 && (
+                                                                    <span className="text-xs text-gray-400 line-through bg-yellow-50 px-1 rounded">
+                                                                        ${(Number(item.fabricPrice) / (1 - Number(item.discountPercent) / 100)).toFixed(2)}
+                                                                    </span>
+                                                                )}
+                                                                <span className="font-semibold text-yellow-700">${Number(item.fabricPrice).toFixed(2)}</span>
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                    {item.motorPrice != null && Number(item.motorPrice) > 0 && (
+                                                        <div className="flex justify-between">
+                                                            <span className="text-muted-foreground">Motor/Chain:</span>
+                                                            <span>+${Number(item.motorPrice).toFixed(2)}</span>
+                                                        </div>
+                                                    )}
+                                                    {item.bracketPrice != null && Number(item.bracketPrice) > 0 && (
+                                                        <div className="flex justify-between">
+                                                            <span className="text-muted-foreground">Brackets:</span>
+                                                            <span>+${Number(item.bracketPrice).toFixed(2)}</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </td>
+                                        </tr>
                                     );
                                 })}
                             </tbody>

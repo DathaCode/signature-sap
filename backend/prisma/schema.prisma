@@ -151,6 +151,7 @@ model Order {
 
   // Admin flags
   fabricOrdered       Boolean           @default(false) @map("fabric_ordered")
+  label               String?           @db.VarChar(100)
 
   // Soft delete (Trash)
   deletedAt           DateTime?         @map("deleted_at") @db.Timestamp(6)

@@ -1372,6 +1372,14 @@ export const updateOrderStatus = async (
             throw new AppError(400, `Invalid status. Must be one of: ${Object.values(OrderStatus).join(', ')}`);
         }
 
+        // Warehouse can only mark PRODUCTION → COMPLETED
+        if (authReq.user?.role === 'WAREHOUSE') {
+            const existing = await prisma.order.findUnique({ where: { id: req.params.id as string } });
+            if (!existing || existing.status !== 'PRODUCTION' || status !== 'COMPLETED') {
+                throw new AppError(403, 'Warehouse users can only mark production orders as completed');
+            }
+        }
+
         const updated = await prisma.order.update({
             where: { id: req.params.id as string },
             data: { status },
@@ -1662,6 +1670,38 @@ export const toggleFabricOrdered = async (
         const updated = await prisma.order.update({
             where: { id: orderId },
             data: { fabricOrdered: typeof fabricOrdered === 'boolean' ? fabricOrdered : !order.fabricOrdered },
+        });
+
+        res.json({ success: true, data: { order: updated } });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Update order label and/or admin notes
+ * PATCH /api/web-orders/:id/admin-fields
+ */
+export const updateAdminFields = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> => {
+    try {
+        const orderId = req.params.id as string;
+        const { label, adminNotes } = req.body;
+
+        const order = await prisma.order.findUnique({ where: { id: orderId } });
+        if (!order) throw new AppError(404, 'Order not found');
+
+        const data: any = {};
+        if (label !== undefined) data.label = label || null;
+        if (adminNotes !== undefined) data.adminNotes = adminNotes || null;
+
+        const updated = await prisma.order.update({
+            where: { id: orderId },
+            data,
+            include: { items: { orderBy: { itemNumber: 'asc' } } },
         });
 
         res.json({ success: true, data: { order: updated } });

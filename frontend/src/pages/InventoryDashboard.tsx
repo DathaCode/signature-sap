@@ -410,9 +410,9 @@ export default function InventoryDashboard() {
                                                 </td>
                                             )}
 
-                                            {/* Colour — dropdown if multiple variants */}
+                                            {/* Colour — dropdown only for FABRIC/ALL tabs; plain text for component tabs */}
                                             <td className="py-3 px-4">
-                                                {hasVariants ? (
+                                                {hasVariants && (activeTab === 'ALL' || activeTab === 'FABRIC') ? (
                                                     <div className="flex items-center gap-1.5">
                                                         <span
                                                             className="w-3 h-3 rounded-full border border-gray-300 shrink-0"
