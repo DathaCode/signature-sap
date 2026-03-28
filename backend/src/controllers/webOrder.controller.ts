@@ -725,7 +725,7 @@ async function runOptimization(order: any) {
             sheets,
             statistics: {
                 usedStockSheets: result.statistics.totalSheets,
-                stockDimensions: `3000×continuous`,
+                stockDimensions: `2950×continuous`,
                 totalUsedArea: result.statistics.totalUsedArea,
                 totalWastedArea: result.statistics.totalWasteArea,
                 wastePercentage: result.wastePercentage,
@@ -1002,7 +1002,7 @@ export const previewWorksheets = async (
                     sheets,
                     statistics: {
                         usedStockSheets: result.statistics.totalSheets,
-                        stockDimensions: `3000×continuous`,
+                        stockDimensions: `2950×continuous`,
                         totalUsedArea: result.statistics.totalUsedArea,
                         totalWastedArea: result.statistics.totalWasteArea,
                         wastePercentage: result.wastePercentage,
@@ -1031,6 +1031,7 @@ export const previewWorksheets = async (
                 bottomRailType: item.bottomRailType,
                 bottomRailColour: item.bottomRailColour,
                 orderItemId: item.id,
+                chainOrMotor: item.chainOrMotor,
             }));
 
         const tubeCutOptimizer = new TubeCutOptimizer();

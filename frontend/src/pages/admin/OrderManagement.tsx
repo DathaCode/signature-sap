@@ -2,9 +2,8 @@ import { useEffect, useState, useCallback } from 'react';
 import { adminOrderApi } from '../../services/api';
 import { Order, WorksheetPreviewResponse } from '../../types/order';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
-import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
-import { Loader2, Check, Factory, Filter, Eye, FileText, Search, X } from 'lucide-react';
+import { Loader2, Check, Factory, RefreshCw, Eye, FileText, Search, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { gooeyToast } from 'goey-toast';
@@ -14,11 +13,10 @@ import WorksheetPreview from '../../components/admin/WorksheetPreview';
 export default function OrderManagement() {
     const [orders, setOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(true);
-    const [statusFilter, setStatusFilter] = useState<string>('ALL');
+    const [statusFilter, setStatusFilter] = useState<string>('PENDING');
     const [customerSearch, setCustomerSearch] = useState('');
     const [dateFrom, setDateFrom] = useState('');
     const [dateTo, setDateTo] = useState('');
-    const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
     const [worksheetPreview, setWorksheetPreview] = useState<{
         orderId: string;
         orderNumber: string;
@@ -91,55 +89,20 @@ export default function OrderManagement() {
         }
     };
 
-    const handleStatusChange = async (id: string, orderNumber: string, newStatus: string) => {
-        const label = newStatus === 'COMPLETED' ? 'complete' : 'cancel';
-        if (!await confirmToast({
-            title: newStatus === 'COMPLETED' ? 'Complete Order' : 'Cancel Order',
-            message: `Mark order ${orderNumber} as ${label}?`,
-            confirmText: newStatus === 'COMPLETED' ? 'Complete' : 'Cancel Order',
-            variant: newStatus === 'CANCELLED' ? 'danger' : 'info',
-        })) return;
-        setUpdatingStatus(id);
-        try {
-            await adminOrderApi.updateStatus(id, newStatus);
-            gooeyToast.success(`Order marked as ${newStatus.toLowerCase()}`);
-            fetchOrders();
-        } catch (error) {
-            console.error(error);
-            gooeyToast.error('Failed to update order status');
-        } finally {
-            setUpdatingStatus(null);
-        }
-    };
+    const STATUS_TABS = ['PENDING', 'CONFIRMED', 'PRODUCTION', 'COMPLETED', 'CANCELLED'] as const;
 
-    const handleClearFilters = () => {
-        setStatusFilter('ALL');
-        setCustomerSearch('');
-        setDateFrom('');
-        setDateTo('');
-    };
-
-    const hasActiveFilters = statusFilter !== 'ALL' || customerSearch.trim() || dateFrom || dateTo;
-
-    const getStatusVariant = (status: string) => {
-        switch (status) {
-            case 'CONFIRMED': return 'success';
-            case 'PRODUCTION': return 'default';
-            case 'COMPLETED': return 'secondary';
-            case 'CANCELLED': return 'destructive';
-            default: return 'outline';
+    const getTabStyle = (tab: string) => {
+        const isActive = statusFilter === tab;
+        const base = 'px-4 py-2 text-sm font-medium border-b-2 transition-colors cursor-pointer whitespace-nowrap';
+        if (!isActive) return `${base} border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300`;
+        switch (tab) {
+            case 'PENDING': return `${base} border-yellow-500 text-yellow-700 bg-yellow-50`;
+            case 'CONFIRMED': return `${base} border-green-500 text-green-700 bg-green-50`;
+            case 'PRODUCTION': return `${base} border-blue-500 text-blue-700 bg-blue-50`;
+            case 'COMPLETED': return `${base} border-gray-500 text-gray-700 bg-gray-50`;
+            case 'CANCELLED': return `${base} border-red-500 text-red-700 bg-red-50`;
+            default: return `${base} border-primary text-primary`;
         }
-    };
-
-    const getStatusActions = (order: Order) => {
-        const options: { value: string; label: string }[] = [];
-        if (order.status === 'PRODUCTION' || order.status === 'CONFIRMED') {
-            options.push({ value: 'COMPLETED', label: 'Completed' });
-        }
-        if (order.status !== 'CANCELLED' && order.status !== 'COMPLETED') {
-            options.push({ value: 'CANCELLED', label: 'Cancelled' });
-        }
-        return options;
     };
 
     return (
@@ -150,86 +113,77 @@ export default function OrderManagement() {
                     <p className="text-muted-foreground">Review and manage customer orders.</p>
                 </div>
                 <Button variant="outline" onClick={fetchOrders}>
-                    <Filter className="mr-2 h-4 w-4" />
+                    <RefreshCw className="mr-2 h-4 w-4" />
                     Refresh
                 </Button>
             </div>
 
+            {/* Status Tabs */}
+            <div className="border-b">
+                <div className="flex gap-0 overflow-x-auto">
+                    {STATUS_TABS.map(tab => (
+                        <button
+                            key={tab}
+                            onClick={() => setStatusFilter(tab)}
+                            className={getTabStyle(tab)}
+                        >
+                            {tab.charAt(0) + tab.slice(1).toLowerCase()}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
             {/* Filter Bar */}
-            <Card>
-                <CardContent className="pt-6">
-                    <div className="flex flex-wrap items-end gap-4">
-                        {/* Customer Search */}
-                        <div className="flex flex-col gap-1.5">
-                            <label className="text-sm font-medium text-muted-foreground">Customer</label>
-                            <div className="relative">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                <input
-                                    type="text"
-                                    placeholder="Search by name..."
-                                    value={customerSearch}
-                                    onChange={(e) => setCustomerSearch(e.target.value)}
-                                    onKeyDown={(e) => e.key === 'Enter' && fetchOrders()}
-                                    className="h-10 w-52 rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                                />
-                            </div>
-                        </div>
+            <div className="flex flex-wrap items-end gap-4">
+                {/* Customer Search */}
+                <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <input
+                        type="text"
+                        placeholder="Search by customer..."
+                        value={customerSearch}
+                        onChange={(e) => setCustomerSearch(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && fetchOrders()}
+                        className="h-9 w-52 rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    />
+                </div>
 
-                        {/* Status Filter */}
-                        <div className="flex flex-col gap-1.5">
-                            <label className="text-sm font-medium text-muted-foreground">Status</label>
-                            <select
-                                className="h-10 w-40 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                                value={statusFilter}
-                                onChange={(e) => setStatusFilter(e.target.value)}
-                            >
-                                <option value="ALL">All Statuses</option>
-                                <option value="PENDING">Pending</option>
-                                <option value="CONFIRMED">Confirmed</option>
-                                <option value="PRODUCTION">Production</option>
-                                <option value="COMPLETED">Completed</option>
-                                <option value="CANCELLED">Cancelled</option>
-                            </select>
-                        </div>
+                {/* Date From */}
+                <div className="flex items-center gap-2">
+                    <label className="text-sm text-muted-foreground">From</label>
+                    <input
+                        type="date"
+                        value={dateFrom}
+                        onChange={(e) => setDateFrom(e.target.value)}
+                        className="h-9 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    />
+                </div>
 
-                        {/* Date From */}
-                        <div className="flex flex-col gap-1.5">
-                            <label className="text-sm font-medium text-muted-foreground">From</label>
-                            <input
-                                type="date"
-                                value={dateFrom}
-                                onChange={(e) => setDateFrom(e.target.value)}
-                                className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                            />
-                        </div>
+                {/* Date To */}
+                <div className="flex items-center gap-2">
+                    <label className="text-sm text-muted-foreground">To</label>
+                    <input
+                        type="date"
+                        value={dateTo}
+                        onChange={(e) => setDateTo(e.target.value)}
+                        className="h-9 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    />
+                </div>
 
-                        {/* Date To */}
-                        <div className="flex flex-col gap-1.5">
-                            <label className="text-sm font-medium text-muted-foreground">To</label>
-                            <input
-                                type="date"
-                                value={dateTo}
-                                onChange={(e) => setDateTo(e.target.value)}
-                                className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                            />
-                        </div>
+                {/* Search Button */}
+                <Button onClick={fetchOrders} size="sm" className="h-9">
+                    <Search className="mr-2 h-4 w-4" />
+                    Search
+                </Button>
 
-                        {/* Search Button */}
-                        <Button onClick={fetchOrders} size="sm" className="h-10">
-                            <Search className="mr-2 h-4 w-4" />
-                            Search
-                        </Button>
-
-                        {/* Clear Filters */}
-                        {hasActiveFilters && (
-                            <Button variant="ghost" size="sm" onClick={handleClearFilters} className="h-10 text-muted-foreground">
-                                <X className="mr-2 h-4 w-4" />
-                                Clear
-                            </Button>
-                        )}
-                    </div>
-                </CardContent>
-            </Card>
+                {/* Clear Filters */}
+                {(customerSearch.trim() || dateFrom || dateTo) && (
+                    <Button variant="ghost" size="sm" onClick={() => { setCustomerSearch(''); setDateFrom(''); setDateTo(''); }} className="h-9 text-muted-foreground">
+                        <X className="mr-2 h-4 w-4" />
+                        Clear
+                    </Button>
+                )}
+            </div>
 
             <Card>
                 <CardHeader>
@@ -254,13 +208,11 @@ export default function OrderManagement() {
                                         <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Reference</th>
                                         <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Items</th>
                                         <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Total</th>
-                                        <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Status</th>
                                         <th className="h-12 px-4 align-middle font-medium text-muted-foreground text-right">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody className="[&_tr:last-child]:border-0">
                                     {orders.map((order) => {
-                                        const statusActions = getStatusActions(order);
                                         return (
                                             <tr key={order.id} className="border-b transition-colors hover:bg-muted/50">
                                                 <td className="p-4 align-middle font-medium">
@@ -286,30 +238,6 @@ export default function OrderManagement() {
                                                 </td>
                                                 <td className="p-4 align-middle">{order.items.length} items</td>
                                                 <td className="p-4 align-middle">${Number(order.total).toFixed(2)}</td>
-                                                <td className="p-4 align-middle">
-                                                    {statusActions.length > 0 ? (
-                                                        <select
-                                                            value={order.status}
-                                                            onChange={(e) => handleStatusChange(order.id, order.orderNumber, e.target.value)}
-                                                            disabled={updatingStatus === order.id}
-                                                            className={`h-8 rounded-md border px-2 py-1 text-xs font-semibold cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-                                                                order.status === 'CONFIRMED' ? 'border-green-300 bg-green-50 text-green-700' :
-                                                                order.status === 'PRODUCTION' ? 'border-blue-300 bg-blue-50 text-blue-700' :
-                                                                order.status === 'PENDING' ? 'border-gray-300 bg-gray-50 text-gray-700' :
-                                                                'border-gray-300 bg-gray-50 text-gray-700'
-                                                            }`}
-                                                        >
-                                                            <option value={order.status} disabled>{order.status}</option>
-                                                            {statusActions.map(opt => (
-                                                                <option key={opt.value} value={opt.value}>
-                                                                    {opt.label}
-                                                                </option>
-                                                            ))}
-                                                        </select>
-                                                    ) : (
-                                                        <Badge variant={getStatusVariant(order.status)}>{order.status}</Badge>
-                                                    )}
-                                                </td>
                                                 <td className="p-4 align-middle text-right">
                                                     <div className="flex justify-end gap-2">
                                                         <Link to={`/admin/orders/${order.id}`}>
@@ -357,7 +285,7 @@ export default function OrderManagement() {
                                     })}
                                     {orders.length === 0 && (
                                         <tr>
-                                            <td colSpan={7} className="p-8 text-center text-muted-foreground">
+                                            <td colSpan={7} className="p-8 text-center text-muted-foreground italic">
                                                 No orders found matching the criteria.
                                             </td>
                                         </tr>

@@ -104,7 +104,7 @@ const MOTOR_DEDUCTIONS: Record<string, number> = {
 // ── Service ──────────────────────────────────────────────────────────────────
 
 export class FabricCutOptimizerService {
-    private readonly STOCK_WIDTH = 3000; // mm – fixed fabric roll width
+    private readonly STOCK_WIDTH = 2950; // mm – default fabric roll width
     private readonly DROP_ADDITION = 200; // mm added to drop for fabric cutting
 
     /**
