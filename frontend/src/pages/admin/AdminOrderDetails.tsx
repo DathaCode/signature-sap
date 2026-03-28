@@ -402,7 +402,7 @@ export default function AdminOrderDetails() {
                             Mark Completed
                         </Button>
                     )}
-                    {order.status === 'PRODUCTION' && (
+                    {(order.status === 'PRODUCTION' || order.status === 'COMPLETED') && (
                         <Button
                             variant="outline"
                             onClick={handleViewWorksheets}
@@ -472,27 +472,29 @@ export default function AdminOrderDetails() {
                     </CardContent>
                 </Card>
 
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="text-lg">Order Summary</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                            <span className="text-muted-foreground">Subtotal ({order.items.length} items):</span>
-                            <span>${Number(order.subtotal).toFixed(2)}</span>
-                        </div>
-                        {Number(order.discount) > 0 && (
-                            <div className="flex justify-between text-sm text-green-600">
-                                <span>Discount:</span>
-                                <span>-${Number(order.discount).toFixed(2)}</span>
+                {user?.role !== 'WAREHOUSE' && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-lg">Order Summary</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-2">
+                            <div className="flex justify-between text-sm">
+                                <span className="text-muted-foreground">Subtotal ({order.items.length} items):</span>
+                                <span>${Number(order.subtotal).toFixed(2)}</span>
                             </div>
-                        )}
-                        <div className="flex justify-between font-bold text-lg border-t pt-2 mt-2">
-                            <span>Total:</span>
-                            <span>${Number(order.total).toFixed(2)}</span>
-                        </div>
-                    </CardContent>
-                </Card>
+                            {Number(order.discount) > 0 && (
+                                <div className="flex justify-between text-sm text-green-600">
+                                    <span>Discount:</span>
+                                    <span>-${Number(order.discount).toFixed(2)}</span>
+                                </div>
+                            )}
+                            <div className="flex justify-between font-bold text-lg border-t pt-2 mt-2">
+                                <span>Total:</span>
+                                <span>${Number(order.total).toFixed(2)}</span>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
             </div>
 
             {/* Edit Mode */}
@@ -549,7 +551,7 @@ export default function AdminOrderDetails() {
                                     <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Details</th>
                                     <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Dimensions</th>
                                     <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Control</th>
-                                    <th className="h-12 px-4 align-middle font-medium text-muted-foreground text-right">Price</th>
+                                    {user?.role !== 'WAREHOUSE' && <th className="h-12 px-4 align-middle font-medium text-muted-foreground text-right">Price</th>}
                                 </tr>
                             </thead>
                             <tbody>
@@ -562,8 +564,8 @@ export default function AdminOrderDetails() {
                                         <>
                                             <tr
                                                 key={itemKey}
-                                                className={`border-b transition-colors hover:bg-muted/50 ${hasBreakdown ? 'cursor-pointer' : ''}`}
-                                                onClick={() => hasBreakdown && setExpandedItem(isExpanded ? null : itemKey)}
+                                                className={`border-b transition-colors hover:bg-muted/50 ${hasBreakdown && user?.role !== 'WAREHOUSE' ? 'cursor-pointer' : ''}`}
+                                                onClick={() => hasBreakdown && user?.role !== 'WAREHOUSE' && setExpandedItem(isExpanded ? null : itemKey)}
                                             >
                                                 <td className="p-4 align-middle">
                                                     {hasBreakdown && (
@@ -581,11 +583,13 @@ export default function AdminOrderDetails() {
                                                 </td>
                                                 <td className="p-4 align-middle">{item.width}mm × {item.drop}mm</td>
                                                 <td className="p-4 align-middle">{item.controlSide} / {item.roll}</td>
-                                                <td className="p-4 align-middle text-right font-medium">
-                                                    <span className="text-blue-700">${Number(item.price || 0).toFixed(2)}</span>
-                                                </td>
+                                                {user?.role !== 'WAREHOUSE' && (
+                                                    <td className="p-4 align-middle text-right font-medium">
+                                                        <span className="text-blue-700">${Number(item.price || 0).toFixed(2)}</span>
+                                                    </td>
+                                                )}
                                             </tr>
-                                            {isExpanded && hasBreakdown && (
+                                            {isExpanded && hasBreakdown && user?.role !== 'WAREHOUSE' && (
                                                 <tr key={`${itemKey}-breakdown`} className="border-b bg-blue-50">
                                                     <td colSpan={6} className="px-8 py-4">
                                                         <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-1 text-sm mb-3">

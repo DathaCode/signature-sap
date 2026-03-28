@@ -205,6 +205,7 @@ export interface Order {
     notes?: string;
     adminNotes?: string;
     customerReference?: string;
+    fabricOrdered?: boolean;
 
     items: BlindItem[];
 

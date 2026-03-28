@@ -149,6 +149,9 @@ model Order {
   fabricCutOptimization Json?           @map("fabric_cut_optimization")
   worksheetGeneratedAt  DateTime?       @map("worksheet_generated_at") @db.Timestamp(6)
 
+  // Admin flags
+  fabricOrdered       Boolean           @default(false) @map("fabric_ordered")
+
   // Soft delete (Trash)
   deletedAt           DateTime?         @map("deleted_at") @db.Timestamp(6)
 

@@ -383,6 +383,14 @@ export const adminOrderApi = {
     },
 
     /**
+     * Toggle fabricOrdered flag
+     */
+    toggleFabricOrdered: async (id: string, fabricOrdered: boolean): Promise<import('../types/order').Order> => {
+        const response = await api.patch(`/web-orders/${id}/fabric-ordered`, { fabricOrdered })
+        return response.data.data.order
+    },
+
+    /**
      * Download blind labels PDF for an order
      */
     downloadLabels: async (id: string): Promise<Blob> => {

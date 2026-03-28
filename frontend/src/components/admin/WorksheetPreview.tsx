@@ -20,7 +20,7 @@ interface Props {
     onAccepted: () => void;
 }
 
-export default function WorksheetPreview({ orderId, orderNumber, data, onClose, onAccepted }: Props) {
+export default function WorksheetPreview({ orderId, orderNumber, customerReference, data, onClose, onAccepted }: Props) {
     const [activeTab, setActiveTab] = useState<'fabric' | 'tube'>('fabric');
     const [accepting, setAccepting] = useState(false);
     const [previewData] = useState(data);
@@ -94,11 +94,16 @@ export default function WorksheetPreview({ orderId, orderNumber, data, onClose, 
                 {/* Header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b">
                     <div>
-                        <h2 className="text-xl font-bold">Worksheet Preview - {orderNumber}</h2>
+                        <h2 className="text-xl font-bold">
+                            Worksheet Preview - {orderNumber}
+                            {customerReference && (
+                                <span className="ml-3 text-base font-medium text-indigo-600">({customerReference})</span>
+                            )}
+                        </h2>
                         <p className="text-sm text-gray-500">
                             {isAccepted
                                 ? `Accepted on ${new Date(previewData.worksheetData.acceptedAt!).toLocaleDateString()}`
-                                : 'Review and accept worksheets 📌'
+                                : 'Review and accept worksheets'
                             }
                         </p>
                     </div>

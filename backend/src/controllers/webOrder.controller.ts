@@ -442,8 +442,13 @@ export const getOrderById = async (
             throw new AppError(404, 'Order not found');
         }
 
-        // Check authorization
-        if (authReq.user.role !== 'ADMIN' && order.userId !== authReq.user.id) {
+        // Check authorization — ADMIN and WAREHOUSE can view any order
+        if (authReq.user.role !== 'ADMIN' && authReq.user.role !== 'WAREHOUSE' && order.userId !== authReq.user.id) {
+            throw new AppError(403, 'Access denied');
+        }
+
+        // WAREHOUSE can only view PRODUCTION, COMPLETED, CANCELLED orders
+        if (authReq.user.role === 'WAREHOUSE' && !['PRODUCTION', 'COMPLETED', 'CANCELLED'].includes(order.status)) {
             throw new AppError(403, 'Access denied');
         }
 
@@ -517,15 +522,27 @@ export const getAllOrders = async (
         const user = (req as AuthRequest).user;
         const { status, productType, userId, customerName, dateFrom, dateTo } = req.query;
 
-        // Warehouse agents can only see PRODUCTION orders
-        const statusFilter = user?.role === 'WAREHOUSE'
-            ? 'PRODUCTION' as OrderStatus
-            : status as OrderStatus | undefined;
+        // Warehouse agents can only see PRODUCTION, COMPLETED, CANCELLED orders
+        const warehouseStatuses: OrderStatus[] = ['PRODUCTION', 'COMPLETED', 'CANCELLED'];
+        let statusFilter: OrderStatus | undefined;
+        let statusIn: OrderStatus[] | undefined;
+
+        if (user?.role === 'WAREHOUSE') {
+            if (status && warehouseStatuses.includes(status as OrderStatus)) {
+                statusFilter = status as OrderStatus;
+            } else {
+                // No specific status or invalid status — show all allowed
+                statusIn = warehouseStatuses;
+            }
+        } else {
+            statusFilter = status as OrderStatus | undefined;
+        }
 
         const orders = await prisma.order.findMany({
             where: {
                 deletedAt: null, // Exclude trashed orders
                 ...(statusFilter && { status: statusFilter }),
+                ...(statusIn && !statusFilter && { status: { in: statusIn } }),
                 ...(productType && { productType: productType as any }),
                 ...(user?.role !== 'WAREHOUSE' && userId && { userId: userId as string }),
                 ...(user?.role !== 'WAREHOUSE' && customerName && {
@@ -1504,11 +1521,56 @@ export const editOrderDetails = async (
             // Delete existing items and recreate from submitted data
             await prisma.orderItem.deleteMany({ where: { orderId } });
 
-            const newItems = body.items.map((item: any, index: number) => {
+            // Recalculate prices for each item using comprehensive pricing
+            const newItems = [];
+            for (let index = 0; index < body.items.length; index++) {
+                const item: any = body.items[index];
                 const w = parseInt(item.width) || 0;
                 const d = parseInt(item.drop) || 0;
                 const motorDeduction = getMotorDeduction(item.chainOrMotor);
-                return {
+
+                let price = item.price || 0;
+                let fabricGroup = item.fabricGroup || null;
+                let discountPercent = item.discountPercent || 0;
+                let fabricPrice = item.fabricPrice || null;
+                let motorPrice = item.motorPrice || null;
+                let bracketPrice = item.bracketPrice || null;
+                let chainPrice = item.chainPrice || null;
+                let clipsPrice = item.clipsPrice || null;
+                let componentPrice = item.componentPrice || null;
+
+                // Recalculate price if required fields are present
+                if (w > 0 && d > 0 && item.material && item.fabricType && item.fabricColour && item.chainOrMotor && item.bracketType && item.bracketColour && item.bottomRailType && item.bottomRailColour) {
+                    try {
+                        const breakdown = await comprehensivePricingService.calculateBlindPrice({
+                            width: w,
+                            drop: d,
+                            material: item.material,
+                            fabricType: item.fabricType,
+                            fabricColour: item.fabricColour,
+                            chainOrMotor: item.chainOrMotor,
+                            chainType: item.chainType || undefined,
+                            bracketType: item.bracketType,
+                            bracketColour: item.bracketColour,
+                            bottomRailType: item.bottomRailType,
+                            bottomRailColour: item.bottomRailColour,
+                        });
+                        price = breakdown.totalPrice;
+                        fabricGroup = breakdown.fabricGroup;
+                        discountPercent = breakdown.discountPercent;
+                        fabricPrice = breakdown.fabricPrice;
+                        motorPrice = breakdown.motorChainPrice;
+                        bracketPrice = breakdown.bracketPrice;
+                        chainPrice = breakdown.chainPrice;
+                        clipsPrice = breakdown.clipsPrice;
+                        componentPrice = (breakdown.idlerClutchPrice || 0) + (breakdown.stopBoltSafetyLockPrice || 0);
+                    } catch (err) {
+                        logger.warn(`Price recalc failed for item ${index + 1}: ${err}`);
+                        // Keep submitted price as fallback
+                    }
+                }
+
+                newItems.push({
                     orderId,
                     itemNumber: index + 1,
                     itemType: 'blind',
@@ -1530,22 +1592,22 @@ export const editOrderDetails = async (
                     calculatedWidth: w > 0 ? w - motorDeduction : null,
                     calculatedDrop: d > 0 ? d + 200 : null,
                     fabricCutWidth: w > 0 ? w - motorDeduction : null,
-                    price: item.price || 0,
-                    fabricGroup: item.fabricGroup || null,
-                    discountPercent: item.discountPercent || 0,
-                    fabricPrice: item.fabricPrice || null,
-                    motorPrice: item.motorPrice || null,
-                    bracketPrice: item.bracketPrice || null,
-                    chainPrice: item.chainPrice || null,
-                    clipsPrice: item.clipsPrice || null,
-                    componentPrice: item.componentPrice || null,
-                };
-            });
+                    price,
+                    fabricGroup,
+                    discountPercent,
+                    fabricPrice,
+                    motorPrice,
+                    bracketPrice,
+                    chainPrice,
+                    clipsPrice,
+                    componentPrice,
+                });
+            }
 
             await prisma.orderItem.createMany({ data: newItems });
 
-            // Recalculate totals
-            const subtotal = body.items.reduce((sum: number, item: any) => sum + (item.price || 0), 0);
+            // Recalculate totals from recalculated prices
+            const subtotal = newItems.reduce((sum, item) => sum + (item.price || 0), 0);
             await prisma.order.update({
                 where: { id: orderId },
                 data: {
@@ -1578,6 +1640,33 @@ export const editOrderDetails = async (
         } else {
             next(error);
         }
+    }
+};
+
+/**
+ * Toggle fabricOrdered flag on an order (Admin only)
+ * PATCH /api/web-orders/:id/fabric-ordered
+ */
+export const toggleFabricOrdered = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> => {
+    try {
+        const orderId = req.params.id as string;
+        const { fabricOrdered } = req.body;
+
+        const order = await prisma.order.findUnique({ where: { id: orderId } });
+        if (!order) throw new AppError(404, 'Order not found');
+
+        const updated = await prisma.order.update({
+            where: { id: orderId },
+            data: { fabricOrdered: typeof fabricOrdered === 'boolean' ? fabricOrdered : !order.fabricOrdered },
+        });
+
+        res.json({ success: true, data: { order: updated } });
+    } catch (error) {
+        next(error);
     }
 };
 

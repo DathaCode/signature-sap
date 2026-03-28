@@ -219,15 +219,15 @@ export function calculateBlindPrice(
 }
 
 /**
- * Determine chain length based on drop height
- * Matches backend logic in comprehensivePricing.service.ts
+ * Chain length based on ORIGINAL drop (not calculated drop).
+ * Must match inventory chain stock: 500 / 900 / 1200 / 1500 / 2000 mm
  */
 export function getChainLength(drop: number): number {
     if (drop <= 850) return 500;
-    if (drop <= 1100) return 750;
-    if (drop <= 1600) return 1000;
-    if (drop <= 2200) return 1200;
-    return 1500; // drop > 2200mm (up to 4000mm)
+    if (drop <= 1200) return 900;
+    if (drop <= 1600) return 1200;
+    if (drop <= 2200) return 1500;
+    return 2000;
 }
 
 /**
