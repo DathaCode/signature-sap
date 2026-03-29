@@ -27,21 +27,45 @@ const PORT = process.env.PORT || 3000;
 // MIDDLEWARE
 // ============================================================================
 
-// Security
-app.use(helmet());
+// Security — strict Helmet config for production
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'"],
+            styleSrc: ["'self'", "'unsafe-inline'"],
+            imgSrc: ["'self'", "data:", "blob:"],
+            connectSrc: ["'self'"],
+            fontSrc: ["'self'"],
+            objectSrc: ["'none'"],
+            frameSrc: ["'none'"],
+            frameAncestors: ["'none'"],
+        },
+    },
+    crossOriginEmbedderPolicy: true,
+    crossOriginOpenerPolicy: { policy: 'same-origin' },
+    crossOriginResourcePolicy: { policy: 'same-origin' },
+    hsts: { maxAge: 31536000, includeSubDomains: true, preload: true },
+    noSniff: true,
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+    xssFilter: true,
+}));
 
-// CORS
+// CORS — explicit origin, no wildcard
 app.use(cors({
     origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
-// Body parsing
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Body parsing — size limits to prevent DoS
+app.use(express.json({ limit: '10kb' }));
+app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 
-// Static files (for serving uploads if needed)
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+// Static files — protected with auth
+import { authenticateToken } from './middleware/auth';
+app.use('/uploads', authenticateToken, express.static(path.join(__dirname, '../uploads')));
 
 // Request logging
 app.use((req, _res, next) => {
@@ -60,7 +84,6 @@ app.get('/api/health', (_req, res) => {
     res.json({
         status: 'healthy',
         timestamp: new Date().toISOString(),
-        uptime: process.uptime(),
     });
 });
 

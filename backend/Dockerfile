@@ -68,6 +68,11 @@ COPY --from=build /app/package*.json ./
 COPY --from=build /app/fabrics_filtered_with_groups.json ./
 COPY --from=build /app/assets ./assets
 
+# Run as non-root user for security
+RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
+RUN chown -R nodejs:nodejs /app
+USER nodejs
+
 EXPOSE 5000
 
 CMD ["node", "dist/server.js"]

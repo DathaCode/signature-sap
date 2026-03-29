@@ -43,8 +43,8 @@ export const authenticateToken = (
             throw new AppError(500, 'JWT_SECRET not configured');
         }
 
-        // Verify token
-        const decoded = jwt.verify(token, secret) as JwtPayload;
+        // Verify token — pin algorithm to prevent confusion attacks
+        const decoded = jwt.verify(token, secret, { algorithms: ['HS256'] }) as JwtPayload;
 
         // Attach user to request
         (req as AuthRequest).user = {
@@ -107,7 +107,7 @@ export const generateToken = (user: {
         throw new AppError(500, 'JWT_SECRET not configured');
     }
 
-    const expiresIn = process.env.JWT_EXPIRES_IN || '7d';
+    const expiresIn = process.env.JWT_EXPIRES_IN || '1h';
 
     return jwt.sign(
         {
@@ -116,7 +116,7 @@ export const generateToken = (user: {
             role: user.role,
             name: user.name,
         },
-        secret as string,
-        { expiresIn } as any
+        secret,
+        { expiresIn: expiresIn as string, algorithm: 'HS256' } as jwt.SignOptions
     );
 };

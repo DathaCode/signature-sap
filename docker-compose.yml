@@ -10,8 +10,10 @@ services:
       POSTGRES_USER: signatureshades_dev
       POSTGRES_PASSWORD: dev_password_123
       POSTGRES_DB: signatureshades_dev
-    ports:
-      - "5432:5432"
+    # Port NOT exposed to host — only accessible via Docker network
+    # Uncomment below for local dev access only:
+    # ports:
+    #   - "5432:5432"
     volumes:
       - postgres_data_local:/var/lib/postgresql/data
     healthcheck:

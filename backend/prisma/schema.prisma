@@ -101,6 +101,8 @@ model User {
   discounts            Json?       // { G1: { acmeda: 0, tbs: 0 }, G2: {...}, G3: {...}, G4: {...} }
   passwordResetToken   String?     @map("password_reset_token") @db.VarChar(255)
   passwordResetExpires DateTime?   @map("password_reset_expires") @db.Timestamp(6)
+  failedLoginAttempts  Int         @default(0) @map("failed_login_attempts")
+  lockedUntil          DateTime?   @map("locked_until") @db.Timestamp(6)
   createdAt            DateTime    @default(now()) @map("created_at") @db.Timestamp(6)
   updatedAt            DateTime    @updatedAt @map("updated_at") @db.Timestamp(6)
 

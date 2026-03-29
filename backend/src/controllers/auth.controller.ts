@@ -10,10 +10,18 @@ import { z } from 'zod';
 const prisma = new PrismaClient();
 
 // Validation schemas
+// Strong password policy for production
+const passwordSchema = z.string()
+    .min(10, 'Password must be at least 10 characters')
+    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+    .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+    .regex(/[0-9]/, 'Password must contain at least one number')
+    .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character');
+
 const registerSchema = z.object({
     name: z.string().min(2, 'Name must be at least 2 characters'),
     email: z.string().email('Invalid email address'),
-    password: z.string().min(6, 'Password must be at least 6 characters'),
+    password: passwordSchema,
     phone: z.string().min(10, 'Phone must be at least 10 digits'),
     address: z.string().min(5, 'Address is required'),
     company: z.string().optional(),
@@ -113,6 +121,12 @@ export const login = async (
             throw new AppError(401, 'Invalid email or password');
         }
 
+        // Check if account is locked
+        if (user.lockedUntil && user.lockedUntil > new Date()) {
+            const minutesLeft = Math.ceil((user.lockedUntil.getTime() - Date.now()) / 60000);
+            throw new AppError(423, `Account is locked. Try again in ${minutesLeft} minute(s).`);
+        }
+
         // Check if account is active
         if (!user.isActive) {
             throw new AppError(403, 'Account has been deactivated. Please contact admin.');
@@ -127,7 +141,23 @@ export const login = async (
         const isPasswordValid = await bcrypt.compare(validatedData.password, user.password);
 
         if (!isPasswordValid) {
+            // Increment failed attempts, lock after 5 failures
+            const attempts = (user.failedLoginAttempts || 0) + 1;
+            const lockData: any = { failedLoginAttempts: attempts };
+            if (attempts >= 5) {
+                lockData.lockedUntil = new Date(Date.now() + 15 * 60 * 1000); // 15 min lockout
+                logger.warn(`Account locked after ${attempts} failed attempts: ${user.email}`);
+            }
+            await prisma.user.update({ where: { id: user.id }, data: lockData });
             throw new AppError(401, 'Invalid email or password');
+        }
+
+        // Reset failed attempts on successful login
+        if (user.failedLoginAttempts > 0) {
+            await prisma.user.update({
+                where: { id: user.id },
+                data: { failedLoginAttempts: 0, lockedUntil: null },
+            });
         }
 
         // Generate JWT token
@@ -264,8 +294,9 @@ export const forgotPassword = async (
             },
         });
 
-        const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`;
-        logger.info(`[PASSWORD RESET] User: ${email} | Link (valid 1h): ${resetUrl}`);
+        // Do NOT log the token/URL — sensitive data
+        logger.info(`[PASSWORD RESET] Token generated for ${email}, expires in 1h`);
+        // TODO: Send reset email via SES/SMTP with the token URL
 
         res.json({ success: true, message: 'If that email is registered, a reset link has been generated. Check with your administrator or system logs.' });
     } catch (error) {
@@ -288,7 +319,7 @@ export const resetPassword = async (
     try {
         const { token, password } = z.object({
             token: z.string().min(1),
-            password: z.string().min(6, 'Password must be at least 6 characters'),
+            password: passwordSchema,
         }).parse(req.body);
 
         const hashedToken = crypto.createHash('sha256').update(token).digest('hex');

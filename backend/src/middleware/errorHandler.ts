@@ -18,9 +18,12 @@ export const errorHandler = (
     res: Response,
     _next: NextFunction
 ) => {
+    const isProduction = process.env.NODE_ENV === 'production';
+
+    // Log error — omit stack in production to avoid leaking internals
     logger.error('Error occurred:', {
         message: err.message,
-        stack: err.stack,
+        ...(isProduction ? {} : { stack: err.stack }),
         path: req.path,
         method: req.method,
     });
@@ -33,7 +36,7 @@ export const errorHandler = (
         });
     }
 
-    // Handle unexpected errors
+    // Handle unexpected errors — never leak details in production
     return res.status(500).json({
         status: 'error',
         message: 'An unexpected error occurred',
