@@ -13,6 +13,38 @@ import { TubeCutOptimizer, TubeBlindInput } from '../services/tubeCutOptimizer.s
 import { InventoryService } from '../services/inventory.service';
 import { WorksheetExportService } from '../services/worksheetExport.service';
 
+/**
+ * Determine supplier key from chainOrMotor string for customer discount lookup.
+ */
+function getSupplierKey(chainOrMotor?: string): 'acmeda' | 'tbs' | 'motorised' {
+    if (!chainOrMotor) return 'acmeda';
+    const lower = chainOrMotor.toLowerCase();
+    if (lower.includes('tbs')) return 'tbs';
+    if (lower.includes('acmeda')) return 'acmeda';
+    return 'motorised';
+}
+
+/**
+ * Get customer discount for a fabric group + supplier from user's stored discounts.
+ */
+async function getCustomerDiscount(
+    userId: string | undefined,
+    fabricGroup: number,
+    chainOrMotor?: string
+): Promise<number | null> {
+    if (!userId) return null;
+    const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { discounts: true },
+    });
+    const discounts = user?.discounts as Record<string, { acmeda: number; tbs: number; motorised: number }> | null;
+    if (!discounts) return null;
+    const groupKey = `G${fabricGroup}`;
+    const supplierKey = getSupplierKey(chainOrMotor);
+    const val = discounts[groupKey]?.[supplierKey];
+    return typeof val === 'number' ? val : null;
+}
+
 // Motor-specific width deductions for fabric cutting
 const MOTOR_DEDUCTIONS: Record<string, number> = {
     'TBS winder-32mm': 32,
@@ -235,6 +267,7 @@ export const createOrder = async (
             let price = 0;
             let fabricGroup: number | null = null;
             let discountPercent = 0;
+            let fabricBasePrice: number | null = null;
             let fabricPrice: number | null = null;
             let motorPrice: number | null = null;
             let bracketPrice: number | null = null;
@@ -265,6 +298,7 @@ export const createOrder = async (
                     price = breakdown.totalPrice;
                     fabricGroup = breakdown.fabricGroup;
                     discountPercent = breakdown.discountPercent;
+                    fabricBasePrice = breakdown.fabricBasePrice;
                     fabricPrice = breakdown.fabricPrice;
                     motorPrice = breakdown.motorChainPrice;
                     bracketPrice = breakdown.bracketPrice;
@@ -285,6 +319,7 @@ export const createOrder = async (
                     price = priceResult.finalPrice;
                     fabricGroup = priceResult.fabricGroup;
                     discountPercent = priceResult.discountPercent;
+                    fabricBasePrice = priceResult.basePrice;
                 }
             } else if (item.material && item.fabricType) {
                 // Basic pricing when not all component fields are filled
@@ -297,6 +332,35 @@ export const createOrder = async (
                 price = priceResult.finalPrice;
                 fabricGroup = priceResult.fabricGroup;
                 discountPercent = priceResult.discountPercent;
+                fabricBasePrice = priceResult.basePrice;
+            }
+
+            // Apply customer-specific discount override if configured by admin
+            if (fabricGroup !== null && fabricBasePrice !== null) {
+                const customDiscount = await getCustomerDiscount(
+                    authReq.user?.id,
+                    fabricGroup,
+                    item.chainOrMotor
+                );
+                if (customDiscount !== null) {
+                    const newFabricPrice = parseFloat((fabricBasePrice * (1 - customDiscount / 100)).toFixed(2));
+                    if (fabricPrice !== null && motorPrice !== null) {
+                        // Comprehensive pricing: recalculate total from components
+                        fabricPrice = newFabricPrice;
+                        price = parseFloat((
+                            newFabricPrice +
+                            (motorPrice || 0) +
+                            (bracketPrice || 0) +
+                            (chainPrice || 0) +
+                            (clipsPrice || 0) +
+                            (componentPrice || 0)
+                        ).toFixed(2));
+                    } else {
+                        // Basic pricing: fabric is the only component
+                        price = newFabricPrice;
+                    }
+                    discountPercent = customDiscount;
+                }
             }
 
             const motorDeduction = getMotorDeduction(item.chainOrMotor);

@@ -37,12 +37,14 @@ interface BlindItemFormProps {
     onContinue?: () => void;
     canRemove?: boolean;
     blindNumber?: number;
+    highlightEmpty?: boolean;
 }
 
-export function BlindItemForm({ index, onRemove, onCopy, onContinue, canRemove = false, blindNumber }: BlindItemFormProps) {
+export function BlindItemForm({ index, onRemove, onCopy, onContinue, canRemove = false, blindNumber, highlightEmpty = false }: BlindItemFormProps) {
     const { register, setValue, control, setError, clearErrors } = useFormContext();
 
     // Watch all fields
+    const location = useWatch({ control, name: `items.${index}.location` });
     const material = useWatch({ control, name: `items.${index}.material` });
     const fabricType = useWatch({ control, name: `items.${index}.fabricType` });
     const fabricColour = useWatch({ control, name: `items.${index}.fabricColour` });
@@ -71,6 +73,12 @@ export function BlindItemForm({ index, onRemove, onCopy, onContinue, canRemove =
 
     // Show chain type dropdown only for winders
     const showChainType = chainOrMotor && isWinderMotor(chainOrMotor);
+
+    // Helper: returns red ring class if highlightEmpty is on and the field is empty/zero
+    const emptyRing = (val: any) =>
+        highlightEmpty && (!val || val === '' || val === 0)
+            ? 'ring-2 ring-red-400'
+            : '';
 
     // Check if all required fields are filled for pricing
     const canCalculatePrice = Boolean(
@@ -242,7 +250,7 @@ export function BlindItemForm({ index, onRemove, onCopy, onContinue, canRemove =
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-2">
                         <Label>Location / Room</Label>
-                        <Input {...register(`items.${index}.location`, { required: 'Required' })} placeholder="e.g. Living Room" />
+                        <Input {...register(`items.${index}.location`, { required: 'Required' })} placeholder="e.g. Living Room" className={emptyRing(location)} />
                     </div>
                     <div className="space-y-2">
                         <Label>Width (mm)</Label>
@@ -250,6 +258,7 @@ export function BlindItemForm({ index, onRemove, onCopy, onContinue, canRemove =
                             type="number"
                             {...register(`items.${index}.width`, { required: 'Required', valueAsNumber: true, min: 350, max: 2950 })}
                             placeholder="Width"
+                            className={emptyRing(width)}
                         />
                         {Number(width) > 0 && (Number(width) < 350 || Number(width) > 2950) && (
                             <p className="text-xs text-amber-600 flex items-center gap-1">
@@ -264,6 +273,7 @@ export function BlindItemForm({ index, onRemove, onCopy, onContinue, canRemove =
                             type="number"
                             {...register(`items.${index}.drop`, { required: 'Required', valueAsNumber: true, min: 200, max: 3000 })}
                             placeholder="Drop"
+                            className={emptyRing(drop)}
                         />
                         {Number(drop) > 0 && (Number(drop) < 200 || Number(drop) > 3000) && (
                             <p className="text-xs text-amber-600 flex items-center gap-1">
@@ -331,6 +341,7 @@ export function BlindItemForm({ index, onRemove, onCopy, onContinue, canRemove =
                                 {...register(`items.${index}.chainType`)}
                                 options={toSelectOptions(CHAIN_TYPES)}
                                 placeholder="Select Chain"
+                                className={emptyRing(chainType)}
                             />
                         </div>
                     )}
@@ -352,6 +363,7 @@ export function BlindItemForm({ index, onRemove, onCopy, onContinue, canRemove =
                             {...register(`items.${index}.material`, { required: 'Required' })}
                             options={materials}
                             placeholder="Select Brand"
+                            className={emptyRing(material)}
                         />
                     </div>
                     <div className="space-y-2">
@@ -361,6 +373,7 @@ export function BlindItemForm({ index, onRemove, onCopy, onContinue, canRemove =
                             options={fabricTypes}
                             placeholder="Select Range"
                             disabled={!material}
+                            className={emptyRing(fabricType)}
                         />
                     </div>
                     <div className="space-y-2">
@@ -370,6 +383,7 @@ export function BlindItemForm({ index, onRemove, onCopy, onContinue, canRemove =
                             options={fabricColors}
                             placeholder="Select Colour"
                             disabled={!fabricType}
+                            className={emptyRing(fabricColour)}
                         />
                     </div>
                 </div>

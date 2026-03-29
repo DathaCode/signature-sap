@@ -42,6 +42,7 @@ export default function NewOrderPage() {
     const [editingIndex, setEditingIndex] = useState<number | null>(null);
     const [notes, setNotes] = useState('');
     const [customerReference, setCustomerReference] = useState('');
+    const [highlightEmpty, setHighlightEmpty] = useState(false);
 
     const methods = useForm<CreateOrderRequest>({
         defaultValues: {
@@ -151,6 +152,7 @@ export default function NewOrderPage() {
         if (confirmed) {
             reset({ productType: 'BLINDS', items: [{ ...emptyBlind }] });
             setEditingIndex(null);
+            setHighlightEmpty(false);
             if (savedBlinds.length > 0) {
                 setShowSummary(true);
             }
@@ -166,11 +168,24 @@ export default function NewOrderPage() {
             'chainOrMotor', 'bottomRailType', 'bottomRailColour'
         ];
 
+        let hasEmpty = false;
         for (const field of required) {
             const val = item[field];
             if (!val || val === '' || val === 0) {
-                return false;
+                hasEmpty = true;
+                break;
             }
+        }
+
+        // If winder, chain type is required
+        const isWinder = item.chainOrMotor?.toLowerCase().includes('winder');
+        if (isWinder && !item.chainType) {
+            hasEmpty = true;
+        }
+
+        if (hasEmpty) {
+            setHighlightEmpty(true);
+            return false;
         }
 
         // Dimension range check
@@ -183,12 +198,7 @@ export default function NewOrderPage() {
             return false;
         }
 
-        // If winder, chain type is required
-        const isWinder = item.chainOrMotor?.toLowerCase().includes('winder');
-        if (isWinder && !item.chainType) {
-            return false;
-        }
-
+        setHighlightEmpty(false);
         return true;
     };
 
@@ -200,7 +210,7 @@ export default function NewOrderPage() {
     // Save current blind and copy settings (except Location, Width, Drop)
     const handleUpdateAndCopy = async () => {
         if (!validateCurrentBlind()) {
-            gooeyToast.error('Please fill all required fields before saving');
+            gooeyToast.error('Please complete all fields or clear them to proceed');
             return;
         }
 
@@ -237,7 +247,7 @@ export default function NewOrderPage() {
     // Save current blind and clear ALL fields (or return to review if editing)
     const handleUpdateAndContinueAdding = async () => {
         if (!validateCurrentBlind()) {
-            gooeyToast.error('Please fill all required fields before saving');
+            gooeyToast.error('Please complete all fields or clear them to proceed');
             return;
         }
 
@@ -397,7 +407,11 @@ export default function NewOrderPage() {
                     onDelete={handleDeleteBlind}
                     onBulkDelete={handleBulkDelete}
                     onBulkUpdate={handleBulkUpdate}
-                    onBackToForm={() => setShowSummary(false)}
+                    onBackToForm={() => {
+                        reset({ productType: 'BLINDS', items: [{ ...emptyBlind }] });
+                        setEditingIndex(null);
+                        setShowSummary(false);
+                    }}
                     onSubmitOrder={handleSubmitOrder}
                     onSaveAsQuote={handleSaveAsQuote}
                     isSubmitting={isSubmitting}
@@ -468,6 +482,7 @@ export default function NewOrderPage() {
                     <BlindItemForm
                         index={0}
                         blindNumber={editingIndex !== null ? editingIndex + 1 : savedBlinds.length + 1}
+                        highlightEmpty={highlightEmpty}
                     />
 
                     {/* ACTION BUTTONS */}
