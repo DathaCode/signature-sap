@@ -4,10 +4,21 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
-    console.log('🔐 Creating admin user...');
+    console.log('Creating admin user...');
 
-    const adminEmail = 'orders@signatureshades.com.au';
-    const adminPassword = 'Admin@123'; // Should be changed on first login
+    const adminEmail = process.env.ADMIN_EMAIL || 'orders@signatureshades.com.au';
+    const adminPassword = process.env.ADMIN_PASSWORD;
+
+    if (!adminPassword) {
+        console.error('ERROR: ADMIN_PASSWORD environment variable is required.');
+        console.error('Usage: ADMIN_PASSWORD="YourStr0ng!Pass" npm run create:admin');
+        process.exit(1);
+    }
+
+    if (adminPassword.length < 10) {
+        console.error('ERROR: Password must be at least 10 characters.');
+        process.exit(1);
+    }
 
     // Check if admin already exists
     const existingAdmin = await prisma.user.findUnique({
@@ -15,12 +26,12 @@ async function main() {
     });
 
     if (existingAdmin) {
-        console.log('✅ Admin user already exists:', adminEmail);
+        console.log('Admin user already exists:', adminEmail);
         return;
     }
 
     // Hash password
-    const hashedPassword = await bcrypt.hash(adminPassword, 10);
+    const hashedPassword = await bcrypt.hash(adminPassword, 12);
 
     // Create admin user
     const admin = await prisma.user.create({
@@ -28,7 +39,7 @@ async function main() {
             email: adminEmail,
             password: hashedPassword,
             name: 'System Administrator',
-            phone: '+94 77 123 4567',
+            phone: '+61 000 000 000',
             address: 'Signature Shades Head Office',
             company: 'Signature Shades',
             role: 'ADMIN',
@@ -36,10 +47,9 @@ async function main() {
         }
     });
 
-    console.log('✅ Admin user created successfully!');
-    console.log('📧 Email:', admin.email);
-    console.log('🔑 Password:', adminPassword);
-    console.log('⚠️  Please change this password after first login!');
+    console.log('Admin user created successfully!');
+    console.log('Email:', admin.email);
+    // Never log the password
 }
 
 main()

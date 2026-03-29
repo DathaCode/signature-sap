@@ -1,6 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import { PrismaClient } from '@prisma/client';
 import { AppError } from '../middleware/errorHandler';
+
+const prisma = new PrismaClient();
 
 export type UserRole = 'CUSTOMER' | 'ADMIN' | 'WAREHOUSE';
 
@@ -25,11 +28,11 @@ interface JwtPayload {
 /**
  * Verify JWT token and attach user to request
  */
-export const authenticateToken = (
+export const authenticateToken = async (
     req: Request,
     _res: Response,
     next: NextFunction
-): void => {
+): Promise<void> => {
     try {
         const authHeader = req.headers['authorization'];
         const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
@@ -46,12 +49,30 @@ export const authenticateToken = (
         // Verify token — pin algorithm to prevent confusion attacks
         const decoded = jwt.verify(token, secret, { algorithms: ['HS256'] }) as JwtPayload;
 
-        // Attach user to request
+        // Verify user still exists and is active in database
+        const dbUser = await prisma.user.findUnique({
+            where: { id: decoded.id },
+            select: { id: true, email: true, role: true, name: true, isActive: true, isApproved: true },
+        });
+
+        if (!dbUser) {
+            throw new AppError(401, 'User no longer exists');
+        }
+
+        if (!dbUser.isActive) {
+            throw new AppError(403, 'Account has been deactivated');
+        }
+
+        if (!dbUser.isApproved) {
+            throw new AppError(403, 'Account is not approved');
+        }
+
+        // Attach fresh user data to request (not stale JWT data)
         (req as AuthRequest).user = {
-            id: decoded.id,
-            email: decoded.email,
-            role: decoded.role,
-            name: decoded.name,
+            id: dbUser.id,
+            email: dbUser.email,
+            role: dbUser.role as UserRole,
+            name: dbUser.name,
         };
 
         next();
