@@ -754,7 +754,7 @@ export default function AdminOrderDetails() {
                                                         {item.fixing && <div><span className="text-muted-foreground">Fixing: </span><span className="font-medium">{item.fixing}</span></div>}
                                                         {item.bracketType && <div><span className="text-muted-foreground">Bracket: </span><span className="font-medium">{item.bracketType}</span></div>}
                                                         {item.bracketColour && <div><span className="text-muted-foreground">Bracket Colour: </span><span className="font-medium">{item.bracketColour}</span></div>}
-                                                        {item.chainOrMotor && <div><span className="text-muted-foreground">Motor: </span><span className="font-medium">{item.chainOrMotor}</span></div>}
+                                                        {item.chainOrMotor && <div><span className="text-muted-foreground">Chain/Motor: </span><span className="font-medium">{item.chainOrMotor}</span></div>}
                                                         {(item as any).chainType && <div><span className="text-muted-foreground">Chain Type: </span><span className="font-medium">{(item as any).chainType}</span></div>}
                                                         {item.bottomRailType && <div><span className="text-muted-foreground">Bottom Rail: </span><span className="font-medium">{item.bottomRailType}</span></div>}
                                                         {item.bottomRailColour && <div><span className="text-muted-foreground">Rail Colour: </span><span className="font-medium">{item.bottomRailColour}</span></div>}

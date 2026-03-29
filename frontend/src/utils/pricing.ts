@@ -63,7 +63,7 @@ export const FABRIC_DATA: Record<string, Record<string, { group: string; colors:
         "Victoria Block Out": { "group": "G2", "colors": ["Chrome", "Crema", "Eucalyptus", "Grey", "Leather", "Mont Blanc", "Natural", "Pure Black", "Putty", "Snow White", "Steel"] },
         "Vintage Block Out": { "group": "G2", "colors": ["Almond", "Blush", "Chalk", "Cloud", "Espresso", "Jarrah", "Oyster"] },
         "Vintage Light Filtering": { "group": "G2", "colors": ["Almond", "Blush", "Chalk", "Cloud", "Espresso", "Jarrah", "Oyster"] },
-        "Vision": { "group": "G2", "colors": ["Beige", "Beige RB08", "Black", "Black RB08", "Charcoal", "Copper", "Dark Pearl", "Grey", "Grey RB08", "Ice", "Ice RB08", "Light Grey", "Sand", "White", "White RB08"] },
+        "Vision": { "group": "G1", "colors": ["Beige", "Beige RB08", "Black", "Black RB08", "Charcoal", "Copper", "Dark Pearl", "Grey", "Grey RB08", "Ice", "Ice RB08", "Light Grey", "Sand", "White", "White RB08"] },
         "Vista Block Out": { "group": "G2", "colors": ["Ash", "Bone", "Daisy", "Ivory", "Lace", "Silver", "Slate", "Smoke", "Storm"] },
         "Vista Light Filter": { "group": "G2", "colors": ["Ash", "Bone", "Daisy", "Ivory", "Lace", "Silver", "Slate", "Smoke", "Storm"] },
         "Vital Block Out": { "group": "G2", "colors": ["Atlantic Salt", "Fog White", "Jet Black", "Ocean Foam", "Sandstone", "Slate Grey"] },

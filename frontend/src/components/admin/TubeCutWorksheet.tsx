@@ -5,6 +5,14 @@ interface Props {
 }
 
 export default function TubeCutWorksheet({ tubeCutData }: Props) {
+    // Compute cumulative blind offset for each group so # is sequential across all groups
+    const groupOffsets: number[] = [];
+    let runningTotal = 0;
+    for (const group of tubeCutData.groups) {
+        groupOffsets.push(runningTotal);
+        runningTotal += group.blinds.length;
+    }
+
     return (
         <div className="space-y-6">
             {tubeCutData.groups.map((group, gIdx) => {
@@ -42,6 +50,7 @@ export default function TubeCutWorksheet({ tubeCutData }: Props) {
                             <table className="w-full text-sm">
                                 <thead>
                                     <tr className="bg-gray-50 border-b">
+                                        <th className="px-4 py-2 text-center font-medium text-gray-600 w-12">#</th>
                                         <th className="px-4 py-2 text-left font-medium text-gray-600">Location</th>
                                         <th className="px-4 py-2 text-right font-medium text-gray-600">Tube Cut Width (mm)</th>
                                         <th className="px-4 py-2 text-left font-medium text-gray-600">Bottom Rail Type</th>
@@ -52,6 +61,7 @@ export default function TubeCutWorksheet({ tubeCutData }: Props) {
                                 <tbody>
                                     {group.blinds.map((blind, bIdx) => (
                                         <tr key={bIdx} className="border-b hover:bg-gray-50">
+                                            <td className="px-4 py-2 text-center text-xs text-gray-500">{groupOffsets[gIdx] + bIdx + 1}</td>
                                             <td className="px-4 py-2 font-medium">{blind.location}</td>
                                             <td className="px-4 py-2 text-right font-semibold text-green-700">
                                                 {blind.tubeCutWidth ?? (blind.originalWidth - 28)}
@@ -70,7 +80,7 @@ export default function TubeCutWorksheet({ tubeCutData }: Props) {
                                 </tbody>
                                 <tfoot>
                                     <tr className="bg-green-50 font-medium text-sm">
-                                        <td className="px-4 py-2">Group Total</td>
+                                        <td colSpan={2} className="px-4 py-2">Group Total</td>
                                         <td colSpan={4} className="px-4 py-2 text-right">
                                             Total: {group.totalWidth}mm — Base: {group.baseQuantity} + 10% wastage ({group.wastage}) = {group.finalQuantity} → <span className="font-bold">{group.piecesToDeduct} pieces</span>
                                         </td>
