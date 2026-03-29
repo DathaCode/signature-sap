@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { webOrderApi, adminOrderApi } from '../../services/api';
 import { Order, BlindItem, WorksheetPreviewResponse } from '../../types/order';
@@ -404,421 +404,414 @@ export default function AdminOrderDetails() {
 
     return (
         <>
-        <div className="space-y-6 p-6 max-w-5xl mx-auto pb-24">
-            {/* Header — Order number + status + date */}
-            <div className="flex items-start gap-4">
-                <Button variant="ghost" size="icon" className="mt-1 shrink-0" onClick={() => navigate(ordersPath)}>
-                    <ArrowLeft className="h-5 w-5" />
-                </Button>
-                <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-3 flex-wrap">
-                        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{order.orderNumber}</h1>
-                        <Badge variant={getStatusVariant(order.status)} className="text-sm">
-                            {order.status}
-                        </Badge>
-                        {order.label && (
-                            <span className="inline-flex items-center gap-1 text-xs font-medium bg-amber-100 text-amber-800 px-2.5 py-1 rounded-full">
-                                <Tag className="h-3 w-3" />
-                                {order.label}
-                            </span>
-                        )}
-                    </div>
-                    <p className="text-sm text-muted-foreground mt-0.5">
-                        Placed on {format(new Date(order.createdAt), 'MMMM d, yyyy')}
-                    </p>
-                </div>
-            </div>
-
-            {/* Action Bar — clean row of buttons */}
-            <div className="flex flex-wrap items-center gap-2 border rounded-lg bg-gray-50/80 px-4 py-3">
-                {/* Edit (admin, PENDING/CONFIRMED) */}
-                {!isWarehouse && (order.status === 'PENDING' || order.status === 'CONFIRMED') && !editing && (
-                    <Button variant="outline" size="sm" onClick={startEditing} disabled={actionLoading}>
-                        <Pencil className="mr-1.5 h-4 w-4" />
-                        Edit Order
+            <div className="space-y-6 p-6 max-w-5xl mx-auto pb-24">
+                {/* Header — Order number + status + date */}
+                <div className="flex items-start gap-4">
+                    <Button variant="ghost" size="icon" className="mt-1 shrink-0" onClick={() => navigate(ordersPath)}>
+                        <ArrowLeft className="h-5 w-5" />
                     </Button>
-                )}
-
-                {/* Approve (admin, PENDING) */}
-                {!isWarehouse && order.status === 'PENDING' && (
-                    <Button size="sm" onClick={handleApprove} disabled={actionLoading} className="bg-green-600 hover:bg-green-700">
-                        <Check className="mr-1.5 h-4 w-4" />
-                        Approve
-                    </Button>
-                )}
-
-                {/* Preview Worksheets (admin, CONFIRMED) */}
-                {!isWarehouse && order.status === 'CONFIRMED' && (
-                    <Button variant="outline" size="sm" onClick={handlePreviewWorksheets} disabled={viewingWorksheets} className="text-blue-600 border-blue-200 hover:bg-blue-50">
-                        {viewingWorksheets ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <FileSpreadsheet className="mr-1.5 h-4 w-4" />}
-                        Preview Worksheets
-                    </Button>
-                )}
-
-                {/* Send to Production (admin, CONFIRMED) */}
-                {!isWarehouse && order.status === 'CONFIRMED' && (
-                    <Button size="sm" onClick={handleSendToProduction} disabled={actionLoading}>
-                        {actionLoading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Factory className="mr-1.5 h-4 w-4" />}
-                        Send to Production
-                    </Button>
-                )}
-
-                {/* Mark Completed (admin + warehouse, PRODUCTION) */}
-                {order.status === 'PRODUCTION' && (
-                    <Button size="sm" variant="outline" onClick={handleComplete} disabled={actionLoading}>
-                        <CheckCircle className="mr-1.5 h-4 w-4" />
-                        Mark Completed
-                    </Button>
-                )}
-
-                {/* View Worksheets (admin + warehouse, PRODUCTION/COMPLETED) */}
-                {(order.status === 'PRODUCTION' || order.status === 'COMPLETED') && (
-                    <Button variant="outline" size="sm" onClick={handleViewWorksheets} disabled={viewingWorksheets} className="text-blue-600 border-blue-200 hover:bg-blue-50">
-                        {viewingWorksheets ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <FileSpreadsheet className="mr-1.5 h-4 w-4" />}
-                        Worksheets
-                    </Button>
-                )}
-
-                {/* Print Labels (admin + warehouse, PRODUCTION) */}
-                {order.status === 'PRODUCTION' && (
-                    <Button variant="outline" size="sm" onClick={handleDownloadLabels} disabled={downloadingLabels} className="text-indigo-600 border-indigo-200 hover:bg-indigo-50">
-                        {downloadingLabels ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Printer className="mr-1.5 h-4 w-4" />}
-                        Print Labels
-                    </Button>
-                )}
-
-                {/* Cancel (admin, PENDING/CONFIRMED) */}
-                {!isWarehouse && (order.status === 'PENDING' || order.status === 'CONFIRMED') && (
-                    <Button variant="outline" size="sm" onClick={handleCancel} disabled={actionLoading} className="text-red-600 border-red-200 hover:bg-red-50">
-                        <Ban className="mr-1.5 h-4 w-4" />
-                        Cancel Order
-                    </Button>
-                )}
-
-                {/* Spacer */}
-                <div className="flex-1" />
-
-                {/* Trash (admin, not cancelled) */}
-                {!isWarehouse && order.status !== 'CANCELLED' && (
-                    <Button variant="ghost" size="sm" onClick={handleTrash} disabled={actionLoading} className="text-red-500 hover:text-red-700 hover:bg-red-50">
-                        <Trash2 className="mr-1.5 h-4 w-4" />
-                        Trash
-                    </Button>
-                )}
-            </div>
-
-            {/* Admin Flags — Fabric Ordered + Label + Admin Notes (admin only, inside order) */}
-            {!isWarehouse && (
-                <div className="grid gap-4 sm:grid-cols-3">
-                    {/* Fabric Ordered (CONFIRMED only) */}
-                    {order.status === 'CONFIRMED' && (
-                        <div className="flex items-center gap-3 border rounded-lg px-4 py-3 bg-white">
-                            <input
-                                type="checkbox"
-                                checked={!!order.fabricOrdered}
-                                onChange={handleToggleFabricOrdered}
-                                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                                id="fabricOrdered"
-                            />
-                            <label htmlFor="fabricOrdered" className="text-sm font-medium text-gray-700 cursor-pointer select-none">
-                                Fabric Ordered
-                            </label>
+                    <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-3 flex-wrap">
+                            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{order.orderNumber}</h1>
+                            <Badge variant={getStatusVariant(order.status)} className="text-sm">
+                                {order.status}
+                            </Badge>
+                            {order.label && (
+                                <span className="inline-flex items-center gap-1 text-xs font-medium bg-amber-100 text-amber-800 px-2.5 py-1 rounded-full">
+                                    <Tag className="h-3 w-3" />
+                                    {order.label}
+                                </span>
+                            )}
                         </div>
+                        <p className="text-sm text-muted-foreground mt-0.5">
+                            Placed on {format(new Date(order.createdAt), 'MMMM d, yyyy')}
+                        </p>
+                    </div>
+                </div>
+
+                {/* Action Bar — clean row of buttons */}
+                <div className="flex flex-wrap items-center gap-2 border rounded-lg bg-gray-50/80 px-4 py-3">
+                    {/* Edit (admin, PENDING/CONFIRMED) */}
+                    {!isWarehouse && (order.status === 'PENDING' || order.status === 'CONFIRMED') && !editing && (
+                        <Button variant="outline" size="sm" onClick={startEditing} disabled={actionLoading}>
+                            <Pencil className="mr-1.5 h-4 w-4" />
+                            Edit Order
+                        </Button>
                     )}
 
-                    {/* Label */}
-                    <div className="flex items-center gap-2 border rounded-lg px-4 py-2 bg-white">
-                        <Tag className="h-4 w-4 text-amber-500 shrink-0" />
-                        {editingLabel ? (
-                            <div className="flex items-center gap-1.5 flex-1">
-                                <Input
-                                    className="h-7 text-xs flex-1"
-                                    value={labelValue}
-                                    onChange={e => setLabelValue(e.target.value)}
-                                    placeholder="e.g. Urgent, VIP"
-                                    maxLength={100}
-                                    autoFocus
-                                    onKeyDown={e => e.key === 'Enter' && handleSaveLabel()}
+                    {/* Approve (admin, PENDING) */}
+                    {!isWarehouse && order.status === 'PENDING' && (
+                        <Button size="sm" onClick={handleApprove} disabled={actionLoading} className="bg-green-600 hover:bg-green-700">
+                            <Check className="mr-1.5 h-4 w-4" />
+                            Approve
+                        </Button>
+                    )}
+
+                    {/* Preview Worksheets (admin, CONFIRMED) */}
+                    {!isWarehouse && order.status === 'CONFIRMED' && (
+                        <Button variant="outline" size="sm" onClick={handlePreviewWorksheets} disabled={viewingWorksheets} className="text-blue-600 border-blue-200 hover:bg-blue-50">
+                            {viewingWorksheets ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <FileSpreadsheet className="mr-1.5 h-4 w-4" />}
+                            Preview Worksheets
+                        </Button>
+                    )}
+
+                    {/* Send to Production (admin, CONFIRMED) */}
+                    {!isWarehouse && order.status === 'CONFIRMED' && (
+                        <Button size="sm" onClick={handleSendToProduction} disabled={actionLoading}>
+                            {actionLoading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Factory className="mr-1.5 h-4 w-4" />}
+                            Send to Production
+                        </Button>
+                    )}
+
+                    {/* Mark Completed (admin + warehouse, PRODUCTION) */}
+                    {order.status === 'PRODUCTION' && (
+                        <Button size="sm" variant="outline" onClick={handleComplete} disabled={actionLoading}>
+                            <CheckCircle className="mr-1.5 h-4 w-4" />
+                            Mark Completed
+                        </Button>
+                    )}
+
+                    {/* View Worksheets (admin + warehouse, PRODUCTION/COMPLETED) */}
+                    {(order.status === 'PRODUCTION' || order.status === 'COMPLETED') && (
+                        <Button variant="outline" size="sm" onClick={handleViewWorksheets} disabled={viewingWorksheets} className="text-blue-600 border-blue-200 hover:bg-blue-50">
+                            {viewingWorksheets ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <FileSpreadsheet className="mr-1.5 h-4 w-4" />}
+                            Worksheets
+                        </Button>
+                    )}
+
+                    {/* Print Labels (admin + warehouse, PRODUCTION) */}
+                    {order.status === 'PRODUCTION' && (
+                        <Button variant="outline" size="sm" onClick={handleDownloadLabels} disabled={downloadingLabels} className="text-indigo-600 border-indigo-200 hover:bg-indigo-50">
+                            {downloadingLabels ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Printer className="mr-1.5 h-4 w-4" />}
+                            Print Labels
+                        </Button>
+                    )}
+
+                    {/* Cancel (admin, PENDING/CONFIRMED) */}
+                    {!isWarehouse && (order.status === 'PENDING' || order.status === 'CONFIRMED') && (
+                        <Button variant="outline" size="sm" onClick={handleCancel} disabled={actionLoading} className="text-red-600 border-red-200 hover:bg-red-50">
+                            <Ban className="mr-1.5 h-4 w-4" />
+                            Cancel Order
+                        </Button>
+                    )}
+
+                    {/* Spacer */}
+                    <div className="flex-1" />
+
+                    {/* Trash (admin, not cancelled) */}
+                    {!isWarehouse && order.status !== 'CANCELLED' && (
+                        <Button variant="ghost" size="sm" onClick={handleTrash} disabled={actionLoading} className="text-red-500 hover:text-red-700 hover:bg-red-50">
+                            <Trash2 className="mr-1.5 h-4 w-4" />
+                            Trash
+                        </Button>
+                    )}
+                </div>
+
+                {/* Admin Flags — Fabric Ordered + Label + Admin Notes (admin only, inside order) */}
+                {!isWarehouse && (
+                    <div className="grid gap-4 sm:grid-cols-3">
+                        {/* Fabric Ordered (CONFIRMED only) */}
+                        {order.status === 'CONFIRMED' && (
+                            <div className="flex items-center gap-3 border rounded-lg px-4 py-3 bg-white">
+                                <input
+                                    type="checkbox"
+                                    checked={!!order.fabricOrdered}
+                                    onChange={handleToggleFabricOrdered}
+                                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                                    id="fabricOrdered"
                                 />
-                                <button onClick={handleSaveLabel} disabled={savingField} className="text-green-600 hover:text-green-800">
-                                    <Check className="h-4 w-4" />
-                                </button>
-                                <button onClick={() => setEditingLabel(false)} className="text-gray-400 hover:text-gray-600">
-                                    <X className="h-4 w-4" />
-                                </button>
-                            </div>
-                        ) : (
-                            <div className="flex items-center gap-2 flex-1 min-w-0">
-                                <span className="text-sm text-gray-600 truncate">
-                                    {order.label || <span className="text-gray-400 italic">No label</span>}
-                                </span>
-                                <button
-                                    onClick={() => { setLabelValue(order.label || ''); setEditingLabel(true); }}
-                                    className="text-gray-400 hover:text-gray-600 shrink-0"
-                                >
-                                    <Pencil className="h-3.5 w-3.5" />
-                                </button>
+                                <label htmlFor="fabricOrdered" className="text-sm font-medium text-gray-700 cursor-pointer select-none">
+                                    Fabric Ordered
+                                </label>
                             </div>
                         )}
-                    </div>
 
-                    {/* Admin Notes */}
-                    <div className="flex items-start gap-2 border rounded-lg px-4 py-2 bg-white sm:col-span-1">
-                        <StickyNote className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
-                        {editingNotes ? (
-                            <div className="flex flex-col gap-1.5 flex-1">
-                                <textarea
-                                    className="text-xs border border-gray-200 rounded px-2 py-1 w-full resize-none focus:outline-none focus:ring-1 focus:ring-blue-400"
-                                    value={adminNotesValue}
-                                    onChange={e => setAdminNotesValue(e.target.value)}
-                                    placeholder="Internal notes..."
-                                    rows={2}
-                                    autoFocus
-                                />
-                                <div className="flex gap-1 justify-end">
-                                    <button onClick={handleSaveAdminNotes} disabled={savingField} className="text-green-600 hover:text-green-800">
+                        {/* Label */}
+                        <div className="flex items-center gap-2 border rounded-lg px-4 py-2 bg-white">
+                            <Tag className="h-4 w-4 text-amber-500 shrink-0" />
+                            {editingLabel ? (
+                                <div className="flex items-center gap-1.5 flex-1">
+                                    <Input
+                                        className="h-7 text-xs flex-1"
+                                        value={labelValue}
+                                        onChange={e => setLabelValue(e.target.value)}
+                                        placeholder="e.g. Urgent, VIP"
+                                        maxLength={100}
+                                        autoFocus
+                                        onKeyDown={e => e.key === 'Enter' && handleSaveLabel()}
+                                    />
+                                    <button onClick={handleSaveLabel} disabled={savingField} className="text-green-600 hover:text-green-800">
                                         <Check className="h-4 w-4" />
                                     </button>
-                                    <button onClick={() => setEditingNotes(false)} className="text-gray-400 hover:text-gray-600">
+                                    <button onClick={() => setEditingLabel(false)} className="text-gray-400 hover:text-gray-600">
                                         <X className="h-4 w-4" />
                                     </button>
                                 </div>
-                            </div>
-                        ) : (
-                            <div className="flex items-center gap-2 flex-1 min-w-0">
-                                <span className="text-sm text-gray-600 truncate">
-                                    {order.adminNotes || <span className="text-gray-400 italic">No admin notes</span>}
-                                </span>
-                                <button
-                                    onClick={() => { setAdminNotesValue(order.adminNotes || ''); setEditingNotes(true); }}
-                                    className="text-gray-400 hover:text-gray-600 shrink-0"
-                                >
-                                    <Pencil className="h-3.5 w-3.5" />
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            )}
-
-            {/* Order Summary Cards */}
-            <div className="grid gap-6 md:grid-cols-2">
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="text-lg">Customer Details</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-2">
-                        <div className="grid grid-cols-[120px_1fr] text-sm">
-                            <span className="text-muted-foreground">Name:</span>
-                            <span className="font-medium">{order.customerName}</span>
-                        </div>
-                        <div className="grid grid-cols-[120px_1fr] text-sm">
-                            <span className="text-muted-foreground">Email:</span>
-                            <span className="font-medium">{order.customerEmail || 'N/A'}</span>
-                        </div>
-                        {(order as any).customerReference && (
-                            <div className="grid grid-cols-[120px_1fr] text-sm">
-                                <span className="text-muted-foreground">Reference:</span>
-                                <span className="font-medium">{(order as any).customerReference}</span>
-                            </div>
-                        )}
-                        {order.notes && (
-                            <div className="grid grid-cols-[120px_1fr] text-sm pt-2">
-                                <span className="text-muted-foreground">Notes:</span>
-                                <span className="font-medium">{order.notes}</span>
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
-
-                {!isWarehouse && (
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-lg">Order Summary</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-2">
-                            <div className="flex justify-between text-sm">
-                                <span className="text-muted-foreground">Subtotal ({order.items.length} items):</span>
-                                <span>${Number(order.subtotal).toFixed(2)}</span>
-                            </div>
-                            {Number(order.discount) > 0 && (
-                                <div className="flex justify-between text-sm text-green-600">
-                                    <span>Discount:</span>
-                                    <span>-${Number(order.discount).toFixed(2)}</span>
+                            ) : (
+                                <div className="flex items-center gap-2 flex-1 min-w-0">
+                                    <span className="text-sm text-gray-600 truncate">
+                                        {order.label || <span className="text-gray-400 italic">Label</span>}
+                                    </span>
+                                    <button
+                                        onClick={() => { setLabelValue(order.label || ''); setEditingLabel(true); }}
+                                        className="text-gray-400 hover:text-gray-600 shrink-0"
+                                    >
+                                        <Pencil className="h-3.5 w-3.5" />
+                                    </button>
                                 </div>
                             )}
-                            <div className="flex justify-between font-bold text-lg border-t pt-2 mt-2">
-                                <span>Total:</span>
-                                <span>${Number(order.total).toFixed(2)}</span>
+                        </div>
+
+                        {/* Admin Notes */}
+                        <div className="flex items-start gap-2 border rounded-lg px-4 py-2 bg-white sm:col-span-1">
+                            <StickyNote className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
+                            {editingNotes ? (
+                                <div className="flex flex-col gap-1.5 flex-1">
+                                    <textarea
+                                        className="text-xs border border-gray-200 rounded px-2 py-1 w-full resize-none focus:outline-none focus:ring-1 focus:ring-blue-400"
+                                        value={adminNotesValue}
+                                        onChange={e => setAdminNotesValue(e.target.value)}
+                                        placeholder="Internal notes..."
+                                        rows={2}
+                                        autoFocus
+                                    />
+                                    <div className="flex gap-1 justify-end">
+                                        <button onClick={handleSaveAdminNotes} disabled={savingField} className="text-green-600 hover:text-green-800">
+                                            <Check className="h-4 w-4" />
+                                        </button>
+                                        <button onClick={() => setEditingNotes(false)} className="text-gray-400 hover:text-gray-600">
+                                            <X className="h-4 w-4" />
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="flex items-center gap-2 flex-1 min-w-0">
+                                    <span className="text-sm text-gray-600 truncate">
+                                        {order.adminNotes || <span className="text-gray-400 italic">Notes</span>}
+                                    </span>
+                                    <button
+                                        onClick={() => { setAdminNotesValue(order.adminNotes || ''); setEditingNotes(true); }}
+                                        className="text-gray-400 hover:text-gray-600 shrink-0"
+                                    >
+                                        <Pencil className="h-3.5 w-3.5" />
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {/* Order Summary Cards */}
+                <div className="grid gap-6 md:grid-cols-2">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-lg">Customer Details</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-2">
+                            <div className="grid grid-cols-[120px_1fr] text-sm">
+                                <span className="text-muted-foreground">Name:</span>
+                                <span className="font-medium">{order.customerName}</span>
+                            </div>
+                            <div className="grid grid-cols-[120px_1fr] text-sm">
+                                <span className="text-muted-foreground">Email:</span>
+                                <span className="font-medium">{order.customerEmail || 'N/A'}</span>
+                            </div>
+                            {(order as any).customerReference && (
+                                <div className="grid grid-cols-[120px_1fr] text-sm">
+                                    <span className="text-muted-foreground">Reference:</span>
+                                    <span className="font-medium">{(order as any).customerReference}</span>
+                                </div>
+                            )}
+                            {order.notes && (
+                                <div className="grid grid-cols-[120px_1fr] text-sm pt-2">
+                                    <span className="text-muted-foreground">Notes:</span>
+                                    <span className="font-medium">{order.notes}</span>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+
+                    {!isWarehouse && (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="text-lg">Order Summary</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-2">
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-muted-foreground">Subtotal ({order.items.length} items):</span>
+                                    <span>${Number(order.subtotal).toFixed(2)}</span>
+                                </div>
+                                {Number(order.discount) > 0 && (
+                                    <div className="flex justify-between text-sm text-green-600">
+                                        <span>Discount:</span>
+                                        <span>-${Number(order.discount).toFixed(2)}</span>
+                                    </div>
+                                )}
+                                <div className="flex justify-between font-bold text-lg border-t pt-2 mt-2">
+                                    <span>Total:</span>
+                                    <span>${Number(order.total).toFixed(2)}</span>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
+                </div>
+
+                {/* Edit Mode */}
+                {editing && (
+                    <Card className="border-blue-300">
+                        <CardHeader className="flex flex-row items-center justify-between pb-3">
+                            <CardTitle className="text-lg text-blue-800">Edit Order Details</CardTitle>
+                            <div className="flex gap-2">
+                                <Button size="sm" onClick={handleSaveEdit} disabled={savingEdit} className="bg-blue-600 hover:bg-blue-700">
+                                    {savingEdit ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Save className="mr-1 h-3 w-3" />}
+                                    Save Changes
+                                </Button>
+                                <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>Cancel</Button>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-sm font-medium text-gray-700">Customer Reference</label>
+                                    <Input className="mt-1" value={editRef} onChange={e => setEditRef(e.target.value)} placeholder="Optional reference" />
+                                </div>
+                                <div>
+                                    <label className="text-sm font-medium text-gray-700">Notes</label>
+                                    <Input className="mt-1" value={editNotes} onChange={e => setEditNotes(e.target.value)} placeholder="Order notes" />
+                                </div>
+                            </div>
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-sm font-semibold text-gray-700">Blind Items ({editItems.length})</span>
+                                    <Button size="sm" variant="outline" onClick={handleAddItem}>
+                                        <Plus className="mr-1 h-3 w-3" />Add Item
+                                    </Button>
+                                </div>
+                                {editItems.map((item, idx) => (
+                                    <EditItemRow key={idx} item={item} index={idx} onChange={handleItemChange} onRemove={handleRemoveItem} />
+                                ))}
                             </div>
                         </CardContent>
                     </Card>
                 )}
-            </div>
 
-            {/* Edit Mode */}
-            {editing && (
-                <Card className="border-blue-300">
-                    <CardHeader className="flex flex-row items-center justify-between pb-3">
-                        <CardTitle className="text-lg text-blue-800">Edit Order Details</CardTitle>
-                        <div className="flex gap-2">
-                            <Button size="sm" onClick={handleSaveEdit} disabled={savingEdit} className="bg-blue-600 hover:bg-blue-700">
-                                {savingEdit ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Save className="mr-1 h-3 w-3" />}
-                                Save Changes
-                            </Button>
-                            <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>Cancel</Button>
-                        </div>
+                {/* Line Items */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Items ({order.items.length})</CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div>
-                                <label className="text-sm font-medium text-gray-700">Customer Reference</label>
-                                <Input className="mt-1" value={editRef} onChange={e => setEditRef(e.target.value)} placeholder="Optional reference" />
-                            </div>
-                            <div>
-                                <label className="text-sm font-medium text-gray-700">Notes</label>
-                                <Input className="mt-1" value={editNotes} onChange={e => setEditNotes(e.target.value)} placeholder="Order notes" />
-                            </div>
-                        </div>
-                        <div className="space-y-3">
-                            <div className="flex items-center justify-between">
-                                <span className="text-sm font-semibold text-gray-700">Blind Items ({editItems.length})</span>
-                                <Button size="sm" variant="outline" onClick={handleAddItem}>
-                                    <Plus className="mr-1 h-3 w-3" />Add Item
-                                </Button>
-                            </div>
-                            {editItems.map((item, idx) => (
-                                <EditItemRow key={idx} item={item} index={idx} onChange={handleItemChange} onRemove={handleRemoveItem} />
-                            ))}
+                    <CardContent>
+                        <div className="relative w-full overflow-auto">
+                            <table className="w-full caption-bottom text-sm text-left">
+                                <thead>
+                                    <tr className="border-b">
+                                        <th className="h-12 px-4 align-middle font-medium text-muted-foreground w-8"></th>
+                                        <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Location</th>
+                                        <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Details</th>
+                                        <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Dimensions</th>
+                                        <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Control</th>
+                                        {!isWarehouse && <th className="h-12 px-4 align-middle font-medium text-muted-foreground text-right">Price</th>}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {order.items.map((item, index) => {
+                                        const itemKey = (item as any).id || index;
+                                        const isExpanded = expandedItem === itemKey;
+                                        const hasBreakdown = hasPriceBreakdown(item);
+
+                                        return (
+                                            <Fragment key={itemKey}>
+                                            <tr className="border-b transition-colors hover:bg-muted/50 group">
+                                                <td className="p-4 align-middle">
+                                                    {hasBreakdown && !isWarehouse && (
+                                                        <button onClick={() => setExpandedItem(isExpanded ? null : itemKey)}>
+                                                            {isExpanded
+                                                                ? <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                                                                : <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                                                            }
+                                                        </button>
+                                                    )}
+                                                </td>
+                                                <td className="p-4 align-middle font-medium">{item.location}</td>
+                                                <td className="p-4 align-middle">
+                                                    <div className="flex flex-col">
+                                                        <span className="font-semibold">{item.material} - {item.fabricType}</span>
+                                                        <span className="text-xs text-muted-foreground">{item.fabricColour}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="p-4 align-middle">{item.width}mm × {item.drop}mm</td>
+                                                <td className="p-4 align-middle">{item.controlSide} / {item.roll}</td>
+                                                {!isWarehouse && (
+                                                    <td className="p-4 align-middle text-right font-medium">
+                                                        <span className="text-blue-700">${Number(item.price || 0).toFixed(2)}</span>
+                                                    </td>
+                                                )}
+                                            </tr>
+                                            {isExpanded && hasBreakdown && !isWarehouse && (
+                                            <tr className="border-b bg-blue-50">
+                                                <td colSpan={6} className="px-8 py-4">
+                                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-1 text-sm mb-3">
+                                                        {item.fixing && <div><span className="text-muted-foreground">Fixing: </span><span className="font-medium">{item.fixing}</span></div>}
+                                                        {item.bracketType && <div><span className="text-muted-foreground">Bracket: </span><span className="font-medium">{item.bracketType}</span></div>}
+                                                        {item.bracketColour && <div><span className="text-muted-foreground">Bracket Colour: </span><span className="font-medium">{item.bracketColour}</span></div>}
+                                                        {item.chainOrMotor && <div><span className="text-muted-foreground">Motor: </span><span className="font-medium">{item.chainOrMotor}</span></div>}
+                                                        {(item as any).chainType && <div><span className="text-muted-foreground">Chain Type: </span><span className="font-medium">{(item as any).chainType}</span></div>}
+                                                        {item.bottomRailType && <div><span className="text-muted-foreground">Bottom Rail: </span><span className="font-medium">{item.bottomRailType}</span></div>}
+                                                        {item.bottomRailColour && <div><span className="text-muted-foreground">Rail Colour: </span><span className="font-medium">{item.bottomRailColour}</span></div>}
+                                                    </div>
+                                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-x-8 gap-y-1 text-sm border-t border-blue-200 pt-3">
+                                                        {item.fabricPrice != null && (
+                                                            <div className="flex justify-between">
+                                                                <span className="text-muted-foreground">Fabric:</span>
+                                                                <span className="flex items-center gap-2">
+                                                                    {item.discountPercent != null && Number(item.discountPercent) > 0 && (
+                                                                        <span className="text-xs text-gray-400 line-through bg-yellow-50 px-1 rounded">
+                                                                            ${(Number(item.fabricPrice) / (1 - Number(item.discountPercent) / 100)).toFixed(2)}
+                                                                        </span>
+                                                                    )}
+                                                                    <span className="font-semibold text-yellow-700">${Number(item.fabricPrice).toFixed(2)}</span>
+                                                                </span>
+                                                            </div>
+                                                        )}
+                                                        {item.motorPrice != null && Number(item.motorPrice) > 0 && (
+                                                            <div className="flex justify-between">
+                                                                <span className="text-muted-foreground">Motor/Chain:</span>
+                                                                <span>+${Number(item.motorPrice).toFixed(2)}</span>
+                                                            </div>
+                                                        )}
+                                                        {item.bracketPrice != null && Number(item.bracketPrice) > 0 && (
+                                                            <div className="flex justify-between">
+                                                                <span className="text-muted-foreground">Brackets:</span>
+                                                                <span>+${Number(item.bracketPrice).toFixed(2)}</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            )}
+                                            </Fragment>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
                         </div>
                     </CardContent>
                 </Card>
+            </div>
+
+            {worksheetPreview && (
+                <WorksheetPreview
+                    orderId={order.id}
+                    orderNumber={order.orderNumber}
+                    customerName={order.customerName}
+                    customerReference={(order as any).customerReference}
+                    notes={(order as any).notes}
+                    createdAt={order.createdAt}
+                    data={worksheetPreview.data}
+                    onClose={() => setWorksheetPreview(null)}
+                    onAccepted={() => setWorksheetPreview(null)}
+                />
             )}
-
-            {/* Line Items */}
-            <Card>
-                <CardHeader>
-                    <CardTitle>Items ({order.items.length})</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="relative w-full overflow-auto">
-                        <table className="w-full caption-bottom text-sm text-left">
-                            <thead>
-                                <tr className="border-b">
-                                    <th className="h-12 px-4 align-middle font-medium text-muted-foreground w-8"></th>
-                                    <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Location</th>
-                                    <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Details</th>
-                                    <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Dimensions</th>
-                                    <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Control</th>
-                                    {!isWarehouse && <th className="h-12 px-4 align-middle font-medium text-muted-foreground text-right">Price</th>}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {order.items.map((item, index) => {
-                                    const itemKey = (item as any).id || index;
-                                    const isExpanded = expandedItem === itemKey;
-                                    const hasBreakdown = hasPriceBreakdown(item);
-
-                                    return (
-                                        <tr key={itemKey} className="border-b transition-colors hover:bg-muted/50 group">
-                                            <td className="p-4 align-middle">
-                                                {hasBreakdown && !isWarehouse && (
-                                                    <button onClick={() => setExpandedItem(isExpanded ? null : itemKey)}>
-                                                        {isExpanded
-                                                            ? <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                                                            : <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                                                        }
-                                                    </button>
-                                                )}
-                                            </td>
-                                            <td className="p-4 align-middle font-medium">{item.location}</td>
-                                            <td className="p-4 align-middle">
-                                                <div className="flex flex-col">
-                                                    <span className="font-semibold">{item.material} - {item.fabricType}</span>
-                                                    <span className="text-xs text-muted-foreground">{item.fabricColour}</span>
-                                                </div>
-                                            </td>
-                                            <td className="p-4 align-middle">{item.width}mm × {item.drop}mm</td>
-                                            <td className="p-4 align-middle">{item.controlSide} / {item.roll}</td>
-                                            {!isWarehouse && (
-                                                <td className="p-4 align-middle text-right font-medium">
-                                                    <span className="text-blue-700">${Number(item.price || 0).toFixed(2)}</span>
-                                                </td>
-                                            )}
-                                        </tr>
-                                    );
-                                })}
-                                {/* Expanded breakdown rows */}
-                                {order.items.map((item, index) => {
-                                    const itemKey = (item as any).id || index;
-                                    const isExpanded = expandedItem === itemKey;
-                                    const hasBreakdown = hasPriceBreakdown(item);
-
-                                    if (!isExpanded || !hasBreakdown || isWarehouse) return null;
-
-                                    return (
-                                        <tr key={`${itemKey}-breakdown`} className="border-b bg-blue-50">
-                                            <td colSpan={6} className="px-8 py-4">
-                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-1 text-sm mb-3">
-                                                    {item.fixing && <div><span className="text-muted-foreground">Fixing: </span><span className="font-medium">{item.fixing}</span></div>}
-                                                    {item.bracketType && <div><span className="text-muted-foreground">Bracket: </span><span className="font-medium">{item.bracketType}</span></div>}
-                                                    {item.bracketColour && <div><span className="text-muted-foreground">Bracket Colour: </span><span className="font-medium">{item.bracketColour}</span></div>}
-                                                    {item.chainOrMotor && <div><span className="text-muted-foreground">Motor: </span><span className="font-medium">{item.chainOrMotor}</span></div>}
-                                                    {(item as any).chainType && <div><span className="text-muted-foreground">Chain Type: </span><span className="font-medium">{(item as any).chainType}</span></div>}
-                                                    {item.bottomRailType && <div><span className="text-muted-foreground">Bottom Rail: </span><span className="font-medium">{item.bottomRailType}</span></div>}
-                                                    {item.bottomRailColour && <div><span className="text-muted-foreground">Rail Colour: </span><span className="font-medium">{item.bottomRailColour}</span></div>}
-                                                </div>
-                                                <div className="grid grid-cols-2 md:grid-cols-3 gap-x-8 gap-y-1 text-sm border-t border-blue-200 pt-3">
-                                                    {item.fabricPrice != null && (
-                                                        <div className="flex justify-between">
-                                                            <span className="text-muted-foreground">Fabric:</span>
-                                                            <span className="flex items-center gap-2">
-                                                                {item.discountPercent != null && Number(item.discountPercent) > 0 && (
-                                                                    <span className="text-xs text-gray-400 line-through bg-yellow-50 px-1 rounded">
-                                                                        ${(Number(item.fabricPrice) / (1 - Number(item.discountPercent) / 100)).toFixed(2)}
-                                                                    </span>
-                                                                )}
-                                                                <span className="font-semibold text-yellow-700">${Number(item.fabricPrice).toFixed(2)}</span>
-                                                            </span>
-                                                        </div>
-                                                    )}
-                                                    {item.motorPrice != null && Number(item.motorPrice) > 0 && (
-                                                        <div className="flex justify-between">
-                                                            <span className="text-muted-foreground">Motor/Chain:</span>
-                                                            <span>+${Number(item.motorPrice).toFixed(2)}</span>
-                                                        </div>
-                                                    )}
-                                                    {item.bracketPrice != null && Number(item.bracketPrice) > 0 && (
-                                                        <div className="flex justify-between">
-                                                            <span className="text-muted-foreground">Brackets:</span>
-                                                            <span>+${Number(item.bracketPrice).toFixed(2)}</span>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
-                </CardContent>
-            </Card>
-        </div>
-
-        {worksheetPreview && (
-            <WorksheetPreview
-                orderId={order.id}
-                orderNumber={order.orderNumber}
-                customerName={order.customerName}
-                customerReference={(order as any).customerReference}
-                notes={(order as any).notes}
-                createdAt={order.createdAt}
-                data={worksheetPreview.data}
-                onClose={() => setWorksheetPreview(null)}
-                onAccepted={() => setWorksheetPreview(null)}
-            />
-        )}
         </>
     );
 }
