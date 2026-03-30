@@ -30,12 +30,12 @@ function getMotorDeduction(motorType: string | undefined): number {
     return MOTOR_DEDUCTIONS[motorType] || 28;
 }
 
-function getChainSize(calcDrop: number): number {
-    if (calcDrop <= 850) return 500;
-    if (calcDrop <= 1200) return 900;
-    if (calcDrop <= 1600) return 1200;
-    if (calcDrop <= 2200) return 1500;
-    return 2000;
+function getChainSize(drop: number): number {
+    if (drop <= 850) return 500;
+    if (drop <= 1100) return 750;
+    if (drop <= 1600) return 1000;
+    if (drop <= 2200) return 1200;
+    return 1500;
 }
 
 interface Props {
@@ -153,8 +153,7 @@ export default function FabricCutWorksheet({ fabricCutData, onPrintLabels, print
                                                 (it: any) => it.id === panel.orderItemId
                                             );
                                             const fabricCutW = item?.fabricCutWidth ?? (item ? item.width - getMotorDeduction(item.chainOrMotor) : '-');
-                                            const calcD = item ? item.drop + 200 : 0;
-                                            const chainSize = calcD > 0 ? getChainSize(calcD) : '-';
+                                            const chainSize = item?.drop > 0 ? getChainSize(item.drop) : '-';
                                             const bracketType = item?.bracketType || 'Single';
                                             const motorType = item?.chainOrMotor || '';
                                             const isBracketHighlighted = /dual/i.test(bracketType) || /extension/i.test(bracketType);
