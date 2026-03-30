@@ -56,8 +56,6 @@ export class ComprehensivePricingService {
      */
     async calculateBlindPrice(data: BlindPricingData): Promise<PriceBreakdown> {
         try {
-            const DEFAULT_COMPONENT_PRICE = 1.00;
-
             const breakdown: PriceBreakdown = {
                 fabricBasePrice: 0,
                 fabricPrice: 0,
@@ -87,61 +85,52 @@ export class ComprehensivePricingService {
             breakdown.discountPercent = fabricResult.discountPercent;
             breakdown.componentsUsed.push(`Fabric: ${data.material} - ${data.fabricType} - ${data.fabricColour}`);
 
-            // 2. MOTOR/CHAIN — lookup from inventory (admin-configurable price)
+            // 2. MOTOR/WINDER — lookup from inventory (admin-configurable price)
             const motorItem = await prisma.inventoryItem.findFirst({
                 where: { itemName: data.chainOrMotor },
                 select: { price: true },
             });
-            breakdown.motorChainPrice = motorItem && parseFloat(motorItem.price.toString()) > 0
+            breakdown.motorChainPrice = motorItem
                 ? parseFloat(motorItem.price.toString())
-                : DEFAULT_COMPONENT_PRICE;
+                : 0;
             breakdown.componentsUsed.push(data.chainOrMotor);
 
             // 3. BRACKET — only charge for Extended/Dual; Single = $0
-            //    Look up from inventory for admin-configurable pricing
+            //    Price is per bracket TYPE (same for all colours and Left/Right)
             const isChargeableBracket = ['Single Extension', 'Dual Left', 'Dual Right'].includes(data.bracketType);
             const bracketName = this.getBracketName(data.chainOrMotor, data.bracketType, data.bracketColour);
             breakdown.componentsUsed.push(bracketName);
             if (isChargeableBracket) {
+                const bracketSearchName = this.getBracketSearchName(data.chainOrMotor, data.bracketType);
                 const bracketItem = await prisma.inventoryItem.findFirst({
-                    where: { itemName: bracketName },
+                    where: { itemName: { startsWith: bracketSearchName } },
                     select: { price: true },
                 });
-                breakdown.bracketPrice = bracketItem && parseFloat(bracketItem.price.toString()) > 0
+                breakdown.bracketPrice = bracketItem
                     ? parseFloat(bracketItem.price.toString())
-                    : DEFAULT_COMPONENT_PRICE;
+                    : 0;
             }
 
-            // 4. CHAIN (informational only — not charged)
+            // 4-7: Chain, clips, idler/clutch, stop bolt — tracked for inventory but NOT charged
             if (this.isWinder(data.chainOrMotor)) {
                 if (!data.chainType) {
                     throw new AppError(400, 'Chain type is required for winder motors');
                 }
                 const chainLength = this.getChainLength(data.drop);
-                const chainName = `${data.chainType} Chain - ${chainLength}mm`;
-                breakdown.chainPrice = DEFAULT_COMPONENT_PRICE;
-                breakdown.componentsUsed.push(chainName);
+                breakdown.componentsUsed.push(`${data.chainType} Chain - ${chainLength}mm`);
             }
-
-            // 5. CLIPS (informational only — not charged)
-            const clipLeftName = `Bottom bar Clips Left - ${data.bottomRailType} - ${data.bottomRailColour}`;
-            const clipRightName = `Bottom bar Clips Right - ${data.bottomRailType} - ${data.bottomRailColour}`;
-            breakdown.clipsPrice = DEFAULT_COMPONENT_PRICE + DEFAULT_COMPONENT_PRICE;
-            breakdown.componentsUsed.push(clipLeftName, clipRightName);
-
-            // 6. IDLER & CLUTCH (informational only — not charged)
+            breakdown.componentsUsed.push(
+                `Bottom bar Clips Left - ${data.bottomRailType} - ${data.bottomRailColour}`,
+                `Bottom bar Clips Right - ${data.bottomRailType} - ${data.bottomRailColour}`
+            );
             if (this.needsIdlerClutch(data.chainOrMotor, data.bracketType)) {
-                breakdown.idlerClutchPrice = DEFAULT_COMPONENT_PRICE + DEFAULT_COMPONENT_PRICE;
                 breakdown.componentsUsed.push('Acmeda Idler', 'Acmeda Clutch');
             }
-
-            // 7. STOP BOLT & SAFETY LOCK (informational only — not charged)
             if (this.isWinder(data.chainOrMotor)) {
-                breakdown.stopBoltSafetyLockPrice = DEFAULT_COMPONENT_PRICE + DEFAULT_COMPONENT_PRICE;
                 breakdown.componentsUsed.push('Stop bolt', 'Safety lock');
             }
 
-            // Total: ONLY fabric + motor + bracket (chain/clips/accessories not billed)
+            // Total: fabric + motor/winder + bracket ONLY
             breakdown.totalPrice = parseFloat((
                 breakdown.fabricPrice +
                 breakdown.motorChainPrice +
@@ -163,37 +152,42 @@ export class ComprehensivePricingService {
 
 
     /**
-     * Get bracket name based on motor type and selections
+     * Get full bracket name for componentsUsed tracking (includes colour)
      */
     private getBracketName(chainOrMotor: string, bracketType: string, bracketColour: string): string {
-        // Determine brand based on motor type
-        let brand = 'Acmeda'; // Default for motors
+        const brand = chainOrMotor === 'TBS winder-32mm' ? 'TBS' : 'Acmeda';
 
-        if (chainOrMotor === 'TBS winder-32mm') {
-            brand = 'TBS';
-        }
-
-        // Validate TBS + Extended bracket combination
         if (brand === 'TBS' && bracketType === 'Single Extension') {
             throw new AppError(400, 'Extended bracket set is not available with TBS winder-32mm');
         }
 
-        // Build bracket name
-        let bracketName = `${brand} `;
-
         if (bracketType === 'Single') {
-            bracketName += `Single Bracket set - ${bracketColour}`;
+            return `${brand} Single Bracket set - ${bracketColour}`;
         } else if (bracketType === 'Single Extension') {
-            bracketName += `Extended Bracket set - ${bracketColour}`;
+            return `${brand} Extended Bracket set - ${bracketColour}`;
         } else if (bracketType === 'Dual Left') {
-            bracketName += `Duel Bracket set Left - ${bracketColour}`;
+            return `${brand} Dual Bracket set Left - ${bracketColour}`;
         } else if (bracketType === 'Dual Right') {
-            bracketName += `Duel Bracket set Right - ${bracketColour}`;
-        } else {
-            throw new AppError(400, `Invalid bracket type: ${bracketType}`);
+            return `${brand} Dual Bracket set Right - ${bracketColour}`;
         }
+        throw new AppError(400, `Invalid bracket type: ${bracketType}`);
+    }
 
-        return bracketName;
+    /**
+     * Get bracket search prefix for price lookup (ignores colour, Left/Right same price)
+     * Only 3 price categories:
+     *   - Acmeda Dual Bracket set (Left/Right)
+     *   - Acmeda Extended Bracket set
+     *   - TBS Dual Bracket set (Left/Right)
+     */
+    private getBracketSearchName(chainOrMotor: string, bracketType: string): string {
+        const brand = chainOrMotor === 'TBS winder-32mm' ? 'TBS' : 'Acmeda';
+
+        if (bracketType === 'Single Extension') {
+            return `${brand} Extended Bracket set`;
+        }
+        // Dual Left / Dual Right → same price prefix
+        return `${brand} Dual Bracket set`;
     }
 
     /**

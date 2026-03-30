@@ -271,9 +271,10 @@ export const createOrder = async (
             let fabricPrice: number | null = null;
             let motorPrice: number | null = null;
             let bracketPrice: number | null = null;
-            let chainPrice: number | null = null;
-            let clipsPrice: number | null = null;
-            let componentPrice: number | null = null;
+            // Chain, clips, componentPrice are no longer charged
+            const chainPrice: number | null = null;
+            const clipsPrice: number | null = null;
+            const componentPrice: number | null = null;
 
             // Calculate comprehensive price if all required fields provided
             if (item.material && item.fabricType && item.fabricColour &&
@@ -302,11 +303,6 @@ export const createOrder = async (
                     fabricPrice = breakdown.fabricPrice;
                     motorPrice = breakdown.motorChainPrice;
                     bracketPrice = breakdown.bracketPrice;
-                    chainPrice = breakdown.chainPrice;
-                    clipsPrice = breakdown.clipsPrice;
-                    componentPrice = parseFloat((
-                        breakdown.idlerClutchPrice + breakdown.stopBoltSafetyLockPrice
-                    ).toFixed(2));
                 } catch (pricingError) {
                     // Fallback to basic pricing if comprehensive fails
                     logger.warn(`Comprehensive pricing failed for item ${i + 1}, falling back to basic pricing: ${pricingError}`);
@@ -345,15 +341,12 @@ export const createOrder = async (
                 if (customDiscount !== null) {
                     const newFabricPrice = parseFloat((fabricBasePrice * (1 - customDiscount / 100)).toFixed(2));
                     if (fabricPrice !== null && motorPrice !== null) {
-                        // Comprehensive pricing: recalculate total from components
+                        // Comprehensive pricing: total = fabric + motor + bracket only
                         fabricPrice = newFabricPrice;
                         price = parseFloat((
                             newFabricPrice +
                             (motorPrice || 0) +
-                            (bracketPrice || 0) +
-                            (chainPrice || 0) +
-                            (clipsPrice || 0) +
-                            (componentPrice || 0)
+                            (bracketPrice || 0)
                         ).toFixed(2));
                     } else {
                         // Basic pricing: fabric is the only component
@@ -1607,9 +1600,10 @@ export const editOrderDetails = async (
                 let fabricPrice = item.fabricPrice || null;
                 let motorPrice = item.motorPrice || null;
                 let bracketPrice = item.bracketPrice || null;
-                let chainPrice = item.chainPrice || null;
-                let clipsPrice = item.clipsPrice || null;
-                let componentPrice = item.componentPrice || null;
+                // Chain, clips, componentPrice are no longer charged
+                const chainPrice: number | null = null;
+                const clipsPrice: number | null = null;
+                const componentPrice: number | null = null;
 
                 // Recalculate price if required fields are present
                 if (w > 0 && d > 0 && item.material && item.fabricType && item.fabricColour && item.chainOrMotor && item.bracketType && item.bracketColour && item.bottomRailType && item.bottomRailColour) {
@@ -1633,9 +1627,6 @@ export const editOrderDetails = async (
                         fabricPrice = breakdown.fabricPrice;
                         motorPrice = breakdown.motorChainPrice;
                         bracketPrice = breakdown.bracketPrice;
-                        chainPrice = breakdown.chainPrice;
-                        clipsPrice = breakdown.clipsPrice;
-                        componentPrice = (breakdown.idlerClutchPrice || 0) + (breakdown.stopBoltSafetyLockPrice || 0);
                     } catch (err) {
                         logger.warn(`Price recalc failed for item ${index + 1}: ${err}`);
                         // Keep submitted price as fallback

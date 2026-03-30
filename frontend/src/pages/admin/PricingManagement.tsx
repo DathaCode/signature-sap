@@ -32,6 +32,50 @@ const isChargeableBracket = (name: string) =>
     name.toLowerCase().includes('duel') ||
     name.toLowerCase().includes('dual');
 
+// 3 bracket pricing groups (colour/side agnostic)
+interface BracketGroup {
+    label: string;
+    matchFn: (item: ComponentItem) => boolean;
+    price: number;
+    itemIds: string[];
+}
+
+function buildBracketGroups(items: ComponentItem[]): BracketGroup[] {
+    const groups: BracketGroup[] = [
+        {
+            label: 'Acmeda Dual Bracket set Left/Right',
+            matchFn: (c) => c.category !== 'TBS' && (c.name.toLowerCase().includes('dual') || c.name.toLowerCase().includes('duel')),
+            price: 0,
+            itemIds: [],
+        },
+        {
+            label: 'Acmeda Extended Bracket set',
+            matchFn: (c) => c.name.toLowerCase().includes('extended'),
+            price: 0,
+            itemIds: [],
+        },
+        {
+            label: 'TBS Dual Bracket set Left/Right',
+            matchFn: (c) => c.category === 'TBS' && (c.name.toLowerCase().includes('dual') || c.name.toLowerCase().includes('duel')),
+            price: 0,
+            itemIds: [],
+        },
+    ];
+
+    for (const item of items) {
+        for (const group of groups) {
+            if (group.matchFn(item)) {
+                group.itemIds.push(item.id);
+                // Use first found price as the displayed price
+                if (group.price === 0) group.price = item.price;
+                break;
+            }
+        }
+    }
+
+    return groups;
+}
+
 export default function PricingManagement() {
     const [activeTab, setActiveTab] = useState<'fabric' | 'components'>('fabric');
 
@@ -48,6 +92,10 @@ export default function PricingManagement() {
     const [components, setComponents] = useState<ComponentItem[]>([]);
     const [editedComponents, setEditedComponents] = useState<Map<string, number>>(new Map());
     const [savingComponents, setSavingComponents] = useState(false);
+
+    // Bracket groups (3 rows)
+    const [bracketGroups, setBracketGroups] = useState<BracketGroup[]>([]);
+    const [editedBracketGroups, setEditedBracketGroups] = useState<Map<number, number>>(new Map());
 
     useEffect(() => {
         fetchPricing();
@@ -86,6 +134,11 @@ export default function PricingManagement() {
                 (isMotorItem(c.name) || isChargeableBracket(c.name))
             );
             setComponents(filtered);
+
+            // Build bracket groups from chargeable brackets
+            const bracketItems = filtered.filter(c => isChargeableBracket(c.name));
+            setBracketGroups(buildBracketGroups(bracketItems));
+            setEditedBracketGroups(new Map());
         } catch (error) {
             console.error('Failed to fetch components:', error);
             gooeyToast.error('Failed to load component prices');
@@ -137,17 +190,42 @@ export default function PricingManagement() {
         return item.price;
     };
 
+    const handleBracketGroupPriceChange = (groupIndex: number, newPrice: string) => {
+        const price = parseFloat(newPrice);
+        if (isNaN(price) || price < 0) return;
+        setEditedBracketGroups(prev => new Map(prev).set(groupIndex, price));
+    };
+
+    const getBracketGroupPrice = (groupIndex: number) => {
+        if (editedBracketGroups.has(groupIndex)) return editedBracketGroups.get(groupIndex);
+        return bracketGroups[groupIndex]?.price ?? 0;
+    };
+
     const saveComponentChanges = async () => {
-        if (editedComponents.size === 0) return;
+        if (editedComponents.size === 0 && editedBracketGroups.size === 0) return;
         setSavingComponents(true);
         try {
             const promises: Promise<void>[] = [];
+
+            // Save individual motor price changes
             editedComponents.forEach((price, id) => {
                 promises.push(pricingApi.updateComponentPrice(id, price));
             });
+
+            // Save bracket group changes — update ALL items in each group
+            editedBracketGroups.forEach((price, groupIndex) => {
+                const group = bracketGroups[groupIndex];
+                if (group) {
+                    for (const itemId of group.itemIds) {
+                        promises.push(pricingApi.updateComponentPrice(itemId, price));
+                    }
+                }
+            });
+
             await Promise.all(promises);
             gooeyToast.success('Component prices updated');
             setEditedComponents(new Map());
+            setEditedBracketGroups(new Map());
             fetchComponents();
         } catch (error) {
             console.error(error);
@@ -159,7 +237,6 @@ export default function PricingManagement() {
 
     // Group components by category for display
     const motors = components.filter(c => isMotorItem(c.name));
-    const brackets = components.filter(c => isChargeableBracket(c.name));
 
     return (
         <div className="space-y-6 p-8 max-w-[1600px] mx-auto">
@@ -175,10 +252,10 @@ export default function PricingManagement() {
                             Save {editedCells.size} Changes
                         </Button>
                     )}
-                    {activeTab === 'components' && editedComponents.size > 0 && (
+                    {activeTab === 'components' && (editedComponents.size > 0 || editedBracketGroups.size > 0) && (
                         <Button onClick={saveComponentChanges} disabled={savingComponents}>
                             {savingComponents ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                            Save {editedComponents.size} Changes
+                            Save {editedComponents.size + editedBracketGroups.size} Changes
                         </Button>
                     )}
                 </div>
@@ -328,43 +405,41 @@ export default function PricingManagement() {
                                 </CardContent>
                             </Card>
 
-                            {/* Extended / Dual Brackets */}
+                            {/* Extended / Dual Brackets — 3 grouped rows */}
                             <Card>
                                 <CardHeader>
                                     <CardTitle className="text-lg">Extended & Dual Brackets</CardTitle>
                                 </CardHeader>
                                 <CardContent>
                                     <p className="text-xs text-muted-foreground mb-3">
-                                        Single brackets are not charged. Only Extended and Dual bracket sets have a price.
+                                        Single brackets are not charged. Set one price per bracket type — applies to all colours and sides.
                                     </p>
                                     <table className="w-full text-sm">
                                         <thead>
                                             <tr className="border-b">
-                                                <th className="py-2 text-left font-medium text-muted-foreground">Bracket</th>
-                                                <th className="py-2 text-left font-medium text-muted-foreground w-16">Colour</th>
+                                                <th className="py-2 text-left font-medium text-muted-foreground">Bracket Type</th>
                                                 <th className="py-2 text-right font-medium text-muted-foreground w-28">Price ($)</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {brackets.length === 0 && (
+                                            {bracketGroups.length === 0 && (
                                                 <tr>
-                                                    <td colSpan={3} className="py-6 text-center text-muted-foreground">
+                                                    <td colSpan={2} className="py-6 text-center text-muted-foreground">
                                                         No bracket items found. Ensure inventory is seeded.
                                                     </td>
                                                 </tr>
                                             )}
-                                            {brackets.map(item => (
-                                                <tr key={item.id} className="border-b last:border-0">
-                                                    <td className="py-2 pr-4">{item.name}</td>
-                                                    <td className="py-2 pr-4 text-xs text-muted-foreground">{item.variant}</td>
-                                                    <td className="py-2">
+                                            {bracketGroups.map((group, idx) => (
+                                                <tr key={idx} className="border-b last:border-0">
+                                                    <td className="py-3 pr-4 font-medium">{group.label}</td>
+                                                    <td className="py-3">
                                                         <Input
                                                             type="number"
                                                             step="0.01"
                                                             min="0"
                                                             className="h-8 w-full text-right px-2"
-                                                            value={getComponentPrice(item)}
-                                                            onChange={(e) => handleComponentPriceChange(item.id, e.target.value)}
+                                                            value={getBracketGroupPrice(idx)}
+                                                            onChange={(e) => handleBracketGroupPriceChange(idx, e.target.value)}
                                                         />
                                                     </td>
                                                 </tr>

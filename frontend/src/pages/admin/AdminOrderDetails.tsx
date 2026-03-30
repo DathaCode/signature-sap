@@ -785,24 +785,6 @@ export default function AdminOrderDetails() {
                                                                 <span>+${Number(item.bracketPrice).toFixed(2)}</span>
                                                             </div>
                                                         )}
-                                                        {item.chainPrice != null && Number(item.chainPrice) > 0 && (
-                                                            <div className="flex justify-between">
-                                                                <span className="text-muted-foreground">Chain:</span>
-                                                                <span>+${Number(item.chainPrice).toFixed(2)}</span>
-                                                            </div>
-                                                        )}
-                                                        {item.clipsPrice != null && Number(item.clipsPrice) > 0 && (
-                                                            <div className="flex justify-between">
-                                                                <span className="text-muted-foreground">Clips:</span>
-                                                                <span>+${Number(item.clipsPrice).toFixed(2)}</span>
-                                                            </div>
-                                                        )}
-                                                        {item.componentPrice != null && Number(item.componentPrice) > 0 && (
-                                                            <div className="flex justify-between">
-                                                                <span className="text-muted-foreground">Other Parts:</span>
-                                                                <span>+${Number(item.componentPrice).toFixed(2)}</span>
-                                                            </div>
-                                                        )}
                                                     </div>
                                                 </td>
                                             </tr>
