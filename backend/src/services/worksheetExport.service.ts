@@ -40,12 +40,12 @@ const DROP_ADDITION = 200;
  * Chain length (mm) based on blind drop.
  * Inventory chains: 500 / 900 / 1200 / 1500 / 2000 mm
  */
-function getChainSize(calcDrop: number): number {
-    if (calcDrop <= 850) return 500;
-    if (calcDrop <= 1200) return 900;
-    if (calcDrop <= 1600) return 1200;
-    if (calcDrop <= 2200) return 1500;
-    return 2000;
+function getChainSize(drop: number): number {
+    if (drop <= 850) return 500;
+    if (drop <= 1100) return 750;
+    if (drop <= 1600) return 1000;
+    if (drop <= 2200) return 1200;
+    return 1500;
 }
 
 export class WorksheetExportService {
@@ -110,7 +110,7 @@ export class WorksheetExportService {
                     const motorType = item?.chainOrMotor || '';
                     const fabricCutWidth = item ? this.calculateFabricCutWidth(item.width, motorType) : '';
                     const calculatedDrop = item ? this.calculateDrop(item.drop) : 0;
-                    const chainSize = calculatedDrop > 0 ? getChainSize(calculatedDrop) : '';
+                    const chainSize = item?.drop > 0 ? getChainSize(item.drop) : '';
 
                     rows.push([
                         panel.blindNumber ?? '',
@@ -507,7 +507,7 @@ export class WorksheetExportService {
                     const motorType = item?.chainOrMotor || '';
                     const fabricCutWidth = item ? this.calculateFabricCutWidth(item.width, motorType) : '';
                     const calculatedDrop = item ? this.calculateDrop(item.drop) : 0;
-                    const chainSize = calculatedDrop > 0 ? getChainSize(calculatedDrop) : '';
+                    const chainSize = item?.drop > 0 ? getChainSize(item.drop) : '';
 
                     const rowY = doc.y;
                     const bracketType = item?.bracketType || 'Single';
