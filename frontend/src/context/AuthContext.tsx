@@ -20,21 +20,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isLoading: true,
     });
 
+    const clearAuth = () => {
+        localStorage.removeItem('token');
+        setState({ user: null, token: null, isAuthenticated: false, isLoading: false });
+    };
+
     // Check token on mount
     useEffect(() => {
         const initAuth = async () => {
             const token = localStorage.getItem('token');
             if (token) {
                 try {
-                    // Check expiration
+                    // Check expiration client-side first (avoids unnecessary API call)
                     const decoded: any = jwtDecode(token);
                     const currentTime = Date.now() / 1000;
 
                     if (decoded.exp < currentTime) {
-                        throw new Error('Token expired');
+                        clearAuth();
+                        return;
                     }
 
-                    // Fetch user details
+                    // Verify token is still valid server-side
                     const { user } = await authApi.getCurrentUser();
                     setState({
                         user,
@@ -42,15 +48,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         isAuthenticated: true,
                         isLoading: false,
                     });
-                } catch (error) {
-                    // Invalid token
-                    localStorage.removeItem('token');
-                    setState({
-                        user: null,
-                        token: null,
-                        isAuthenticated: false,
-                        isLoading: false,
-                    });
+                } catch (error: any) {
+                    const status = error?.response?.status;
+                    if (status === 401 || status === 403) {
+                        // Genuine auth failure — token invalid/revoked
+                        clearAuth();
+                    } else {
+                        // Network error, 500, timeout — keep token, don't log out
+                        // User can still interact; next request will retry
+                        setState(prev => ({ ...prev, isLoading: false }));
+                    }
                 }
             } else {
                 setState(prev => ({ ...prev, isLoading: false }));
@@ -58,6 +65,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
 
         initAuth();
+
+        // Listen for 401s from api interceptor (e.g. mid-session token expiry)
+        const handleUnauthorized = () => clearAuth();
+        window.addEventListener('auth:unauthorized', handleUnauthorized);
+        return () => window.removeEventListener('auth:unauthorized', handleUnauthorized);
     }, []);
 
     const login = async (credentials: LoginCredentials) => {

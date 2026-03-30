@@ -24,15 +24,24 @@ api.interceptors.request.use(
     }
 )
 
-// Response interceptor to handle 401 (optional: add refresh logic here)
+// Response interceptor — handle 401 (expired/invalid token) with full logout
 api.interceptors.response.use(
     (response) => response,
     async (error) => {
-        if (error.response?.status === 401) {
-            // Clear token if expired/invalid
+        const status = error.response?.status
+        const requestUrl = error.config?.url || ''
+
+        // Don't intercept auth endpoints — avoids redirect loops
+        const isAuthEndpoint = requestUrl.includes('/auth/login') ||
+            requestUrl.includes('/auth/register') ||
+            requestUrl.includes('/auth/forgot-password')
+
+        if (status === 401 && !isAuthEndpoint) {
             localStorage.removeItem('token')
-            // window.location.href = '/login' // Optional: Force redirect
+            // Notify AuthContext and any listeners to clear state
+            window.dispatchEvent(new CustomEvent('auth:unauthorized'))
         }
+
         return Promise.reject(error)
     }
 )
