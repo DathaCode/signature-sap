@@ -153,7 +153,8 @@ export default function FabricCutWorksheet({ fabricCutData, onPrintLabels, print
                                                 (it: any) => it.id === panel.orderItemId
                                             );
                                             const fabricCutW = item?.fabricCutWidth ?? (item ? item.width - getMotorDeduction(item.chainOrMotor) : '-');
-                                            const chainSize = item?.drop > 0 ? getChainSize(item.drop) : '-';
+                                            const calcD = item ? item.drop + 200 : 0;
+                                            const chainSize = item?.drop != null && item.drop > 0 ? getChainSize(item.drop) : '-';
                                             const bracketType = item?.bracketType || 'Single';
                                             const motorType = item?.chainOrMotor || '';
                                             const isBracketHighlighted = /dual/i.test(bracketType) || /extension/i.test(bracketType);
