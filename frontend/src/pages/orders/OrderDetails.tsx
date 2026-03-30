@@ -79,7 +79,7 @@ export default function OrderDetails() {
                     </div>
                 </div>
                 <div className="flex gap-2">
-                    <Button variant="outline">
+                    <Button variant="outline" onClick={() => window.print()}>
                         <Printer className="mr-2 h-4 w-4" />
                         Print
                     </Button>
@@ -116,10 +116,12 @@ export default function OrderDetails() {
                             <span className="text-muted-foreground">Name:</span>
                             <span className="font-medium">{order.customerName}</span>
                         </div>
-                        <div className="grid grid-cols-[100px_1fr] text-sm">
-                            <span className="text-muted-foreground">Email:</span>
-                            <span className="font-medium">{order.customerEmail || 'N/A'}</span>
-                        </div>
+                        {order.customerReference && (
+                            <div className="grid grid-cols-[100px_1fr] text-sm">
+                                <span className="text-muted-foreground">Reference:</span>
+                                <span className="font-medium">{order.customerReference}</span>
+                            </div>
+                        )}
                         {order.notes && (
                             <div className="grid grid-cols-[100px_1fr] text-sm pt-2">
                                 <span className="text-muted-foreground">Notes:</span>

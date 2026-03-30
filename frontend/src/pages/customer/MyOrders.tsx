@@ -96,8 +96,8 @@ export default function MyOrders() {
                             <CardContent className="py-4">
                                 <div className="flex items-center justify-between">
                                     <div className="text-sm">
-                                        <span className="text-muted-foreground">Project/Notes: </span>
-                                        <span className="font-medium">{order.notes || 'N/A'}</span>
+                                        <span className="text-muted-foreground">Reference: </span>
+                                        <span className="font-medium">{order.customerReference || 'N/A'}</span>
                                     </div>
                                     <Link to={`/orders/${order.id}`}>
                                         <Button variant="ghost" size="sm">

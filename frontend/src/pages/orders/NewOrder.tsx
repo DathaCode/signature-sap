@@ -188,6 +188,12 @@ export default function NewOrderPage() {
             return false;
         }
 
+        // TBS winder cannot use Extended bracket
+        if (item.chainOrMotor === 'TBS winder-32mm' && item.bracketType === 'Single Extension') {
+            gooeyToast.error('Extended bracket is not available with TBS winder. Please select a different bracket type.');
+            return false;
+        }
+
         // Dimension range check
         if (item.width < 200 || item.width > 3000) {
             gooeyToast.error('Width must be between 200mm and 3000mm');
