@@ -24,19 +24,33 @@ api.interceptors.request.use(
     }
 )
 
+// Token-error messages emitted by authenticateToken middleware in auth.ts.
+// Only these specific 401s mean "your session is dead" — any other 401 (e.g.
+// a proxy returning 401, or a future resource-level check) should NOT kill
+// the session; it surfaces as a normal error to the caller instead.
+const TOKEN_ERROR_MESSAGES = [
+    'Invalid or expired token',
+    'Access token required',
+    'User no longer exists',
+    'Authentication required',
+]
+
 // Response interceptor — handle 401 (expired/invalid token) with full logout
 api.interceptors.response.use(
     (response) => response,
     async (error) => {
         const status = error.response?.status
         const requestUrl = error.config?.url || ''
+        const message: string = error.response?.data?.message || ''
 
         // Don't intercept auth endpoints — avoids redirect loops
         const isAuthEndpoint = requestUrl.includes('/auth/login') ||
             requestUrl.includes('/auth/register') ||
             requestUrl.includes('/auth/forgot-password')
 
-        if (status === 401 && !isAuthEndpoint) {
+        const isTokenError = TOKEN_ERROR_MESSAGES.includes(message)
+
+        if (status === 401 && !isAuthEndpoint && isTokenError) {
             localStorage.removeItem('token')
             // Notify AuthContext and any listeners to clear state
             window.dispatchEvent(new CustomEvent('auth:unauthorized'))
