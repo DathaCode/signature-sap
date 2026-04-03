@@ -18,8 +18,8 @@ export default function Layout({ children }: LayoutProps) {
         <Link
             to={path}
             className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${isActive(path)
-                    ? 'bg-brand-gold text-white shadow-sm'
-                    : 'text-brand-navy hover:bg-brand-gold/10 hover:text-brand-gold-dark'
+                ? 'bg-brand-gold text-white shadow-sm'
+                : 'text-brand-navy hover:bg-brand-gold/10 hover:text-brand-gold-dark'
                 }`}
         >
             {icon}
@@ -92,19 +92,14 @@ export default function Layout({ children }: LayoutProps) {
                             <Link to="/" className="hover:text-brand-gold transition-colors">
                                 Home
                             </Link>
-                            {location.pathname.split('/').filter(Boolean).map((segment, index, array) => {
-                                // Hide UUID segments (order detail pages show order# in page content)
-                                const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(segment);
-                                if (isUuid) return null;
-                                return (
-                                    <div key={index} className="flex items-center space-x-2">
-                                        <ChevronRight className="h-3 w-3" />
-                                        <span className={index === array.length - 1 || (index < array.length - 1 && /^[0-9a-f]{8}-/i.test(array[index + 1])) ? 'text-brand-gold font-medium' : ''}>
-                                            {segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, ' ')}
-                                        </span>
-                                    </div>
-                                );
-                            })}
+                            {location.pathname.split('/').filter(Boolean).map((segment, index, array) => (
+                                <div key={index} className="flex items-center space-x-2">
+                                    <ChevronRight className="h-3 w-3" />
+                                    <span className={index === array.length - 1 ? 'text-brand-gold font-medium' : ''}>
+                                        {segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, ' ')}
+                                    </span>
+                                </div>
+                            ))}
                         </div>
                     )}
                 </div>
@@ -118,7 +113,7 @@ export default function Layout({ children }: LayoutProps) {
                     backgroundRepeat: 'no-repeat',
                     backgroundPosition: 'center center',
                     backgroundSize: 'contain',
-                    opacity: 0.02,
+                    opacity: 0.03,
                 }}
             />
 

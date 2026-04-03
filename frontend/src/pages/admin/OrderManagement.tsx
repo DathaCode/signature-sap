@@ -236,7 +236,7 @@ export default function OrderManagement() {
                                     {orders.map((order) => (
                                         <tr key={order.id} className="border-b transition-colors hover:bg-muted/50">
                                             <td className="p-4 align-middle font-medium">
-                                                <Link to={`${basePath}/orders/${order.id}?tab=${statusFilter}`} className="text-blue-700 hover:underline">
+                                                <Link to={`${basePath}/orders/${order.orderNumber}?tab=${statusFilter}`} className="text-blue-700 hover:underline">
                                                     {order.orderNumber}
                                                 </Link>
                                             </td>
@@ -249,7 +249,7 @@ export default function OrderManagement() {
                                             </td>
                                             <td className="p-4 align-middle">
                                                 {order.customerReference ? (
-                                                    <Link to={`${basePath}/orders/${order.id}?tab=${statusFilter}`} className="text-sm font-medium text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded hover:bg-indigo-100">
+                                                    <Link to={`${basePath}/orders/${order.orderNumber}?tab=${statusFilter}`} className="text-sm font-medium text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded hover:bg-indigo-100">
                                                         {order.customerReference}
                                                     </Link>
                                                 ) : (
@@ -272,7 +272,7 @@ export default function OrderManagement() {
                                             {!isWarehouse && <td className="p-4 align-middle">${Number(order.total).toFixed(2)}</td>}
                                             <td className="p-4 align-middle text-right">
                                                 <div className="flex justify-end gap-2">
-                                                    <Link to={`${basePath}/orders/${order.id}?tab=${statusFilter}`}>
+                                                    <Link to={`${basePath}/orders/${order.orderNumber}?tab=${statusFilter}`}>
                                                         <Button variant="ghost" size="icon" title="View Details">
                                                             <Eye className="h-4 w-4" />
                                                         </Button>

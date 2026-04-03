@@ -161,6 +161,34 @@ function buildPerBlindHardware(item: any): { category: string; itemName: string;
 
 const prisma = new PrismaClient();
 
+/**
+ * Middleware: resolve :id param — accepts UUID or orderNumber (e.g. "260031.S").
+ * If it's an orderNumber, replaces req.params.id with the actual UUID.
+ */
+export const resolveOrderId = async (
+    req: Request,
+    _res: Response,
+    next: NextFunction
+): Promise<void> => {
+    try {
+        const param = req.params.id;
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(param);
+        if (!isUuid) {
+            const order = await prisma.order.findUnique({
+                where: { orderNumber: param },
+                select: { id: true },
+            });
+            if (!order) {
+                throw new AppError(404, 'Order not found');
+            }
+            req.params.id = order.id;
+        }
+        next();
+    } catch (error) {
+        next(error);
+    }
+};
+
 // Validation schemas
 // Use coerce for width/drop to handle string→number from JSON
 // Use string() instead of enum() for controlSide/roll to handle empty strings
@@ -477,8 +505,12 @@ export const getOrderById = async (
             throw new AppError(401, 'Authentication required');
         }
 
+        const param = req.params.id as string;
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(param);
+        const whereClause = isUuid ? { id: param } : { orderNumber: param };
+
         const order = await prisma.order.findUnique({
-            where: { id: req.params.id as string },
+            where: whereClause,
             include: {
                 items: {
                     orderBy: { itemNumber: 'asc' },

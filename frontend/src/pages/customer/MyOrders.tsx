@@ -212,7 +212,7 @@ export default function MyOrders() {
                                         <span className="text-muted-foreground">Reference: </span>
                                         <span className="font-medium">{order.customerReference || 'N/A'}</span>
                                     </div>
-                                    <Link to={`/orders/${order.id}`}>
+                                    <Link to={`/orders/${order.orderNumber}`}>
                                         <Button variant="ghost" size="sm">
                                             View Details
                                         </Button>
