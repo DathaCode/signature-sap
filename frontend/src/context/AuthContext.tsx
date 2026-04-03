@@ -84,7 +84,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 isAuthenticated: true,
                 isLoading: false,
             });
-            gooeyToast.success('Wait for welcome, ' + user.name);
+            gooeyToast.success('Welcome to Signature Shades, ' + user.name);
         } catch (error: any) {
             const message = error.response?.data?.message || 'Login failed';
             gooeyToast.error(message);
