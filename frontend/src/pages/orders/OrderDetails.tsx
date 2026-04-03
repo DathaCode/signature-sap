@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { webOrderApi } from '../../services/api';
 import { Order, BlindItem } from '../../types/order';
@@ -179,9 +179,8 @@ export default function OrderDetails() {
                                     const hasBreakdown = hasPriceBreakdown(item);
 
                                     return (
-                                        <>
+                                        <React.Fragment key={itemKey}>
                                             <tr
-                                                key={itemKey}
                                                 className="border-b transition-colors hover:bg-muted/50 cursor-pointer"
                                                 onClick={() => setExpandedItem(isExpanded ? null : itemKey)}
                                             >
@@ -209,14 +208,14 @@ export default function OrderDetails() {
                                                 </td>
                                             </tr>
                                             {isExpanded && hasBreakdown && (
-                                                <tr key={`${itemKey}-breakdown`} className="border-b bg-blue-50">
+                                                <tr className="border-b bg-blue-50">
                                                     <td colSpan={6} className="px-8 py-4">
                                                         {/* Blind specification details */}
                                                         <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-1 text-sm mb-3">
                                                             {item.fixing && <div><span className="text-muted-foreground">Fixing: </span><span className="font-medium">{item.fixing}</span></div>}
                                                             {item.bracketType && <div><span className="text-muted-foreground">Bracket: </span><span className="font-medium">{item.bracketType}</span></div>}
                                                             {item.bracketColour && <div><span className="text-muted-foreground">Bracket Colour: </span><span className="font-medium">{item.bracketColour}</span></div>}
-                                                            {item.chainOrMotor && <div><span className="text-muted-foreground">Motor: </span><span className="font-medium">{item.chainOrMotor}</span></div>}
+                                                            {item.chainOrMotor && <div><span className="text-muted-foreground">Chain/Motor: </span><span className="font-medium">{item.chainOrMotor}</span></div>}
                                                             {item.chainType && <div><span className="text-muted-foreground">Chain Type: </span><span className="font-medium">{item.chainType}</span></div>}
                                                             {item.bottomRailType && <div><span className="text-muted-foreground">Bottom Rail: </span><span className="font-medium">{item.bottomRailType}</span></div>}
                                                             {item.bottomRailColour && <div><span className="text-muted-foreground">Rail Colour: </span><span className="font-medium">{item.bottomRailColour}</span></div>}
@@ -255,7 +254,7 @@ export default function OrderDetails() {
                                                     </td>
                                                 </tr>
                                             )}
-                                        </>
+                                        </React.Fragment>
                                     );
                                 })}
                             </tbody>
