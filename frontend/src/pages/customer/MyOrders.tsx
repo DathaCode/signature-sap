@@ -8,7 +8,7 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Loader2, Plus, Search, Calendar, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { format, isWithinInterval, startOfDay, endOfDay, parseISO } from 'date-fns';
+import { format, startOfDay, endOfDay, parseISO } from 'date-fns';
 
 export default function MyOrders() {
     const { user } = useAuth();
