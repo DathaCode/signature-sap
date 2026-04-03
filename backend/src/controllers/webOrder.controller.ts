@@ -171,7 +171,7 @@ export const resolveOrderId = async (
     next: NextFunction
 ): Promise<void> => {
     try {
-        const param = req.params.id;
+        const param = req.params.id as string;
         const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(param);
         if (!isUuid) {
             const order = await prisma.order.findUnique({
@@ -181,7 +181,7 @@ export const resolveOrderId = async (
             if (!order) {
                 throw new AppError(404, 'Order not found');
             }
-            req.params.id = order.id;
+            (req.params as any).id = order.id;
         }
         next();
     } catch (error) {
