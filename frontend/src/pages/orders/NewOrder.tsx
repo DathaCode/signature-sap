@@ -473,7 +473,7 @@ export default function NewOrderPage() {
                                 />
                             </div>
                             <p className="text-xs text-gray-500 pb-2">
-                                A system reference will also be assigned automatically.
+                                Visible on your invoice, quotes, and order history.
                             </p>
                         </div>
                     </CardContent>
