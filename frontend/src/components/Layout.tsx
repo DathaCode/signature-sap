@@ -34,15 +34,15 @@ export default function Layout({ children }: LayoutProps) {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
                     <div className="flex items-center justify-between">
                         {/* Logo */}
-                        <div className="flex items-center space-x-3">
+                        <div className="flex items-center space-x-4">
                             <img
                                 src="/app-icon.webp"
                                 alt="Signature Shades"
-                                className="h-11 w-auto"
+                                className="h-14 w-auto"
                             />
                             <div className="hidden sm:block">
-                                <h1 className="text-brand-navy text-lg font-bold leading-tight">Signature Shades</h1>
-                                <p className="text-brand-gold text-xs font-medium">Order Management</p>
+                                <h1 className="text-brand-navy text-xl font-bold leading-tight">Signature Shades</h1>
+                                <p className="text-brand-gold text-sm font-medium">Order Management</p>
                             </div>
                         </div>
 

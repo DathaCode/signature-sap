@@ -75,7 +75,7 @@ function MonthlyOrderChart({ orders }: { orders: Order[] }) {
 }
 
 export default function CustomerDashboard() {
-    const { user, logout } = useAuth();
+    const { user } = useAuth();
     const [stats, setStats] = useState({ pending: 0, activeQuotes: 0, totalOrders: 0, completedOrders: 0 });
     const [allOrders, setAllOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(true);
@@ -121,7 +121,6 @@ export default function CustomerDashboard() {
                     <h1 className="text-3xl font-bold tracking-tight">Welcome back, {user?.name}</h1>
                     <p className="text-muted-foreground">Here's what's happening with your account.</p>
                 </div>
-                <Button variant="outline" onClick={logout}>Sign out</Button>
             </div>
 
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
