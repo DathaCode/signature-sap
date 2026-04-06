@@ -62,8 +62,8 @@ app.use(cors({
 }));
 
 // Body parsing — size limits to prevent DoS
-app.use(express.json({ limit: '10kb' }));
-app.use(express.urlencoded({ extended: true, limit: '10kb' }));
+app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 
 // Static files — protected with auth
 import { authenticateToken } from './middleware/auth';
