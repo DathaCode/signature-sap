@@ -1897,41 +1897,64 @@ export const downloadLabels = async (
 
             // ── Separator ────────────────────────────────────────────────────
             doc.moveTo(PAD, y).lineTo(LBL_W - PAD, y).lineWidth(0.5).strokeColor('#000').stroke();
-            y += 3 * MM;
+            y += 2 * MM;
 
-            // Line 1 — ORDER REF
-            doc.fontSize(12).font('Helvetica-Bold').fillColor('#000')
-               .text(`ORDER REF: ${order.orderNumber.toUpperCase()}`, PAD, y, { width: innerW });
-            y = doc.y + 1 * MM;
-
-            // Line 2 — CX REF (may wrap to next line naturally)
-            doc.fontSize(12).font('Helvetica-Bold')
-               .text(`CX REF: ${cxRefLine.toUpperCase()}`, PAD, y, { width: innerW });
-            // Line 3 — blank line gap between info block and dimensions block
-            y = doc.y + 5 * MM;
-
-            // Line 4 — W / H
-            doc.fontSize(12).font('Helvetica-Bold')
-               .text(`W: ${item.width ?? 0}   H: ${item.drop ?? 0}`, PAD, y, { width: innerW });
-            y = doc.y + 1 * MM;
-
-            // Line 5 — Location
-            doc.fontSize(12).font('Helvetica-Bold')
-               .text((item.location ?? '').toUpperCase(), PAD, y, { width: innerW });
-            y = doc.y + 1 * MM;
-
-            // Line 6 — Material FabricType - Colour
+            // Build all label lines to calculate fit
+            const orderRefText = `ORDER REF: ${order.orderNumber.toUpperCase()}`;
+            const cxRefText = `CX REF: ${cxRefLine.toUpperCase()}`;
+            const dimText = `W: ${item.width ?? 0}   H: ${item.drop ?? 0}`;
+            const locationText = (item.location ?? '').toUpperCase();
             const matFabric = [item.material, item.fabricType].filter(Boolean).join(' ');
             const fabricLine = matFabric
                 ? `${matFabric}${item.fabricColour ? ` - ${item.fabricColour}` : ''}`
                 : (item.fabricColour ?? '');
-            doc.fontSize(12).font('Helvetica-Bold')
-               .text(fabricLine.toUpperCase(), PAD, y, { width: innerW });
-            y = doc.y + 1 * MM;
+            const fabricText = fabricLine.toUpperCase();
+            const controlText = controlLine.toUpperCase();
 
-            // Lines 7-8 — Control (may wrap naturally e.g. "RIGHT BACK\nCHAIN 1500MM")
-            doc.fontSize(12).font('Helvetica-Bold')
-               .text(controlLine.toUpperCase(), PAD, y, { width: innerW });
+            // Calculate font size: check if all content fits within label height
+            const availableH = LBL_H - y - PAD;
+            // Estimate lines needed (some lines may wrap with long motor names)
+            const allLines = [orderRefText, cxRefText, dimText, locationText, fabricText, controlText];
+            const longestLine = Math.max(...allLines.map(l => l.length));
+            // Base font size 11, scale down if content is long
+            let labelFontSize = 11;
+            if (longestLine > 40) labelFontSize = 10;
+            if (longestLine > 50) labelFontSize = 9;
+            // Also check vertical fit: ~6 lines + gaps, each line ~(fontSize*1.2 + 1mm)
+            const estLineH = labelFontSize * 1.2 + 1 * MM;
+            const estTotalH = estLineH * 7 + 5 * MM; // 6 lines + spacing
+            if (estTotalH > availableH) labelFontSize = Math.max(8, labelFontSize - 1);
+
+            const lineGap = 0.8 * MM;
+
+            // Line 1 — ORDER REF
+            doc.fontSize(labelFontSize).font('Helvetica-Bold').fillColor('#000')
+               .text(orderRefText, PAD, y, { width: innerW });
+            y = doc.y + lineGap;
+
+            // Line 2 — CX REF
+            doc.fontSize(labelFontSize).font('Helvetica-Bold')
+               .text(cxRefText, PAD, y, { width: innerW });
+            y = doc.y + 3 * MM;
+
+            // Line 3 — W / H
+            doc.fontSize(labelFontSize).font('Helvetica-Bold')
+               .text(dimText, PAD, y, { width: innerW });
+            y = doc.y + lineGap;
+
+            // Line 4 — Location
+            doc.fontSize(labelFontSize).font('Helvetica-Bold')
+               .text(locationText, PAD, y, { width: innerW });
+            y = doc.y + lineGap;
+
+            // Line 5 — Material FabricType - Colour
+            doc.fontSize(labelFontSize).font('Helvetica-Bold')
+               .text(fabricText, PAD, y, { width: innerW });
+            y = doc.y + lineGap;
+
+            // Line 6 — Control (may wrap for long motor names)
+            doc.fontSize(labelFontSize).font('Helvetica-Bold')
+               .text(controlText, PAD, y, { width: innerW });
         }
 
         doc.end();

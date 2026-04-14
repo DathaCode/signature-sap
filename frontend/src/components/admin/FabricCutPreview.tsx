@@ -194,7 +194,7 @@ export default function FabricCutPreview({
                                                 fontWeight="bold"
                                                 fill="#000"
                                             >
-                                                {panel.blindNumber ?? (panelIndex + 1)}{panel.rotated && '*'}
+                                                {panel.blindNumber ?? (panelIndex + 1)}
                                             </text>
 
                                             {/* Dimension labels inside panels (when large enough) */}
@@ -306,7 +306,6 @@ export default function FabricCutPreview({
             <div className="mt-4 p-3 bg-gray-50 rounded-md text-sm text-gray-600 flex flex-wrap gap-4 items-center">
                 <span className="font-semibold">Legend:</span>
                 <span>Panel numbers inside rectangles</span>
-                <span>* = Rotated 90&deg;</span>
                 <span className="flex items-center gap-1">
                     <svg className="inline" width="20" height="14" style={{ verticalAlign: 'middle' }}>
                         <rect width="20" height="14" fill="url(#stripe-legend)" />

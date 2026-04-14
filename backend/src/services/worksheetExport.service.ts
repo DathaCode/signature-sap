@@ -82,7 +82,7 @@ export class WorksheetExportService {
         const headers = [
             'Blind #', 'Location', 'Fabric Cut Width (mm)', 'Calculated Drop (mm)',
             'Control Side', 'Control Colour', 'Chain/Motor', 'Roll',
-            'Fabric Type', 'Fabric Colour', 'Bottom Rail Colour', 'Chain Size (mm)', 'Rotated'
+            'Bottom Rail Colour', 'Chain Size (mm)'
         ];
 
         const rows: string[] = [];
@@ -121,11 +121,8 @@ export class WorksheetExportService {
                         `"${item?.bracketColour || '-'}"`,
                         `"${(motorType || '-').replace(/_/g, ' ')}"`,
                         `"${item?.roll || '-'}"`,
-                        `"${item?.fabricType || '-'}"`,
-                        `"${item?.fabricColour || '-'}"`,
                         `"${item?.bottomRailColour || '-'}"`,
                         chainSize,
-                        panel.rotated ? '*' : '',
                     ].join(','));
                 }
             }
@@ -303,7 +300,7 @@ export class WorksheetExportService {
 
                     // Panel number = blind number from order (centred)
                     const blindNo = panel.blindNumber ?? (idx + 1);
-                    const numStr = `${blindNo}${panel.rotated ? '*' : ''}`;
+                    const numStr = `${blindNo}`;
                     doc.fontSize(pw > 40 && ph > 30 ? 14 : 9)
                         .font('Helvetica-Bold').fillColor('#000');
                     const tw = doc.widthOfString(numStr);
@@ -375,7 +372,7 @@ export class WorksheetExportService {
 
                 // — Legend —
                 doc.fontSize(7).font('Helvetica').fillColor('#666')
-                    .text('* = Rotated 90°   |   Diagonal stripes = Waste area', MARGIN_LEFT, 540);
+                    .text('Diagonal stripes = Waste area', MARGIN_LEFT, 540);
 
                 // — Footer —
                 doc.fontSize(7).fillColor('#aaa')
@@ -465,9 +462,9 @@ export class WorksheetExportService {
         doc.y = HDR_Y + HDR_H + 28;
 
         // Column widths sized for landscape A4 (841pt wide). Total ~752pt from x=30.
-        // Rot column removed; Bracket Type added (70pt); Chain/Motor reduced to 86pt.
-        const colWidths = [38, 75, 58, 55, 40, 55, 86, 35, 70, 60, 60, 50, 70];
-        const headers = ['Blind#', 'Location', 'Fab Cut W', 'Calc D', 'Ctrl', 'Ctrl Col', 'Chain/Motor', 'Roll', 'Fabric', 'Colour', 'BR Colour', 'Chain', 'Bracket Type'];
+        // Fabric & Colour columns removed; Chain/Motor widened for motor names.
+        const colWidths = [42, 85, 65, 60, 45, 60, 145, 45, 70, 55, 80];
+        const headers = ['Blind#', 'Location', 'Fab Cut W', 'Calc D', 'Ctrl', 'Ctrl Col', 'Chain/Motor', 'Roll', 'BR Colour', 'Chain', 'Bracket Type'];
         const TABLE_LEFT = 30;
         const ROW_HEIGHT = 15; // Fixed row height in pt (prevents overlap)
         const TABLE_WIDTH = colWidths.reduce((a, b) => a + b, 0);
@@ -485,7 +482,7 @@ export class WorksheetExportService {
             doc.fillColor('#DBEAFE').rect(TABLE_LEFT, hdrY - 2, TABLE_WIDTH, HDR_ROW_H).fill();
             doc.lineWidth(0.5).strokeColor('#888').rect(TABLE_LEFT, hdrY - 2, TABLE_WIDTH, HDR_ROW_H).stroke();
             let hdrX = TABLE_LEFT;
-            doc.fontSize(7.5).font('Helvetica-Bold').fillColor('#1E3A5F');
+            doc.fontSize(8.5).font('Helvetica-Bold').fillColor('#1E3A5F');
             headers.forEach((h, i) => {
                 doc.lineWidth(0.3).strokeColor('#aaa')
                     .moveTo(hdrX, hdrY - 2).lineTo(hdrX, hdrY - 2 + HDR_ROW_H).stroke();
@@ -494,7 +491,20 @@ export class WorksheetExportService {
             });
             doc.y = hdrY + HDR_ROW_H;
 
-            doc.fontSize(8).font('Helvetica').fillColor('#000');
+            // Count roll types across all panels for minority highlighting
+            const rollCounts: Record<string, number> = {};
+            for (const sheet of groupData.optimization.sheets) {
+                for (const panel of sheet.panels) {
+                    const item = groupData.items.find((it: any) => it.id === panel.orderItemId);
+                    const roll = item?.roll || '-';
+                    rollCounts[roll] = (rollCounts[roll] || 0) + 1;
+                }
+            }
+            const rollTypes = Object.keys(rollCounts).filter(r => r !== '-');
+            const minRollCount = rollTypes.length > 1 ? Math.min(...rollTypes.map(r => rollCounts[r])) : -1;
+            const minorityRolls = rollTypes.filter(r => rollCounts[r] === minRollCount);
+
+            doc.fontSize(8.5).font('Helvetica').fillColor('#000');
             for (const sheet of groupData.optimization.sheets) {
                 // Sort panels by blind number for sequential table display
                 const sortedPanels = [...sheet.panels].sort(
@@ -511,11 +521,14 @@ export class WorksheetExportService {
 
                     const rowY = doc.y;
                     const bracketType = item?.bracketType || 'Single';
+                    const rollValue = item?.roll || '-';
                     const isBracketHighlighted = /dual/i.test(bracketType) || /extension/i.test(bracketType);
                     const isMotorHighlighted = /motor/i.test(motorType);
-                    // CHAIN/MOTOR col = index 6, BRACKET TYPE col = last (index 12)
+                    const isRollMinority = minorityRolls.includes(rollValue);
+                    // CHAIN/MOTOR col = index 6, ROLL col = index 7, BRACKET TYPE col = last (index 10)
                     const CHAIN_MOTOR_COL = 6;
-                    const BRACKET_TYPE_COL = 12;
+                    const ROLL_COL = 7;
+                    const BRACKET_TYPE_COL = 10;
                     const values = [
                         String(panel.blindNumber ?? ''),
                         item?.location || panel.location || panel.label,
@@ -524,9 +537,7 @@ export class WorksheetExportService {
                         item?.controlSide || '-',
                         item?.bracketColour || '-',
                         (motorType || '-').replace(/_/g, ' '),
-                        item?.roll || '-',
-                        item?.fabricType || '-',
-                        item?.fabricColour || '-',
+                        rollValue,
                         item?.bottomRailColour || '-',
                         chainSize ? `${chainSize}mm` : '-',
                         bracketType,
@@ -538,13 +549,15 @@ export class WorksheetExportService {
                     }
                     // Draw cells with borders and highlights
                     let rx = TABLE_LEFT;
-                    doc.fontSize(7.5).font('Helvetica').fillColor('#000');
+                    doc.fontSize(8.5).font('Helvetica').fillColor('#000');
                     values.forEach((val, i) => {
                         const shouldHighlight =
                             (i === BRACKET_TYPE_COL && isBracketHighlighted) ||
-                            (i === CHAIN_MOTOR_COL && isMotorHighlighted);
+                            (i === CHAIN_MOTOR_COL && isMotorHighlighted) ||
+                            (i === ROLL_COL && isRollMinority);
                         if (shouldHighlight) {
-                            doc.fillColor('#FEF08A').rect(rx, rowY - 1, colWidths[i], ROW_HEIGHT).fill();
+                            const highlightColor = (i === ROLL_COL && isRollMinority) ? '#FDBA74' : '#FEF08A';
+                            doc.fillColor(highlightColor).rect(rx, rowY - 1, colWidths[i], ROW_HEIGHT).fill();
                         }
                         doc.lineWidth(0.3).strokeColor('#ccc')
                             .rect(rx, rowY - 1, colWidths[i], ROW_HEIGHT).stroke();

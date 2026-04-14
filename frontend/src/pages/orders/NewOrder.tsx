@@ -470,6 +470,7 @@ export default function NewOrderPage() {
                                     value={customerReference}
                                     onChange={(e) => setCustomerReference(e.target.value)}
                                     placeholder="e.g. Smith Kitchen, House-123, Project XYZ"
+                                    disabled={savedBlinds.length > 0}
                                 />
                             </div>
                             <p className="text-xs text-gray-500 pb-2">

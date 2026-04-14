@@ -128,30 +128,41 @@ export default function FabricCutWorksheet({ fabricCutData, onPrintLabels, print
                         </div>
 
                         <div className="overflow-x-auto">
-                            <table className="w-full text-xs border-collapse border border-gray-300">
+                            <table className="w-full text-sm border-collapse border border-gray-300">
                                 <thead>
                                     <tr className="bg-blue-50">
-                                        <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold text-blue-900">Blind #</th>
-                                        <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold text-blue-900">Location</th>
-                                        <th className="border border-gray-300 px-2 py-1.5 text-right font-semibold text-blue-900">Fab Cut W</th>
-                                        <th className="border border-gray-300 px-2 py-1.5 text-right font-semibold text-blue-900">Calc D</th>
-                                        <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold text-blue-900">Ctrl</th>
-                                        <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold text-blue-900">Ctrl Col</th>
-                                        <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold text-blue-900">Chain/Motor</th>
-                                        <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold text-blue-900">Roll</th>
-                                        <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold text-blue-900">Fabric</th>
-                                        <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold text-blue-900">Colour</th>
-                                        <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold text-blue-900">BR Colour</th>
-                                        <th className="border border-gray-300 px-2 py-1.5 text-right font-semibold text-blue-900">Chain</th>
-                                        <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold text-blue-900">Bracket Type</th>
+                                        <th className="border border-gray-300 px-3 py-2 text-left font-semibold text-blue-900 w-[60px]">Blind #</th>
+                                        <th className="border border-gray-300 px-3 py-2 text-left font-semibold text-blue-900 w-[110px]">Location</th>
+                                        <th className="border border-gray-300 px-3 py-2 text-right font-semibold text-blue-900 w-[90px]">Fab Cut W</th>
+                                        <th className="border border-gray-300 px-3 py-2 text-right font-semibold text-blue-900 w-[80px]">Calc D</th>
+                                        <th className="border border-gray-300 px-3 py-2 text-left font-semibold text-blue-900 w-[60px]">Ctrl</th>
+                                        <th className="border border-gray-300 px-3 py-2 text-left font-semibold text-blue-900 w-[80px]">Ctrl Col</th>
+                                        <th className="border border-gray-300 px-3 py-2 text-left font-semibold text-blue-900 min-w-[180px]">Chain/Motor</th>
+                                        <th className="border border-gray-300 px-3 py-2 text-left font-semibold text-blue-900 w-[70px]">Roll</th>
+                                        <th className="border border-gray-300 px-3 py-2 text-left font-semibold text-blue-900 w-[90px]">BR Colour</th>
+                                        <th className="border border-gray-300 px-3 py-2 text-right font-semibold text-blue-900 w-[80px]">Chain</th>
+                                        <th className="border border-gray-300 px-3 py-2 text-left font-semibold text-blue-900 w-[100px]">Bracket Type</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {groupData.optimization.sheets.map(sheet =>
-                                        [...sheet.panels].sort((a, b) => (a.blindNumber ?? 0) - (b.blindNumber ?? 0)).map((panel, idx) => {
-                                            const item = groupData.items.find(
-                                                (it: any) => it.id === panel.orderItemId
-                                            );
+                                    {(() => {
+                                        // Count roll type occurrences across all panels for highlighting minority
+                                        const rollCounts: Record<string, number> = {};
+                                        const allPanels: any[] = [];
+                                        groupData.optimization.sheets.forEach(sheet => {
+                                            [...sheet.panels].sort((a, b) => (a.blindNumber ?? 0) - (b.blindNumber ?? 0)).forEach(panel => {
+                                                const item = groupData.items.find((it: any) => it.id === panel.orderItemId);
+                                                const roll = item?.roll || '-';
+                                                rollCounts[roll] = (rollCounts[roll] || 0) + 1;
+                                                allPanels.push({ panel, item, sheetId: sheet.id });
+                                            });
+                                        });
+                                        // Find the minimum count roll type (only highlight if there are multiple roll types)
+                                        const rollTypes = Object.keys(rollCounts).filter(r => r !== '-');
+                                        const minRollCount = rollTypes.length > 1 ? Math.min(...rollTypes.map(r => rollCounts[r])) : -1;
+                                        const minorityRolls = rollTypes.filter(r => rollCounts[r] === minRollCount);
+
+                                        return allPanels.map(({ panel, item, sheetId }, idx) => {
                                             const fabricCutW = item?.fabricCutWidth ?? (item ? item.width - getMotorDeduction(item.chainOrMotor) : '-');
                                             const calcD = item ? item.drop + 200 : 0;
                                             const chainSize = item?.drop != null && item.drop > 0 ? getChainSize(item.drop) : '-';
@@ -159,30 +170,30 @@ export default function FabricCutWorksheet({ fabricCutData, onPrintLabels, print
                                             const motorType = item?.chainOrMotor || '';
                                             const isBracketHighlighted = /dual/i.test(bracketType) || /extension/i.test(bracketType);
                                             const isMotorHighlighted = /motor/i.test(motorType);
+                                            const rollValue = item?.roll || '-';
+                                            const isRollMinority = minorityRolls.includes(rollValue);
                                             const rowBg = idx % 2 === 0 ? '' : 'bg-gray-50';
                                             return (
-                                                <tr key={`${sheet.id}-${idx}`} className={`${rowBg} hover:bg-blue-50`}>
-                                                    <td className="border border-gray-300 px-2 py-1.5 font-semibold">{panel.blindNumber ?? (idx + 1)}</td>
-                                                    <td className="border border-gray-300 px-2 py-1.5 font-medium">{item?.location || panel.location || panel.label}</td>
-                                                    <td className="border border-gray-300 px-2 py-1.5 text-right font-semibold text-blue-700">{fabricCutW}</td>
-                                                    <td className="border border-gray-300 px-2 py-1.5 text-right">{calcD > 0 ? calcD : '-'}</td>
-                                                    <td className="border border-gray-300 px-2 py-1.5">{item?.controlSide || '-'}</td>
-                                                    <td className="border border-gray-300 px-2 py-1.5">{item?.bracketColour || '-'}</td>
-                                                    <td className={`border border-gray-300 px-2 py-1.5 max-w-[100px] truncate ${isMotorHighlighted ? 'bg-yellow-200 text-yellow-900 font-medium' : ''}`}>
+                                                <tr key={`${sheetId}-${idx}`} className={`${rowBg} hover:bg-blue-50`}>
+                                                    <td className="border border-gray-300 px-3 py-2 font-semibold">{panel.blindNumber ?? (idx + 1)}</td>
+                                                    <td className="border border-gray-300 px-3 py-2 font-medium">{item?.location || panel.location || panel.label}</td>
+                                                    <td className="border border-gray-300 px-3 py-2 text-right font-semibold text-blue-700">{fabricCutW}</td>
+                                                    <td className="border border-gray-300 px-3 py-2 text-right">{calcD > 0 ? calcD : '-'}</td>
+                                                    <td className="border border-gray-300 px-3 py-2">{item?.controlSide || '-'}</td>
+                                                    <td className="border border-gray-300 px-3 py-2">{item?.bracketColour || '-'}</td>
+                                                    <td className={`border border-gray-300 px-3 py-2 whitespace-nowrap ${isMotorHighlighted ? 'bg-yellow-200 text-yellow-900 font-medium' : ''}`}>
                                                         {motorType.replace(/_/g, ' ') || '-'}
                                                     </td>
-                                                    <td className="border border-gray-300 px-2 py-1.5">{item?.roll || '-'}</td>
-                                                    <td className="border border-gray-300 px-2 py-1.5">{item?.fabricType || '-'}</td>
-                                                    <td className="border border-gray-300 px-2 py-1.5">{item?.fabricColour || '-'}</td>
-                                                    <td className="border border-gray-300 px-2 py-1.5">{item?.bottomRailColour || '-'}</td>
-                                                    <td className="border border-gray-300 px-2 py-1.5 text-right">{chainSize !== '-' ? `${chainSize}mm` : '-'}</td>
-                                                    <td className={`border border-gray-300 px-2 py-1.5 font-medium ${isBracketHighlighted ? 'bg-yellow-200 text-yellow-900' : ''}`}>
+                                                    <td className={`border border-gray-300 px-3 py-2 font-medium ${isRollMinority ? 'bg-orange-200 text-orange-900' : ''}`}>{rollValue}</td>
+                                                    <td className="border border-gray-300 px-3 py-2">{item?.bottomRailColour || '-'}</td>
+                                                    <td className="border border-gray-300 px-3 py-2 text-right">{chainSize !== '-' ? `${chainSize}mm` : '-'}</td>
+                                                    <td className={`border border-gray-300 px-3 py-2 font-medium ${isBracketHighlighted ? 'bg-yellow-200 text-yellow-900' : ''}`}>
                                                         {bracketType}
                                                     </td>
                                                 </tr>
                                             );
-                                        })
-                                    )}
+                                        });
+                                    })()}
                                 </tbody>
                             </table>
                         </div>
