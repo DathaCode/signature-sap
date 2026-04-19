@@ -277,7 +277,7 @@ export default function PricingManagement() {
                         ? 'border-blue-600 text-blue-700'
                         : 'border-transparent text-gray-500 hover:text-gray-700'}`}
                 >
-                    Motors & Brackets
+                    Blind Parts
                 </button>
             </div>
 
