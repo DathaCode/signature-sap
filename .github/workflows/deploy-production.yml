@@ -1,15 +1,15 @@
-name: Deploy to Production
+name: Deploy to Production (AWS EC2)
 
 on:
   push:
-    branches: [main]
-  workflow_dispatch:
+    branches: [prod]          # Only deploy when code reaches the `prod` branch
+  workflow_dispatch:           # Allow manual trigger from GitHub Actions UI
 
 jobs:
   deploy:
     name: Deploy to EC2
     runs-on: ubuntu-latest
-    environment: production
+    environment: production    # Ties to GitHub Environment (can add approval gate)
 
     steps:
       - name: Checkout code
@@ -26,39 +26,41 @@ jobs:
         run: |
           ssh -i ~/.ssh/id_ed25519 ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} << 'EOF'
             set -e
-            cd /opt/signatureshades/signature-sap || cd /home/ubuntu/signature-sap
+            cd /home/ubuntu/signature-sap
 
-            # Pull latest code
-            git pull origin main
+            echo "📦 Pulling latest code from prod..."
+            git pull origin prod
 
-            # Stop containers
+            echo "🛑 Stopping containers..."
             docker compose -f docker-compose.prod.yml --env-file .env.production down
 
-            # Build new images
+            echo "🔨 Building new images..."
             docker compose -f docker-compose.prod.yml --env-file .env.production build --no-cache
 
-            # Start containers
+            echo "🚀 Starting containers..."
             docker compose -f docker-compose.prod.yml --env-file .env.production up -d
 
-            # Run migrations
+            echo "🗄️ Running DB migrations..."
             docker exec signatureshades-api-prod npx prisma migrate deploy
 
-            # Clean up old images
+            echo "🧹 Cleaning old images..."
             docker image prune -f
 
-            echo "Deployment completed successfully!"
+            echo "✅ Deployment complete at $(date)"
           EOF
 
-      - name: Health check
+      - name: Health Check
         run: |
-          sleep 10
+          echo "⏳ Waiting for app to start..."
+          sleep 15
           curl -f https://orders.signatureshades.com.au/api/health || exit 1
+          echo "✅ Health check passed!"
 
-      - name: Notify deployment
+      - name: Deployment Status
         if: always()
         run: |
-          if [ ${{ job.status }} == 'success' ]; then
-            echo "✅ Deployment to production succeeded"
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "✅ Production deployment SUCCEEDED"
           else
-            echo "❌ Deployment to production failed"
+            echo "❌ Production deployment FAILED — check logs above"
           fi
