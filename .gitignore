@@ -7,6 +7,9 @@ node_modules/
 .env.local
 .env.*.local
 !.env.production
+.env.production.example
+.env.local.example
+
 
 # Build outputs
 dist/
@@ -80,7 +83,9 @@ temp/
 tmp/
 
 # N/A .MD
+.md
 PROGRESS.md
 user_process_flow_UPDATED.md
 MIGRATION_STRATEGY.md
 UPGRADE.md
+.claude
