@@ -42,7 +42,7 @@ const bendDrawingUpload = multer({
         s3: s3Client,
         bucket: process.env.AWS_S3_BUCKET!,
         contentType: multerS3.AUTO_CONTENT_TYPE,
-        key: (_, file, cb) => {
+        key: (_req: Express.Request, file: Express.Multer.File, cb: (error: Error | null, key: string) => void) => {
             const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1E9)}`;
             const ext = path.extname(file.originalname);
             cb(null, `bend-drawings/bend-${uniqueSuffix}${ext}`);

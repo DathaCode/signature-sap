@@ -2,7 +2,6 @@ import express, { Application } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
-import path from 'path';
 import { logger } from './config/logger';
 import { errorHandler } from './middleware/errorHandler';
 
