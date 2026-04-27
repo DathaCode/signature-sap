@@ -390,6 +390,10 @@ export const uploadBendDrawing = async (file: File): Promise<string> => {
     return response.data.filePath
 }
 
+export const getBendDrawingUrl = (key: string): string => {
+    return `/api/web-orders/bend-drawing/view?key=${encodeURIComponent(key)}`
+}
+
 export const webOrderApi = {
     /**
      * Create a new web order

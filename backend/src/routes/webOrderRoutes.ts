@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import multer from 'multer';
 import multerS3 from 'multer-s3';
-import { S3Client } from '@aws-sdk/client-s3';
+import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import path from 'path';
 import {
     createOrder,
@@ -60,8 +61,23 @@ router.post('/upload/bend-drawing', authenticateToken, bendDrawingUpload.single(
         res.status(400).json({ success: false, error: 'No file uploaded' });
         return;
     }
-    const filePath = (req.file as Express.MulterS3.File).location;
+    const filePath = (req.file as Express.MulterS3.File).key;
     res.json({ success: true, filePath });
+});
+
+// Presigned URL for viewing bend drawings from private S3 bucket
+router.get('/bend-drawing/view', authenticateToken, async (req, res) => {
+    const key = req.query.key as string;
+    if (!key) {
+        res.status(400).json({ error: 'key is required' });
+        return;
+    }
+    const command = new GetObjectCommand({
+        Bucket: process.env.AWS_S3_BUCKET!,
+        Key: key,
+    });
+    const url = await getSignedUrl(s3Client, command, { expiresIn: 900 }); // 15 min
+    res.redirect(url);
 });
 
 // Customer routes (authentication required)

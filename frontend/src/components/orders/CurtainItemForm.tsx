@@ -20,7 +20,7 @@ import {
     BEND_TYPES,
 } from '../../data/sheerHardware';
 import { Upload, X } from 'lucide-react';
-import { pricingApi, uploadBendDrawing } from '../../services/api';
+import { pricingApi, uploadBendDrawing, getBendDrawingUrl } from '../../services/api';
 import { gooeyToast } from 'goey-toast';
 
 interface FabricOption {
@@ -530,9 +530,14 @@ export function CurtainItemForm({ index, curtainNumber, highlightEmpty = false }
                                 <Label>Attach File</Label>
                                 {bendFilePath ? (
                                     <div className="flex items-center gap-2 mt-2 p-3 border border-green-300 bg-green-50 rounded-lg">
-                                        <span className="text-sm text-green-700 truncate flex-1">
+                                        <a
+                                            href={getBendDrawingUrl(bendFilePath)}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-sm text-green-700 underline truncate flex-1"
+                                        >
                                             {bendFilePath.split('/').pop()}
-                                        </span>
+                                        </a>
                                         <button
                                             type="button"
                                             onClick={removeFile}
