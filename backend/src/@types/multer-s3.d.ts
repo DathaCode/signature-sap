@@ -1,8 +1,8 @@
-import { Request } from 'express';
-import { S3Client } from '@aws-sdk/client-s3';
-import { StorageEngine } from 'multer';
-
 declare module 'multer-s3' {
+    type Request = import('express').Request;
+    type S3Client = import('@aws-sdk/client-s3').S3Client;
+    type StorageEngine = import('multer').StorageEngine;
+
     interface Options {
         s3: S3Client;
         bucket: string;
@@ -25,16 +25,14 @@ declare module 'multer-s3' {
     export = multerS3;
 }
 
-declare global {
-    namespace Express {
-        namespace MulterS3 {
-            interface File extends Express.Multer.File {
-                bucket: string;
-                key: string;
-                location: string;
-                etag: string;
-                contentType: string;
-            }
+declare namespace Express {
+    namespace MulterS3 {
+        interface File extends Express.Multer.File {
+            bucket: string;
+            key: string;
+            location: string;
+            etag: string;
+            contentType: string;
         }
     }
 }
