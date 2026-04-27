@@ -3,24 +3,26 @@ declare module 'multer-s3' {
     type S3Client = import('@aws-sdk/client-s3').S3Client;
     type StorageEngine = import('multer').StorageEngine;
 
-    interface Options {
-        s3: S3Client;
-        bucket: string;
-        contentType?: (
-            req: Request,
-            file: Express.Multer.File,
-            cb: (error: Error | null, mime: string, stream: NodeJS.ReadableStream) => void
-        ) => void;
-        key?: (
-            req: Request,
-            file: Express.Multer.File,
-            cb: (error: Error | null, key: string) => void
-        ) => void;
+    namespace multerS3 {
+        interface Options {
+            s3: S3Client;
+            bucket: string;
+            contentType?: (
+                req: Request,
+                file: Express.Multer.File,
+                cb: (error: Error | null, mime: string, stream: NodeJS.ReadableStream) => void
+            ) => void;
+            key?: (
+                req: Request,
+                file: Express.Multer.File,
+                cb: (error: Error | null, key: string) => void
+            ) => void;
+        }
+
+        const AUTO_CONTENT_TYPE: Options['contentType'];
     }
 
-    const AUTO_CONTENT_TYPE: Options['contentType'];
-
-    function multerS3(options: Options): StorageEngine;
+    function multerS3(options: multerS3.Options): StorageEngine;
 
     export = multerS3;
 }
