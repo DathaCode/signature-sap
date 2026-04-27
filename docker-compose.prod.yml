@@ -37,8 +37,8 @@ services:
       CORS_ORIGIN: ${CORS_ORIGIN}
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN}
-    volumes:
-      - ./uploads:/app/uploads
+      AWS_REGION: ${AWS_REGION}
+      AWS_S3_BUCKET: ${AWS_S3_BUCKET}
     depends_on:
       postgres:
         condition: service_healthy

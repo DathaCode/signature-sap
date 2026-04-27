@@ -68,9 +68,6 @@ COPY --from=build /app/package*.json ./
 COPY --from=build /app/fabrics_filtered_with_groups.json ./
 COPY --from=build /app/assets ./assets
 
-# Create uploads directory before switching to non-root user
-RUN mkdir -p /app/uploads/bend-drawings
-
 # Run as non-root user for security
 RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
 RUN chown -R nodejs:nodejs /app

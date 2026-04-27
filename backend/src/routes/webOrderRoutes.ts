@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import multer from 'multer';
+import multerS3 from 'multer-s3';
+import { S3Client } from '@aws-sdk/client-s3';
 import path from 'path';
-import fs from 'fs';
 import {
     createOrder,
     getMyOrders,
@@ -30,19 +31,20 @@ import { authenticateToken, requireAdmin, requireAdminOrWarehouse } from '../mid
 
 const router = Router();
 
-// Configure multer for bend drawing uploads
-const bendDrawingDir = path.join(process.cwd(), 'uploads', 'bend-drawings');
-if (!fs.existsSync(bendDrawingDir)) {
-    fs.mkdirSync(bendDrawingDir, { recursive: true });
-}
+// Configure S3 client for bend drawing uploads
+const s3Client = new S3Client({
+    region: process.env.AWS_REGION || 'ap-southeast-2',
+});
 
 const bendDrawingUpload = multer({
-    storage: multer.diskStorage({
-        destination: (_, __, cb) => cb(null, bendDrawingDir),
-        filename: (_, file, cb) => {
+    storage: multerS3({
+        s3: s3Client,
+        bucket: process.env.AWS_S3_BUCKET!,
+        contentType: multerS3.AUTO_CONTENT_TYPE,
+        key: (_, file, cb) => {
             const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1E9)}`;
             const ext = path.extname(file.originalname);
-            cb(null, `bend-${uniqueSuffix}${ext}`);
+            cb(null, `bend-drawings/bend-${uniqueSuffix}${ext}`);
         },
     }),
     limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
@@ -58,7 +60,7 @@ router.post('/upload/bend-drawing', authenticateToken, bendDrawingUpload.single(
         res.status(400).json({ success: false, error: 'No file uploaded' });
         return;
     }
-    const filePath = `/uploads/bend-drawings/${req.file.filename}`;
+    const filePath = (req.file as Express.MulterS3.File).location;
     res.json({ success: true, filePath });
 });
 
