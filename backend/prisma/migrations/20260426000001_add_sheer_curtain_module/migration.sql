@@ -82,9 +82,12 @@ CREATE TABLE IF NOT EXISTS "sheer_fabric_pricing" (
 );
 
 -- Foreign key from sheer_fabric_pricing to users
-ALTER TABLE "sheer_fabric_pricing"
-    ADD CONSTRAINT IF NOT EXISTS "sheer_fabric_pricing_user_id_fkey"
-    FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE;
+DO $$ BEGIN
+    ALTER TABLE "sheer_fabric_pricing"
+        ADD CONSTRAINT "sheer_fabric_pricing_user_id_fkey"
+        FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 CREATE INDEX IF NOT EXISTS "sheer_fabric_pricing_fabric_group_idx" ON "sheer_fabric_pricing"("fabric_group");
 CREATE INDEX IF NOT EXISTS "sheer_fabric_pricing_user_id_idx" ON "sheer_fabric_pricing"("user_id");
