@@ -1,4 +1,7 @@
 import { Router } from 'express';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
 import {
     createOrder,
     getMyOrders,
@@ -27,9 +30,37 @@ import { authenticateToken, requireAdmin, requireAdminOrWarehouse } from '../mid
 
 const router = Router();
 
+// Configure multer for bend drawing uploads
+const bendDrawingDir = path.join(process.cwd(), 'uploads', 'bend-drawings');
+if (!fs.existsSync(bendDrawingDir)) {
+    fs.mkdirSync(bendDrawingDir, { recursive: true });
+}
+
+const bendDrawingUpload = multer({
+    storage: multer.diskStorage({
+        destination: (_, __, cb) => cb(null, bendDrawingDir),
+        filename: (_, file, cb) => {
+            const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1E9)}`;
+            const ext = path.extname(file.originalname);
+            cb(null, `bend-${uniqueSuffix}${ext}`);
+        },
+    }),
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+});
+
 // Admin-specific fixed routes (must come BEFORE /:id parameterised routes)
 router.get('/admin/all', authenticateToken, requireAdminOrWarehouse, getAllOrders);
 router.get('/admin/trash', authenticateToken, requireAdmin, getTrashOrders);
+
+// File upload for bend drawings
+router.post('/upload/bend-drawing', authenticateToken, bendDrawingUpload.single('file'), (req, res) => {
+    if (!req.file) {
+        res.status(400).json({ success: false, error: 'No file uploaded' });
+        return;
+    }
+    const filePath = `/uploads/bend-drawings/${req.file.filename}`;
+    res.json({ success: true, filePath });
+});
 
 // Customer routes (authentication required)
 router.post('/create', authenticateToken, createOrder);

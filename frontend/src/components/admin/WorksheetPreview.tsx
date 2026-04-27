@@ -4,6 +4,7 @@ import { adminOrderApi } from '../../services/api';
 import { Button } from '../ui/Button';
 import FabricCutWorksheet from './FabricCutWorksheet';
 import TubeCutWorksheet from './TubeCutWorksheet';
+import CurtainWorksheet from './CurtainWorksheet';
 import { gooeyToast } from 'goey-toast';
 import { confirmToast } from '../../utils/confirmToast';
 import { X, Download, Check, AlertTriangle } from 'lucide-react';
@@ -11,6 +12,7 @@ import { X, Download, Check, AlertTriangle } from 'lucide-react';
 interface Props {
     orderId: string;
     orderNumber: string;
+    productType?: string;
     customerName?: string;
     customerReference?: string;
     notes?: string;
@@ -20,7 +22,8 @@ interface Props {
     onAccepted: () => void;
 }
 
-export default function WorksheetPreview({ orderId, orderNumber, customerReference, data, onClose, onAccepted }: Props) {
+export default function WorksheetPreview({ orderId, orderNumber, productType, customerReference, data, onClose, onAccepted }: Props) {
+    const isCurtain = productType === 'CURTAINS' || (data.worksheetData.fabricCutData as any)?.type === 'CURTAINS';
     const [activeTab, setActiveTab] = useState<'fabric' | 'tube'>('fabric');
     const [accepting, setAccepting] = useState(false);
     const [previewData] = useState(data);
@@ -67,7 +70,7 @@ export default function WorksheetPreview({ orderId, orderNumber, customerReferen
         }
     };
 
-    const handleDownload = async (type: 'fabric-cut-csv' | 'fabric-cut-pdf' | 'tube-cut-csv' | 'tube-cut-pdf') => {
+    const handleDownload = async (type: 'fabric-cut-csv' | 'fabric-cut-pdf' | 'tube-cut-csv' | 'tube-cut-pdf' | 'curtain-csv' | 'curtain-pdf') => {
         setDownloading(type);
         try {
             const blob = await adminOrderApi.downloadWorksheet(orderId, type);
@@ -135,31 +138,42 @@ export default function WorksheetPreview({ orderId, orderNumber, customerReferen
                     </div>
                 )}
 
-                {/* Tabs */}
-                <div className="flex border-b px-6">
-                    <button
-                        className={`px-4 py-3 text-sm font-medium border-b-2 ${activeTab === 'fabric'
-                                ? 'border-blue-500 text-blue-600'
-                                : 'border-transparent text-gray-500 hover:text-gray-700'
-                            }`}
-                        onClick={() => setActiveTab('fabric')}
-                    >
-                        Fabric Cut Worksheet
-                    </button>
-                    <button
-                        className={`px-4 py-3 text-sm font-medium border-b-2 ${activeTab === 'tube'
-                                ? 'border-green-500 text-green-600'
-                                : 'border-transparent text-gray-500 hover:text-gray-700'
-                            }`}
-                        onClick={() => setActiveTab('tube')}
-                    >
-                        Tube Cut Worksheet
-                    </button>
-                </div>
+                {/* Tabs — curtain orders only have one tab */}
+                {!isCurtain && (
+                    <div className="flex border-b px-6">
+                        <button
+                            className={`px-4 py-3 text-sm font-medium border-b-2 ${activeTab === 'fabric'
+                                    ? 'border-blue-500 text-blue-600'
+                                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                                }`}
+                            onClick={() => setActiveTab('fabric')}
+                        >
+                            Fabric Cut Worksheet
+                        </button>
+                        <button
+                            className={`px-4 py-3 text-sm font-medium border-b-2 ${activeTab === 'tube'
+                                    ? 'border-green-500 text-green-600'
+                                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                                }`}
+                            onClick={() => setActiveTab('tube')}
+                        >
+                            Tube Cut Worksheet
+                        </button>
+                    </div>
+                )}
+                {isCurtain && (
+                    <div className="border-b px-6 py-3">
+                        <span className="px-4 py-2 text-sm font-medium border-b-2 border-teal-500 text-teal-600">
+                            Curtain Worksheet
+                        </span>
+                    </div>
+                )}
 
                 {/* Content */}
                 <div className="flex-1 overflow-auto p-6">
-                    {activeTab === 'fabric' ? (
+                    {isCurtain ? (
+                        <CurtainWorksheet curtainData={previewData.worksheetData.fabricCutData as any} />
+                    ) : activeTab === 'fabric' ? (
                         <FabricCutWorksheet
                             fabricCutData={previewData.worksheetData.fabricCutData}
                             onPrintLabels={handlePrintLabels}
@@ -173,8 +187,31 @@ export default function WorksheetPreview({ orderId, orderNumber, customerReferen
                 {/* Footer Actions */}
                 <div className="flex items-center justify-between px-6 py-4 border-t bg-gray-50">
                     <div className="flex gap-2">
-                        {/* Download buttons */}
-                        {activeTab === 'fabric' ? (
+                        {/* Download buttons for curtain orders */}
+                        {isCurtain && (
+                            <>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleDownload('curtain-csv')}
+                                    disabled={!!downloading}
+                                >
+                                    <Download className="mr-1 h-3 w-3" />
+                                    {downloading === 'curtain-csv' ? 'Downloading...' : 'CSV'}
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleDownload('curtain-pdf')}
+                                    disabled={!!downloading}
+                                >
+                                    <Download className="mr-1 h-3 w-3" />
+                                    {downloading === 'curtain-pdf' ? 'Downloading...' : 'PDF'}
+                                </Button>
+                            </>
+                        )}
+                        {/* Download buttons — not shown for curtain orders */}
+                        {!isCurtain && activeTab === 'fabric' && (
                             <>
                                 <Button
                                     variant="outline"
@@ -195,7 +232,8 @@ export default function WorksheetPreview({ orderId, orderNumber, customerReferen
                                     {downloading === 'fabric-cut-pdf' ? 'Downloading...' : 'PDF'}
                                 </Button>
                             </>
-                        ) : (
+                        )}
+                        {!isCurtain && activeTab === 'tube' && (
                             <>
                                 <Button
                                     variant="outline"

@@ -257,7 +257,137 @@ export const pricingApi = {
      */
     updateComponentPrice: async (id: string, price: number): Promise<void> => {
         await api.patch(`/pricing/component/${id}`, { price })
-    }
+    },
+
+    /**
+     * Calculate sheer curtain price with all components
+     */
+    calculateCurtainPrice: async (data: {
+        width: number;
+        drop: number;
+        openingType: string;
+        fullness: number;
+        bracketType: string;
+        fabric: string;
+        fabricGroup: string;
+        requiresDropDeduction?: boolean;
+        dropDeductionValue?: number;
+        requiresTracks?: boolean;
+        trackType?: string;
+        motorType?: string;
+        remotes?: string;
+        chargerHub?: string;
+    }): Promise<{
+        deductedDrop: number;
+        hookCount: number;
+        leftHooks?: number;
+        rightHooks?: number;
+        fabricLength: number;
+        fabricMeters: number;
+        bracketCount: number;
+        wandCount: number;
+        dropSurcharge: number;
+        fabricCost: number;
+        hookCost: number;
+        bracketCost: number;
+        wandCost: number;
+        subtotal: number;
+        motorCost: number;
+        remoteCost: number;
+        chargerCost: number;
+        gst: number;
+        total: number;
+    }> => {
+        const response = await api.post('/pricing/calculate-curtain', data)
+        return response.data.calculation
+    },
+
+    /**
+     * Get sheer fabric pricing for a group (admin)
+     */
+    getSheerFabricPricing: async (group: string, userId?: string): Promise<Array<{
+        id: number;
+        fabricGroup: string;
+        fabricName: string;
+        pricePerMeter: number;
+        userId: string | null;
+    }>> => {
+        const response = await api.get(`/pricing/sheer-fabric/${encodeURIComponent(group)}`, {
+            params: userId ? { userId } : {},
+        })
+        return response.data.data.pricing
+    },
+
+    /**
+     * Update sheer fabric pricing (admin)
+     */
+    updateSheerFabricPricing: async (group: string, fabricName: string, pricePerMeter: number, userId?: string): Promise<void> => {
+        await api.put(`/pricing/sheer-fabric/${encodeURIComponent(group)}/${encodeURIComponent(fabricName)}`, {
+            pricePerMeter,
+            userId: userId || null,
+        })
+    },
+
+    /**
+     * List all sheer fabrics across groups (used by curtain order form)
+     */
+    getAllSheerFabrics: async (): Promise<Array<{
+        id: number;
+        fabricGroup: string;
+        fabricName: string;
+        pricePerMeter: number;
+    }>> => {
+        const response = await api.get('/pricing/sheer-fabrics/all')
+        return response.data.data.fabrics
+    },
+
+    /**
+     * Add a new sheer fabric to a group (admin)
+     */
+    addSheerFabric: async (group: string, fabricName: string, pricePerMeter: number): Promise<void> => {
+        await api.post(`/pricing/sheer-fabric/${encodeURIComponent(group)}`, {
+            fabricName,
+            pricePerMeter,
+        })
+    },
+
+    /**
+     * Delete a sheer fabric (admin)
+     */
+    deleteSheerFabric: async (group: string, fabricName: string): Promise<void> => {
+        await api.delete(`/pricing/sheer-fabric/${encodeURIComponent(group)}/${encodeURIComponent(fabricName)}`)
+    },
+
+    /**
+     * Get drop surcharge settings for all sheer groups (admin)
+     */
+    getSheerGroupSettings: async (): Promise<Array<{
+        id: number;
+        fabricGroup: string;
+        dropSurchargePerM: number;
+    }>> => {
+        const response = await api.get('/pricing/sheer-group-settings')
+        return response.data.data.settings
+    },
+
+    /**
+     * Update drop surcharge for a sheer group (admin)
+     */
+    updateSheerGroupSettings: async (group: string, dropSurchargePerM: number): Promise<void> => {
+        await api.put(`/pricing/sheer-group-settings/${encodeURIComponent(group)}`, { dropSurchargePerM })
+    },
+}
+
+/**
+ * Upload bend drawing file for sheer curtain orders
+ */
+export const uploadBendDrawing = async (file: File): Promise<string> => {
+    const formData = new FormData()
+    formData.append('file', file)
+    const response = await api.post('/web-orders/upload/bend-drawing', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    return response.data.filePath
 }
 
 export const webOrderApi = {
@@ -353,7 +483,7 @@ export const adminOrderApi = {
     /**
      * Download worksheet file
      */
-    downloadWorksheet: async (id: string, type: 'fabric-cut-csv' | 'fabric-cut-pdf' | 'tube-cut-csv' | 'tube-cut-pdf'): Promise<Blob> => {
+    downloadWorksheet: async (id: string, type: 'fabric-cut-csv' | 'fabric-cut-pdf' | 'tube-cut-csv' | 'tube-cut-pdf' | 'curtain-csv' | 'curtain-pdf'): Promise<Blob> => {
         const response = await api.get(`/web-orders/${id}/worksheets/download/${type}`, {
             responseType: 'blob',
         })

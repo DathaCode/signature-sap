@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { webOrderApi } from '../../services/api';
-import { Order, BlindItem } from '../../types/order';
+import { Order, BlindItem, CurtainItem } from '../../types/order';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
@@ -17,8 +17,16 @@ export default function OrderDetails() {
     const [loading, setLoading] = useState(true);
     const [expandedItem, setExpandedItem] = useState<number | null>(null);
 
-    const hasPriceBreakdown = (item: BlindItem) =>
-        item.fabricPrice != null || item.motorPrice != null || item.bracketPrice != null || item.fixing != null;
+    const isCurtainOrder = order?.productType === 'CURTAINS';
+
+    const hasPriceBreakdown = (item: BlindItem | CurtainItem) => {
+        if (isCurtainOrder) {
+            const c = item as CurtainItem;
+            return c.fabricCost != null || c.hookCost != null || c.bracketCost != null;
+        }
+        const b = item as BlindItem;
+        return b.fabricPrice != null || b.motorPrice != null || b.bracketPrice != null || b.fixing != null;
+    };
 
     useEffect(() => {
         const fetchOrder = async () => {
@@ -157,7 +165,7 @@ export default function OrderDetails() {
             {/* Line Items */}
             <Card>
                 <CardHeader>
-                    <CardTitle>Items</CardTitle>
+                    <CardTitle>{isCurtainOrder ? 'Curtain' : 'Blind'} Items</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <div className="relative w-full overflow-auto">
@@ -168,16 +176,107 @@ export default function OrderDetails() {
                                     <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Location</th>
                                     <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Details</th>
                                     <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Dimensions</th>
-                                    <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Control</th>
+                                    <th className="h-12 px-4 align-middle font-medium text-muted-foreground">{isCurtainOrder ? 'Opening' : 'Control'}</th>
                                     <th className="h-12 px-4 align-middle font-medium text-muted-foreground text-right">Price</th>
                                 </tr>
                             </thead>
                             <tbody className="[&_tr:last-child]:border-0">
-                                {order.items.map((item, index) => {
-                                    const itemKey = item.id || index;
+                                {order.items.map((rawItem, index) => {
+                                    const itemKey = rawItem.id || index;
                                     const isExpanded = expandedItem === itemKey;
-                                    const hasBreakdown = hasPriceBreakdown(item);
+                                    const hasBreakdown = hasPriceBreakdown(rawItem);
 
+                                    if (isCurtainOrder) {
+                                        const item = rawItem as CurtainItem;
+                                        return (
+                                            <React.Fragment key={itemKey}>
+                                                <tr
+                                                    className="border-b transition-colors hover:bg-muted/50 cursor-pointer"
+                                                    onClick={() => setExpandedItem(isExpanded ? null : itemKey)}
+                                                >
+                                                    <td className="p-4 align-middle">
+                                                        {isExpanded
+                                                            ? <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                                                            : <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                                                        }
+                                                    </td>
+                                                    <td className="p-4 align-middle font-medium">{item.location}</td>
+                                                    <td className="p-4 align-middle">
+                                                        <div className="flex flex-col">
+                                                            <span className="font-semibold">{item.fabric || 'N/A'}</span>
+                                                            <span className="text-xs text-muted-foreground">{item.fabricColour}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="p-4 align-middle">{item.width}mm x {item.drop}mm</td>
+                                                    <td className="p-4 align-middle">
+                                                        {item.openingType}
+                                                        {item.fullness && <span className="text-xs text-muted-foreground ml-1">({item.fullness}%)</span>}
+                                                    </td>
+                                                    <td className="p-4 align-middle text-right font-medium">
+                                                        <span className="text-blue-700">${Number(item.price || 0).toFixed(2)}</span>
+                                                    </td>
+                                                </tr>
+                                                {isExpanded && (
+                                                    <tr className="border-b bg-teal-50">
+                                                        <td colSpan={6} className="px-8 py-4">
+                                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-1 text-sm mb-3">
+                                                                {item.curtainType && <div><span className="text-muted-foreground">Type: </span><span className="font-medium">{item.curtainType}</span></div>}
+                                                                {item.installation && <div><span className="text-muted-foreground">Installation: </span><span className="font-medium">{item.installation}</span></div>}
+                                                                {item.bracketType && <div><span className="text-muted-foreground">Bracket: </span><span className="font-medium">{item.bracketType}</span></div>}
+                                                                {item.trackColour && <div><span className="text-muted-foreground">Track Colour: </span><span className="font-medium">{item.trackColour}</span></div>}
+                                                                {item.wandSize && <div><span className="text-muted-foreground">Wand: </span><span className="font-medium">{item.wandSize}mm</span></div>}
+                                                            </div>
+                                                            {item.requiresTracks && (
+                                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-1 text-sm mb-3 border-t border-teal-200 pt-2">
+                                                                    {item.trackType && <div><span className="text-muted-foreground">Track: </span><span className="font-medium">{item.trackType}</span></div>}
+                                                                    {item.motorType && <div><span className="text-muted-foreground">Motor: </span><span className="font-medium">{item.motorType}</span></div>}
+                                                                    {item.trackControlSide && <div><span className="text-muted-foreground">Control: </span><span className="font-medium">{item.trackControlSide}</span></div>}
+                                                                    {item.remotes && <div><span className="text-muted-foreground">Remote: </span><span className="font-medium">{item.remotes}</span></div>}
+                                                                </div>
+                                                            )}
+                                                            {hasBreakdown && (
+                                                                <div className="grid grid-cols-2 md:grid-cols-3 gap-x-8 gap-y-1 text-sm border-t border-teal-200 pt-3">
+                                                                    {item.fabricCost != null && (
+                                                                        <div className="flex justify-between">
+                                                                            <span className="text-muted-foreground">Fabric:</span>
+                                                                            <span className="font-medium">${Number(item.fabricCost).toFixed(2)}</span>
+                                                                        </div>
+                                                                    )}
+                                                                    {item.hookCost != null && Number(item.hookCost) > 0 && (
+                                                                        <div className="flex justify-between">
+                                                                            <span className="text-muted-foreground">Hooks:</span>
+                                                                            <span>+${Number(item.hookCost).toFixed(2)}</span>
+                                                                        </div>
+                                                                    )}
+                                                                    {item.bracketCost != null && Number(item.bracketCost) > 0 && (
+                                                                        <div className="flex justify-between">
+                                                                            <span className="text-muted-foreground">Brackets:</span>
+                                                                            <span>+${Number(item.bracketCost).toFixed(2)}</span>
+                                                                        </div>
+                                                                    )}
+                                                                    {item.wandCost != null && Number(item.wandCost) > 0 && (
+                                                                        <div className="flex justify-between">
+                                                                            <span className="text-muted-foreground">Wands:</span>
+                                                                            <span>+${Number(item.wandCost).toFixed(2)}</span>
+                                                                        </div>
+                                                                    )}
+                                                                    {item.dropSurcharge != null && Number(item.dropSurcharge) > 0 && (
+                                                                        <div className="flex justify-between">
+                                                                            <span className="text-muted-foreground">Drop Surcharge:</span>
+                                                                            <span>+${Number(item.dropSurcharge).toFixed(2)}</span>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </React.Fragment>
+                                        );
+                                    }
+
+                                    // Blind item rendering
+                                    const item = rawItem as BlindItem;
                                     return (
                                         <React.Fragment key={itemKey}>
                                             <tr
@@ -210,7 +309,6 @@ export default function OrderDetails() {
                                             {isExpanded && hasBreakdown && (
                                                 <tr className="border-b bg-blue-50">
                                                     <td colSpan={6} className="px-8 py-4">
-                                                        {/* Blind specification details */}
                                                         <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-1 text-sm mb-3">
                                                             {item.fixing && <div><span className="text-muted-foreground">Fixing: </span><span className="font-medium">{item.fixing}</span></div>}
                                                             {item.bracketType && <div><span className="text-muted-foreground">Bracket: </span><span className="font-medium">{item.bracketType}</span></div>}
@@ -220,7 +318,6 @@ export default function OrderDetails() {
                                                             {item.bottomRailType && <div><span className="text-muted-foreground">Bottom Rail: </span><span className="font-medium">{item.bottomRailType}</span></div>}
                                                             {item.bottomRailColour && <div><span className="text-muted-foreground">Rail Colour: </span><span className="font-medium">{item.bottomRailColour}</span></div>}
                                                         </div>
-                                                        {/* Price breakdown */}
                                                         <div className="grid grid-cols-2 md:grid-cols-3 gap-x-8 gap-y-1 text-sm border-t border-blue-200 pt-3">
                                                             {item.fabricPrice != null && (
                                                                 <div className="flex justify-between">

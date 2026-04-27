@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { adminPricingApi, pricingApi } from '../../services/api';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
-import { Loader2, Save } from 'lucide-react';
+import { Loader2, Save, Plus, Trash2 } from 'lucide-react';
 import { gooeyToast } from 'goey-toast';
 import { Input } from '../../components/ui/Input';
 
@@ -22,6 +22,7 @@ interface ComponentItem {
 }
 
 const COMPONENT_CATEGORIES = ['ACMEDA', 'TBS', 'MOTOR'];
+const SHEER_FABRIC_GROUPS = ['Group 1', 'Group 2', 'Budget', 'Block Out Curtains'];
 
 // Which item names are motors (charged) vs brackets (charged only for Extended/Dual)
 const isMotorItem = (name: string) =>
@@ -77,7 +78,7 @@ function buildBracketGroups(items: ComponentItem[]): BracketGroup[] {
 }
 
 export default function PricingManagement() {
-    const [activeTab, setActiveTab] = useState<'fabric' | 'components'>('fabric');
+    const [activeTab, setActiveTab] = useState<'fabric' | 'components' | 'sheerFabric' | 'sheerParts'>('fabric');
 
     // Fabric matrix state
     const [loading, setLoading] = useState(true);
@@ -97,6 +98,30 @@ export default function PricingManagement() {
     const [bracketGroups, setBracketGroups] = useState<BracketGroup[]>([]);
     const [editedBracketGroups, setEditedBracketGroups] = useState<Map<number, number>>(new Map());
 
+    // Sheer fabric pricing state
+    const [sheerFabricGroup, setSheerFabricGroup] = useState(SHEER_FABRIC_GROUPS[0]);
+    const [sheerFabrics, setSheerFabrics] = useState<Array<{ id: number; fabricGroup: string; fabricName: string; pricePerMeter: number; userId: string | null }>>([]);
+    const [sheerFabricsLoading, setSheerFabricsLoading] = useState(false);
+    const [editedSheerFabrics, setEditedSheerFabrics] = useState<Map<string, number>>(new Map());
+    const [savingSheerFabrics, setSavingSheerFabrics] = useState(false);
+    const [newFabricName, setNewFabricName] = useState('');
+    const [newFabricPrice, setNewFabricPrice] = useState('');
+    const [addingFabric, setAddingFabric] = useState(false);
+
+    // Sheer parts pricing state (motors, remotes, chargers)
+    const [sheerPartsLoading, setSheerPartsLoading] = useState(false);
+    const [sheerMotors, setSheerMotors] = useState<ComponentItem[]>([]);
+    const [sheerRemotes, setSheerRemotes] = useState<ComponentItem[]>([]);
+    const [sheerChargers, setSheerChargers] = useState<ComponentItem[]>([]);
+    const [editedSheerParts, setEditedSheerParts] = useState<Map<string, number>>(new Map());
+    const [savingSheerParts, setSavingSheerParts] = useState(false);
+
+    // Drop surcharge per group state
+    const [groupSettings, setGroupSettings] = useState<Record<string, number>>({});
+    const [editedGroupSettings, setEditedGroupSettings] = useState<Record<string, string>>({});
+    const [savingGroupSettings, setSavingGroupSettings] = useState(false);
+
+
     useEffect(() => {
         fetchPricing();
     }, [fabricGroup]);
@@ -106,6 +131,31 @@ export default function PricingManagement() {
             fetchComponents();
         }
     }, [activeTab]);
+
+    const fetchGroupSettings = useCallback(async () => {
+        try {
+            const data = await pricingApi.getSheerGroupSettings();
+            const map: Record<string, number> = {};
+            data.forEach(s => { map[s.fabricGroup] = s.dropSurchargePerM; });
+            setGroupSettings(map);
+        } catch (error) {
+            console.error('Failed to fetch group settings:', error);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (activeTab === 'sheerFabric') {
+            fetchSheerFabrics();
+            fetchGroupSettings();
+        }
+    }, [activeTab, sheerFabricGroup]);
+
+    useEffect(() => {
+        if (activeTab === 'sheerParts') {
+            fetchSheerParts();
+        }
+    }, [activeTab]);
+
 
     const fetchPricing = async () => {
         setLoading(true);
@@ -144,6 +194,57 @@ export default function PricingManagement() {
             gooeyToast.error('Failed to load component prices');
         } finally {
             setComponentsLoading(false);
+        }
+    };
+
+    const fetchSheerParts = async () => {
+        setSheerPartsLoading(true);
+        try {
+            const [motors, remotes, chargers] = await Promise.all([
+                pricingApi.getAllComponentPrices('SHEER_MOTOR'),
+                pricingApi.getAllComponentPrices('SHEER_REMOTE'),
+                pricingApi.getAllComponentPrices('SHEER_CHARGER'),
+            ]);
+            setSheerMotors(motors.components);
+            setSheerRemotes(remotes.components);
+            setSheerChargers(chargers.components);
+            setEditedSheerParts(new Map());
+        } catch (error) {
+            console.error('Failed to fetch sheer parts:', error);
+            gooeyToast.error('Failed to load sheer parts pricing');
+        } finally {
+            setSheerPartsLoading(false);
+        }
+    };
+
+    const getSheerPartPrice = (item: ComponentItem) => {
+        if (editedSheerParts.has(item.id)) return editedSheerParts.get(item.id);
+        return item.price;
+    };
+
+    const handleSheerPartPriceChange = (id: string, newPrice: string) => {
+        const price = parseFloat(newPrice);
+        if (isNaN(price) || price < 0) return;
+        setEditedSheerParts(prev => new Map(prev).set(id, price));
+    };
+
+    const saveSheerPartsChanges = async () => {
+        if (editedSheerParts.size === 0) return;
+        setSavingSheerParts(true);
+        try {
+            const promises: Promise<void>[] = [];
+            editedSheerParts.forEach((price, id) => {
+                promises.push(pricingApi.updateComponentPrice(id, price));
+            });
+            await Promise.all(promises);
+            gooeyToast.success('Sheer parts prices updated');
+            setEditedSheerParts(new Map());
+            fetchSheerParts();
+        } catch (error) {
+            console.error(error);
+            gooeyToast.error('Failed to update some prices');
+        } finally {
+            setSavingSheerParts(false);
         }
     };
 
@@ -235,6 +336,111 @@ export default function PricingManagement() {
         }
     };
 
+    // --- Sheer Fabric ---
+    const fetchSheerFabrics = async () => {
+        setSheerFabricsLoading(true);
+        try {
+            const data = await pricingApi.getSheerFabricPricing(sheerFabricGroup);
+            setSheerFabrics(data);
+            setEditedSheerFabrics(new Map());
+        } catch (error) {
+            console.error('Failed to fetch sheer fabric pricing:', error);
+            gooeyToast.error('Failed to load sheer fabric pricing');
+        } finally {
+            setSheerFabricsLoading(false);
+        }
+    };
+
+    const handleSheerFabricPriceChange = (fabricName: string, newPrice: string) => {
+        const price = parseFloat(newPrice);
+        if (isNaN(price) || price < 0) return;
+        setEditedSheerFabrics(prev => new Map(prev).set(fabricName, price));
+    };
+
+    const getSheerFabricPrice = (fabric: { fabricName: string; pricePerMeter: number }) => {
+        if (editedSheerFabrics.has(fabric.fabricName)) return editedSheerFabrics.get(fabric.fabricName);
+        return fabric.pricePerMeter;
+    };
+
+    const handleAddSheerFabric = async () => {
+        const name = newFabricName.trim();
+        const price = parseFloat(newFabricPrice);
+        if (!name) {
+            gooeyToast.error('Fabric name is required');
+            return;
+        }
+        if (isNaN(price) || price < 0) {
+            gooeyToast.error('Enter a valid price');
+            return;
+        }
+        setAddingFabric(true);
+        try {
+            await pricingApi.addSheerFabric(sheerFabricGroup, name, price);
+            gooeyToast.success(`${name} added to ${sheerFabricGroup}`);
+            setNewFabricName('');
+            setNewFabricPrice('');
+            fetchSheerFabrics();
+        } catch (error: any) {
+            console.error(error);
+            gooeyToast.error(error.response?.data?.message || 'Failed to add fabric');
+        } finally {
+            setAddingFabric(false);
+        }
+    };
+
+    const handleDeleteSheerFabric = async (fabricName: string) => {
+        if (!window.confirm(`Delete "${fabricName}" from ${sheerFabricGroup}? This cannot be undone.`)) return;
+        try {
+            await pricingApi.deleteSheerFabric(sheerFabricGroup, fabricName);
+            gooeyToast.success(`${fabricName} removed`);
+            fetchSheerFabrics();
+        } catch (error: any) {
+            console.error(error);
+            gooeyToast.error(error.response?.data?.message || 'Failed to delete fabric');
+        }
+    };
+
+    const saveSheerFabricChanges = async () => {
+        if (editedSheerFabrics.size === 0) return;
+        setSavingSheerFabrics(true);
+        try {
+            const promises: Promise<void>[] = [];
+            editedSheerFabrics.forEach((price, fabricName) => {
+                promises.push(pricingApi.updateSheerFabricPricing(sheerFabricGroup, fabricName, price));
+            });
+            await Promise.all(promises);
+            gooeyToast.success('Sheer fabric pricing updated');
+            setEditedSheerFabrics(new Map());
+            fetchSheerFabrics();
+        } catch (error) {
+            console.error(error);
+            gooeyToast.error('Failed to update sheer fabric pricing');
+        } finally {
+            setSavingSheerFabrics(false);
+        }
+    };
+
+
+    const saveGroupSettings = async () => {
+        if (Object.keys(editedGroupSettings).length === 0) return;
+        setSavingGroupSettings(true);
+        try {
+            await Promise.all(
+                Object.entries(editedGroupSettings).map(([group, val]) =>
+                    pricingApi.updateSheerGroupSettings(group, parseFloat(val))
+                )
+            );
+            gooeyToast.success('Drop surcharge rates updated');
+            setEditedGroupSettings({});
+            fetchGroupSettings();
+        } catch (error) {
+            console.error(error);
+            gooeyToast.error('Failed to update surcharge rates');
+        } finally {
+            setSavingGroupSettings(false);
+        }
+    };
+
     // Group components by category for display
     const motors = components.filter(c => isMotorItem(c.name));
 
@@ -258,41 +464,66 @@ export default function PricingManagement() {
                             Save {editedComponents.size + editedBracketGroups.size} Changes
                         </Button>
                     )}
+                    {activeTab === 'sheerFabric' && editedSheerFabrics.size > 0 && (
+                        <Button onClick={saveSheerFabricChanges} disabled={savingSheerFabrics}>
+                            {savingSheerFabrics ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                            Save {editedSheerFabrics.size} Fabric Changes
+                        </Button>
+                    )}
+                    {activeTab === 'sheerFabric' && Object.keys(editedGroupSettings).length > 0 && (
+                        <Button onClick={saveGroupSettings} disabled={savingGroupSettings}>
+                            {savingGroupSettings ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                            Save Surcharge Changes
+                        </Button>
+                    )}
+                    {activeTab === 'sheerParts' && editedSheerParts.size > 0 && (
+                        <Button onClick={saveSheerPartsChanges} disabled={savingSheerParts}>
+                            {savingSheerParts ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                            Save {editedSheerParts.size} Changes
+                        </Button>
+                    )}
+
                 </div>
             </div>
 
             {/* Top-level tabs */}
             <div className="flex gap-2 border-b pb-0">
-                <button
-                    onClick={() => setActiveTab('fabric')}
-                    className={`px-6 py-3 font-medium text-sm border-b-2 transition-colors ${activeTab === 'fabric'
-                        ? 'border-blue-600 text-blue-700'
-                        : 'border-transparent text-gray-500 hover:text-gray-700'}`}
-                >
-                    Fabric Matrix
-                </button>
-                <button
-                    onClick={() => setActiveTab('components')}
-                    className={`px-6 py-3 font-medium text-sm border-b-2 transition-colors ${activeTab === 'components'
-                        ? 'border-blue-600 text-blue-700'
-                        : 'border-transparent text-gray-500 hover:text-gray-700'}`}
-                >
-                    Blind Parts
-                </button>
+                {([
+                    ['fabric', 'Fabric Matrix'],
+                    ['components', 'Blind Parts'],
+                    ['sheerFabric', 'Sheer Fabric'],
+                    ['sheerParts', 'Sheer Parts'],
+                ] as [typeof activeTab, string][]).map(([tab, label]) => (
+                    <button
+                        key={tab}
+                        onClick={() => setActiveTab(tab)}
+                        className={`px-6 py-3 font-medium text-sm border-b-2 transition-colors rounded-t-md ${
+                            activeTab === tab
+                                ? 'border-blue-600 text-blue-700 bg-blue-50'
+                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                        }`}
+                    >
+                        {label}
+                    </button>
+                ))}
             </div>
 
             {/* FABRIC MATRIX TAB */}
             {activeTab === 'fabric' && (
                 <>
-                    <div className="flex gap-2 overflow-x-auto">
+                    <div className="flex gap-1 border-b pb-0 overflow-x-auto">
                         {[1, 2, 3].map(group => (
-                            <Button
+                            <button
                                 key={group}
-                                variant={fabricGroup === group ? 'default' : 'outline'}
                                 onClick={() => setFabricGroup(group)}
+                                className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                                    fabricGroup === group
+                                        ? 'border-blue-600 text-blue-700 bg-blue-50'
+                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                                }`}
                             >
                                 Group {group}
-                            </Button>
+                            </button>
                         ))}
                     </div>
 
@@ -452,6 +683,257 @@ export default function PricingManagement() {
                     )}
                 </div>
             )}
+
+            {/* SHEER FABRIC TAB */}
+            {activeTab === 'sheerFabric' && (
+                <>
+                    <div className="flex gap-1 border-b pb-0 overflow-x-auto">
+                        {SHEER_FABRIC_GROUPS.map(group => (
+                            <button
+                                key={group}
+                                onClick={() => setSheerFabricGroup(group)}
+                                className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                                    sheerFabricGroup === group
+                                        ? 'border-blue-600 text-blue-700 bg-blue-50'
+                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                                }`}
+                            >
+                                {group}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Drop Surcharge per group */}
+                    <Card className="border-amber-200 bg-amber-50">
+                        <CardHeader className="py-3">
+                            <CardTitle className="text-base text-amber-800">Drop Surcharge Rates ($ per meter over 2980mm)</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                {SHEER_FABRIC_GROUPS.map(group => (
+                                    <div key={group}>
+                                        <label className="text-xs font-medium text-gray-600 block mb-1">{group}</label>
+                                        <div className="flex items-center gap-1">
+                                            <span className="text-sm text-gray-500">$</span>
+                                            <Input
+                                                type="number"
+                                                step="0.01"
+                                                min="0"
+                                                className="h-8 text-right px-2"
+                                                value={editedGroupSettings[group] ?? (groupSettings[group] ?? 60)}
+                                                onChange={(e) => setEditedGroupSettings(prev => ({ ...prev, [group]: e.target.value }))}
+                                            />
+                                            <span className="text-xs text-gray-500">/m</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Sheer Fabric Pricing - {sheerFabricGroup}</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            {sheerFabricsLoading ? (
+                                <div className="flex items-center justify-center py-8">
+                                    <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+                                </div>
+                            ) : (
+                                <table className="w-full text-sm">
+                                    <thead>
+                                        <tr className="border-b">
+                                            <th className="py-2 text-left font-medium text-muted-foreground">Fabric Name</th>
+                                            <th className="py-2 text-right font-medium text-muted-foreground w-36">Price per Meter ($)</th>
+                                            <th className="py-2 text-center font-medium text-muted-foreground w-20">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {sheerFabrics.length === 0 && (
+                                            <tr>
+                                                <td colSpan={3} className="py-6 text-center text-muted-foreground">
+                                                    No fabrics in this group yet. Add one below.
+                                                </td>
+                                            </tr>
+                                        )}
+                                        {sheerFabrics.map(fabric => (
+                                            <tr key={fabric.fabricName} className="border-b last:border-0">
+                                                <td className="py-2 pr-4 font-medium">{fabric.fabricName}</td>
+                                                <td className="py-2">
+                                                    <Input
+                                                        type="number"
+                                                        step="0.01"
+                                                        min="0"
+                                                        className="h-8 w-full text-right px-2"
+                                                        value={getSheerFabricPrice(fabric)}
+                                                        onChange={(e) => handleSheerFabricPriceChange(fabric.fabricName, e.target.value)}
+                                                    />
+                                                </td>
+                                                <td className="py-2 text-center">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleDeleteSheerFabric(fabric.fabricName)}
+                                                        className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50"
+                                                        title="Delete fabric"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                        <tr className="border-t-2 bg-gray-50">
+                                            <td className="py-2 pr-4">
+                                                <Input
+                                                    placeholder="New fabric name..."
+                                                    value={newFabricName}
+                                                    onChange={(e) => setNewFabricName(e.target.value)}
+                                                    className="h-8"
+                                                />
+                                            </td>
+                                            <td className="py-2">
+                                                <Input
+                                                    type="number"
+                                                    step="0.01"
+                                                    min="0"
+                                                    placeholder="Price/m"
+                                                    value={newFabricPrice}
+                                                    onChange={(e) => setNewFabricPrice(e.target.value)}
+                                                    className="h-8 text-right px-2"
+                                                />
+                                            </td>
+                                            <td className="py-2 text-center">
+                                                <button
+                                                    type="button"
+                                                    onClick={handleAddSheerFabric}
+                                                    disabled={addingFabric}
+                                                    className="text-green-600 hover:text-green-800 p-1 rounded hover:bg-green-50 disabled:opacity-50"
+                                                    title="Add fabric"
+                                                >
+                                                    {addingFabric ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            )}
+                        </CardContent>
+                    </Card>
+                </>
+            )}
+
+            {/* SHEER PARTS TAB */}
+            {activeTab === 'sheerParts' && (
+                <div className="space-y-6">
+                    <p className="text-sm text-muted-foreground">
+                        Set the price charged to customers for motorised track components. Changes take effect on new orders immediately.
+                    </p>
+                    {sheerPartsLoading ? (
+                        <div className="flex items-center justify-center py-12">
+                            <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+                        </div>
+                    ) : (
+                        <div className="grid md:grid-cols-3 gap-6">
+                            {/* Track Motors */}
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="text-lg">Track Motors</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <table className="w-full text-sm">
+                                        <thead>
+                                            <tr className="border-b">
+                                                <th className="py-2 text-left font-medium text-muted-foreground">Motor</th>
+                                                <th className="py-2 text-right font-medium text-muted-foreground w-28">Price ($)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {sheerMotors.length === 0 && (
+                                                <tr><td colSpan={2} className="py-6 text-center text-muted-foreground">No motors found. Run seed script.</td></tr>
+                                            )}
+                                            {sheerMotors.map(item => (
+                                                <tr key={item.id} className="border-b last:border-0">
+                                                    <td className="py-2 pr-4">{item.name}</td>
+                                                    <td className="py-2">
+                                                        <Input type="number" step="0.01" min="0" className="h-8 w-full text-right px-2"
+                                                            value={getSheerPartPrice(item)}
+                                                            onChange={(e) => handleSheerPartPriceChange(item.id, e.target.value)} />
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </CardContent>
+                            </Card>
+
+                            {/* Remotes */}
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="text-lg">Remote Controls</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <table className="w-full text-sm">
+                                        <thead>
+                                            <tr className="border-b">
+                                                <th className="py-2 text-left font-medium text-muted-foreground">Remote</th>
+                                                <th className="py-2 text-right font-medium text-muted-foreground w-28">Price ($)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {sheerRemotes.length === 0 && (
+                                                <tr><td colSpan={2} className="py-6 text-center text-muted-foreground">No remotes found. Run seed script.</td></tr>
+                                            )}
+                                            {sheerRemotes.map(item => (
+                                                <tr key={item.id} className="border-b last:border-0">
+                                                    <td className="py-2 pr-4">{item.name}</td>
+                                                    <td className="py-2">
+                                                        <Input type="number" step="0.01" min="0" className="h-8 w-full text-right px-2"
+                                                            value={getSheerPartPrice(item)}
+                                                            onChange={(e) => handleSheerPartPriceChange(item.id, e.target.value)} />
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </CardContent>
+                            </Card>
+
+                            {/* Charger / Hub */}
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="text-lg">Charger / Hub</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <table className="w-full text-sm">
+                                        <thead>
+                                            <tr className="border-b">
+                                                <th className="py-2 text-left font-medium text-muted-foreground">Item</th>
+                                                <th className="py-2 text-right font-medium text-muted-foreground w-28">Price ($)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {sheerChargers.length === 0 && (
+                                                <tr><td colSpan={2} className="py-6 text-center text-muted-foreground">No chargers found. Run seed script.</td></tr>
+                                            )}
+                                            {sheerChargers.map(item => (
+                                                <tr key={item.id} className="border-b last:border-0">
+                                                    <td className="py-2 pr-4">{item.name}</td>
+                                                    <td className="py-2">
+                                                        <Input type="number" step="0.01" min="0" className="h-8 w-full text-right px-2"
+                                                            value={getSheerPartPrice(item)}
+                                                            onChange={(e) => handleSheerPartPriceChange(item.id, e.target.value)} />
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </CardContent>
+                            </Card>
+                        </div>
+                    )}
+                </div>
+            )}
+
         </div>
     );
 }

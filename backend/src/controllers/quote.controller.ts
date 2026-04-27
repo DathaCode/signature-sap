@@ -53,9 +53,12 @@ const QuoteItemSchema = z.object({
 
 const CreateQuoteSchema = z.object({
     productType: z.enum(['BLINDS', 'CURTAINS', 'SHUTTERS']),
-    items: z.array(QuoteItemSchema).min(1, 'At least one item is required'),
+    items: z.array(z.any()).min(1, 'At least one item is required'),
     notes: z.string().optional(),
     customerReference: z.string().max(255).optional(),
+    siteAddress: z.string().optional(),
+    contactNumber: z.string().optional(),
+    dateRequired: z.string().optional(),
 });
 
 /**
@@ -102,7 +105,7 @@ export const createQuote = async (
         const validatedData = CreateQuoteSchema.parse(req.body);
 
         // Calculate totals
-        const subtotal = validatedData.items.reduce((sum, item) => sum + (item.price || 0), 0);
+        const subtotal = validatedData.items.reduce((sum: number, item: any) => sum + (Number(item.price) || 0), 0);
         const total = subtotal; // Could add taxes, fees, etc.
 
         // Generate quote number

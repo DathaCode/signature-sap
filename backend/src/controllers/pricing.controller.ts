@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { PrismaClient } from '@prisma/client';
 import pricingService from '../services/pricing.service';
 import comprehensivePricingService from '../services/comprehensivePricing.service';
+import { sheerCurtainPricingService } from '../services/sheerCurtainPricing.service';
 import { AuthRequest } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
 import { z } from 'zod';
@@ -300,5 +301,264 @@ export const updateComponentPrice = async (
         } else {
             next(error);
         }
+    }
+};
+
+// ============================================================================
+// SHEER CURTAIN PRICING
+// ============================================================================
+
+const calculateCurtainPriceSchema = z.object({
+    width: z.number().int().positive('Width must be a positive number'),
+    drop: z.number().int().positive('Drop must be a positive number'),
+    openingType: z.enum(['Single Open', 'Centre Open', 'Free Fold']),
+    fullness: z.number().refine(val => [120, 130, 140, 150].includes(val), 'Fullness must be 120, 130, 140, or 150'),
+    bracketType: z.string().min(1, 'Bracket type is required'),
+    fabric: z.string().min(1, 'Fabric is required'),
+    fabricGroup: z.string().min(1, 'Fabric group is required'),
+    requiresDropDeduction: z.boolean().optional(),
+    dropDeductionValue: z.number().int().optional(),
+    // Track type (motorised pricing)
+    requiresTracks: z.boolean().optional(),
+    trackType: z.string().optional(),
+    motorType: z.string().optional(),
+    remotes: z.string().optional(),
+    chargerHub: z.string().optional(),
+});
+
+/**
+ * Calculate sheer curtain price with all components
+ * POST /api/pricing/calculate-curtain
+ */
+export const calculateCurtainPrice = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> => {
+    try {
+        const authReq = req as AuthRequest;
+        const validatedData = calculateCurtainPriceSchema.parse(req.body);
+
+        const calculation = await sheerCurtainPricingService.calculateCurtainMetrics({
+            ...validatedData,
+            userId: authReq.user?.id,
+        });
+
+        res.json({
+            success: true,
+            calculation,
+        });
+    } catch (error) {
+        if (error instanceof z.ZodError) {
+            next(new AppError(400, error.errors[0].message));
+        } else {
+            next(error);
+        }
+    }
+};
+
+/**
+ * Get sheer fabric pricing for a group (admin)
+ * GET /api/pricing/sheer-fabric/:group
+ */
+export const getSheerFabricPricing = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> => {
+    try {
+        const group = req.params.group as string;
+        const userId = (req.query.userId as string) || undefined;
+
+        const pricing = await prisma.sheerFabricPricing.findMany({
+            where: {
+                fabricGroup: group,
+                userId: userId ?? null,
+            },
+            orderBy: { fabricName: 'asc' },
+        });
+
+        res.json({
+            success: true,
+            data: { pricing },
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Get all default sheer fabrics across all groups (used by curtain order form)
+ * GET /api/pricing/sheer-fabrics/all
+ */
+export const getAllSheerFabrics = async (
+    _req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> => {
+    try {
+        const fabrics = await prisma.sheerFabricPricing.findMany({
+            where: { userId: null },
+            orderBy: [{ fabricGroup: 'asc' }, { fabricName: 'asc' }],
+        });
+        res.json({ success: true, data: { fabrics } });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Add a new sheer fabric to a group (admin)
+ * POST /api/pricing/sheer-fabric/:group
+ */
+export const addSheerFabric = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> => {
+    try {
+        const group = req.params.group as string;
+        const { fabricName, pricePerMeter } = req.body;
+
+        if (!fabricName || typeof fabricName !== 'string' || !fabricName.trim()) {
+            throw new AppError(400, 'Fabric name is required');
+        }
+        if (!pricePerMeter || pricePerMeter <= 0) {
+            throw new AppError(400, 'Price per meter must be a positive number');
+        }
+
+        const created = await prisma.sheerFabricPricing.create({
+            data: {
+                fabricGroup: group,
+                fabricName: fabricName.trim(),
+                pricePerMeter,
+                userId: null,
+            },
+        });
+
+        res.json({ success: true, data: { fabric: created } });
+    } catch (error: any) {
+        if (error.code === 'P2002') {
+            next(new AppError(409, 'A fabric with this name already exists in this group'));
+        } else {
+            next(error);
+        }
+    }
+};
+
+/**
+ * Delete a sheer fabric (admin) - removes default + all customer overrides
+ * DELETE /api/pricing/sheer-fabric/:group/:fabricName
+ */
+export const deleteSheerFabric = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> => {
+    try {
+        const group = req.params.group as string;
+        const fabricName = decodeURIComponent(req.params.fabricName as string);
+
+        await prisma.sheerFabricPricing.deleteMany({
+            where: { fabricGroup: group, fabricName },
+        });
+
+        res.json({ success: true });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Update sheer fabric pricing (admin)
+ * PUT /api/pricing/sheer-fabric/:group/:fabricName
+ */
+export const updateSheerFabricPricing = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> => {
+    try {
+        const group = req.params.group as string;
+        const fabricName = req.params.fabricName as string;
+        const { pricePerMeter, userId } = req.body;
+
+        if (!pricePerMeter || pricePerMeter <= 0) {
+            throw new AppError(400, 'Price per meter must be a positive number');
+        }
+
+        const updated = await prisma.sheerFabricPricing.upsert({
+            where: {
+                unique_sheer_fabric_pricing: {
+                    fabricGroup: group,
+                    fabricName: decodeURIComponent(fabricName),
+                    userId: userId || null,
+                },
+            },
+            update: {
+                pricePerMeter,
+            },
+            create: {
+                fabricGroup: group,
+                fabricName: decodeURIComponent(fabricName),
+                pricePerMeter,
+                userId: userId || null,
+            },
+        });
+
+        res.json({
+            success: true,
+            data: { pricing: updated },
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Get drop surcharge settings for all sheer fabric groups (admin)
+ * GET /api/pricing/sheer-group-settings
+ */
+export const getSheerGroupSettings = async (
+    _req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> => {
+    try {
+        const settings = await prisma.sheerGroupSettings.findMany({
+            orderBy: { fabricGroup: 'asc' },
+        });
+        res.json({ success: true, data: { settings } });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Update drop surcharge for a sheer fabric group (admin)
+ * PUT /api/pricing/sheer-group-settings/:group
+ */
+export const updateSheerGroupSettings = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> => {
+    try {
+        const group = decodeURIComponent(req.params.group as string);
+        const { dropSurchargePerM } = req.body;
+
+        if (dropSurchargePerM === undefined || dropSurchargePerM < 0) {
+            throw new AppError(400, 'dropSurchargePerM must be a non-negative number');
+        }
+
+        const updated = await prisma.sheerGroupSettings.upsert({
+            where: { fabricGroup: group },
+            update: { dropSurchargePerM },
+            create: { fabricGroup: group, dropSurchargePerM },
+        });
+
+        res.json({ success: true, data: { settings: updated } });
+    } catch (error) {
+        next(error);
     }
 };

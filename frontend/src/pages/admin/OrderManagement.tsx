@@ -26,6 +26,8 @@ export default function OrderManagement() {
         (tabs as readonly string[]).includes(initialTab) ? initialTab : tabs[0]
     );
 
+    const [productTypeFilter, setProductTypeFilter] = useState<'ALL' | 'BLINDS' | 'CURTAINS'>('ALL');
+
     const [orders, setOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(true);
     const [customerSearch, setCustomerSearch] = useState('');
@@ -57,6 +59,7 @@ export default function OrderManagement() {
             if (customerSearch.trim()) params.customerName = customerSearch.trim();
             if (dateFrom) params.dateFrom = dateFrom;
             if (dateTo) params.dateTo = dateTo;
+            if (productTypeFilter !== 'ALL') params.productType = productTypeFilter;
 
             const data = await adminOrderApi.getAllOrders(params);
             setOrders(data.orders);
@@ -66,11 +69,11 @@ export default function OrderManagement() {
         } finally {
             setLoading(false);
         }
-    }, [statusFilter, customerSearch, dateFrom, dateTo]);
+    }, [statusFilter, customerSearch, dateFrom, dateTo, productTypeFilter]);
 
     useEffect(() => {
         fetchOrders();
-    }, [statusFilter, dateFrom, dateTo]);
+    }, [statusFilter, dateFrom, dateTo, productTypeFilter]);
 
     const handleApprove = async (id: string) => {
         if (!await confirmToast({ title: 'Approve Order', message: 'Approve this order and notify the customer?', confirmText: 'Approve', variant: 'info' })) return;
@@ -157,6 +160,23 @@ export default function OrderManagement() {
                 </Button>
             </div>
 
+            {/* Product Type Filter */}
+            <div className="flex gap-2">
+                {([['ALL', 'All Products'], ['BLINDS', 'Block Out Blinds'], ['CURTAINS', 'Sheers']] as const).map(([val, label]) => (
+                    <button
+                        key={val}
+                        onClick={() => setProductTypeFilter(val)}
+                        className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all border ${
+                            productTypeFilter === val
+                                ? 'bg-brand-gold text-white border-brand-gold shadow-sm'
+                                : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400'
+                        }`}
+                    >
+                        {label}
+                    </button>
+                ))}
+            </div>
+
             {/* Status Tabs */}
             <div className="border-b">
                 <div className="flex gap-0 overflow-x-auto">
@@ -226,6 +246,7 @@ export default function OrderManagement() {
                                         <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Date</th>
                                         <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Customer</th>
                                         <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Reference</th>
+                                        <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Type</th>
                                         {!isWarehouse && <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Label</th>}
                                         <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Items</th>
                                         {!isWarehouse && <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Total</th>}
@@ -254,6 +275,13 @@ export default function OrderManagement() {
                                                     </Link>
                                                 ) : (
                                                     <span className="text-xs text-muted-foreground">&mdash;</span>
+                                                )}
+                                            </td>
+                                            <td className="p-4 align-middle">
+                                                {order.productType === 'CURTAINS' ? (
+                                                    <span className="text-xs font-medium bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">Sheers</span>
+                                                ) : (
+                                                    <span className="text-xs font-medium bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">Blinds</span>
                                                 )}
                                             </td>
                                             {!isWarehouse && (
@@ -329,7 +357,7 @@ export default function OrderManagement() {
                                     ))}
                                     {orders.length === 0 && (
                                         <tr>
-                                            <td colSpan={isWarehouse ? 6 : 8} className="p-8 text-center text-muted-foreground italic">
+                                            <td colSpan={isWarehouse ? 7 : 9} className="p-8 text-center text-muted-foreground italic">
                                                 No orders found matching the criteria.
                                             </td>
                                         </tr>

@@ -7,6 +7,7 @@ import { z } from 'zod';
 import path from 'path';
 import pricingService from '../services/pricing.service';
 import comprehensivePricingService from '../services/comprehensivePricing.service';
+import { sheerCurtainPricingService } from '../services/sheerCurtainPricing.service';
 
 import { FabricCutOptimizerService } from '../services/fabricCutOptimizer.service';
 import { TubeCutOptimizer, TubeBlindInput } from '../services/tubeCutOptimizer.service';
@@ -218,15 +219,88 @@ const OrderItemSchema = z.object({
     chainPrice: z.coerce.number().optional(),
     clipsPrice: z.coerce.number().optional(),
     componentPrice: z.coerce.number().optional(),
+    // Pelmet section (also available for blinds)
+    requiresPelmet: z.boolean().optional(),
+    pelmetType: z.string().optional(),
+    pelmetColor: z.string().optional(),
+    pelmetSize: z.string().optional(),
+    pelmetCustomSize: z.coerce.number().optional(),
+});
+
+// Curtain order item schema
+const CurtainOrderItemSchema = z.object({
+    location: z.string().min(1, 'Location is required'),
+    width: z.coerce.number().int().positive('Width must be a positive number'),
+    drop: z.coerce.number().int().positive('Drop must be a positive number'),
+
+    // Curtain configuration
+    curtainType: z.string().optional(),
+    hem: z.coerce.number().optional(),
+    fabric: z.string().optional(),
+    fabricColour: z.string().optional(),
+    installation: z.string().optional(),
+    bracketType: z.string().optional(),
+    trackColour: z.string().optional(),
+    openingType: z.string().optional(),
+    wandSize: z.coerce.number().optional(),
+    fullness: z.coerce.number().optional(),
+
+    // Track Type section
+    requiresTracks: z.boolean().optional(),
+    trackType: z.string().optional(),
+    motorType: z.string().optional(),
+    trackControlSide: z.string().optional(),
+    remotes: z.string().optional(),
+    chargerHub: z.string().optional(),
+    trackColor: z.string().optional(),
+
+    // Drop deduction
+    requiresDropDeduction: z.boolean().optional(),
+    dropDeductionValue: z.coerce.number().optional(),
+
+    // Bend section
+    requiresBentTracks: z.boolean().optional(),
+    bendType: z.string().optional(),
+    bendQty: z.coerce.number().optional(),
+    bendFilePath: z.string().optional(),
+
+    // Pelmet section
+    requiresPelmet: z.boolean().optional(),
+    pelmetType: z.string().optional(),
+    pelmetColor: z.string().optional(),
+    pelmetSize: z.string().optional(),
+    pelmetCustomSize: z.coerce.number().optional(),
+
+    // Frontend may send calculated/pricing fields - accept but recalculate server-side
+    fabricGroup: z.string().optional(),
+    price: z.coerce.number().optional(),
+    deductedDrop: z.coerce.number().optional(),
+    hookCount: z.coerce.number().optional(),
+    leftHooks: z.coerce.number().optional(),
+    rightHooks: z.coerce.number().optional(),
+    bracketCount: z.coerce.number().optional(),
+    wandCount: z.coerce.number().optional(),
+    fabricLength: z.coerce.number().optional(),
+    fabricMeters: z.coerce.number().optional(),
+    dropSurcharge: z.coerce.number().optional(),
+    fabricCost: z.coerce.number().optional(),
+    hookCost: z.coerce.number().optional(),
+    bracketCost: z.coerce.number().optional(),
+    wandCost: z.coerce.number().optional(),
+    subtotal: z.coerce.number().optional(),
+    gst: z.coerce.number().optional(),
+    total: z.coerce.number().optional(),
 });
 
 const CreateOrderSchema = z.object({
     productType: z.enum(['BLINDS', 'CURTAINS', 'SHUTTERS']),
     orderDate: z.string().optional(),
     dateRequired: z.string().optional(),
-    items: z.array(OrderItemSchema).min(1, 'At least one item is required'),
+    items: z.array(z.any()).min(1, 'At least one item is required'),
     notes: z.string().optional(),
     customerReference: z.string().max(255).optional(),
+    siteAddress: z.string().optional(),
+    contactNumber: z.string().max(50).optional(),
 });
 
 /**
@@ -289,8 +363,125 @@ export const createOrder = async (
         let subtotal = 0;
         const processedItems = [];
 
-        for (let i = 0; i < validatedData.items.length; i++) {
-            const item = validatedData.items[i];
+        if (validatedData.productType === 'CURTAINS') {
+            // ================================================================
+            // CURTAIN ORDER PROCESSING
+            // ================================================================
+            for (let i = 0; i < validatedData.items.length; i++) {
+                const item = validatedData.items[i] as z.infer<typeof CurtainOrderItemSchema>;
+
+                const w = Number(item.width);
+                const d = Number(item.drop);
+                if (!w || w < 100 || w > 6000) {
+                    throw new AppError(400, `Item ${i + 1}: Width must be between 100mm and 6000mm`);
+                }
+                if (!d || d < 100) {
+                    throw new AppError(400, `Item ${i + 1}: Drop must be at least 100mm`);
+                }
+                item.width = w;
+                item.drop = d;
+
+                let price = 0;
+                let curtainCalc: any = null;
+
+                // Calculate curtain pricing if required fields are present
+                if (item.fabric && item.openingType && item.fullness && item.bracketType && item.fabricGroup) {
+                    try {
+                        curtainCalc = await sheerCurtainPricingService.calculateCurtainMetrics({
+                            width: item.width,
+                            drop: item.drop,
+                            openingType: item.openingType,
+                            fullness: item.fullness,
+                            bracketType: item.bracketType,
+                            fabric: item.fabric,
+                            fabricGroup: item.fabricGroup,
+                            requiresDropDeduction: item.requiresDropDeduction !== false,
+                            dropDeductionValue: item.dropDeductionValue ? Number(item.dropDeductionValue) : 35,
+                            requiresTracks: item.requiresTracks,
+                            trackType: item.trackType,
+                            motorType: item.motorType,
+                            remotes: item.remotes,
+                            chargerHub: item.chargerHub,
+                            userId: authReq.user?.id,
+                        });
+                        price = curtainCalc.total;
+                    } catch (pricingError) {
+                        logger.warn(`Curtain pricing failed for item ${i + 1}: ${pricingError}`);
+                    }
+                }
+
+                processedItems.push({
+                    itemNumber: i + 1,
+                    itemType: 'curtain',
+                    location: item.location,
+                    width: item.width,
+                    drop: item.drop,
+
+                    // Curtain configuration fields
+                    curtainType: item.curtainType || 'S Fold',
+                    hem: Number(item.hem) || 70,
+                    fabricColour: item.fabricColour || null,
+                    material: item.fabric || null, // Store fabric name in material field
+                    installation: item.installation || null,
+                    bracketType: item.bracketType || null,
+                    trackColour: item.trackColour || null,
+                    openingType: item.openingType || null,
+                    wandSize: Number(item.wandSize) || 1250,
+                    fullness: item.fullness ? Number(item.fullness) : null,
+
+                    // Track Type section
+                    requiresTracks: item.requiresTracks || false,
+                    trackType: item.trackType || null,
+                    motorType: item.motorType || null,
+                    trackControlSide: item.trackControlSide || null,
+                    remotes: item.remotes || null,
+                    chargerHub: item.chargerHub || null,
+                    trackColor: item.trackColor || null,
+
+                    // Drop deduction
+                    requiresDropDeduction: item.requiresDropDeduction !== false,
+                    dropDeductionValue: item.dropDeductionValue ? Number(item.dropDeductionValue) : 35,
+
+                    // Bend section
+                    requiresBentTracks: item.requiresBentTracks || false,
+                    bendType: item.bendType || null,
+                    bendQty: item.bendQty || null,
+                    bendFilePath: item.bendFilePath || null,
+
+                    // Pelmet section
+                    requiresPelmet: item.requiresPelmet || false,
+                    pelmetType: item.pelmetType || null,
+                    pelmetColor: item.pelmetColor || null,
+                    pelmetSize: item.pelmetSize || null,
+                    pelmetCustomSize: item.pelmetCustomSize || null,
+
+                    // Calculated fields
+                    deductedDrop: curtainCalc?.deductedDrop || null,
+                    hookCount: curtainCalc?.hookCount || null,
+                    leftHooks: curtainCalc?.leftHooks || null,
+                    rightHooks: curtainCalc?.rightHooks || null,
+                    bracketCount: curtainCalc?.bracketCount || null,
+                    wandCount: curtainCalc?.wandCount || null,
+                    fabricLength: curtainCalc?.fabricLength || null,
+                    dropSurcharge: curtainCalc?.dropSurcharge || 0,
+
+                    // Pricing
+                    price,
+                    fabricPrice: curtainCalc?.fabricCost || null,
+                    bracketPrice: curtainCalc?.bracketCost || null,
+                    hookCost: curtainCalc?.hookCost || null,
+                    wandCost: curtainCalc?.wandCost || null,
+                    discountPercent: 0,
+                });
+
+                subtotal += price;
+            }
+        } else {
+            // ================================================================
+            // BLIND ORDER PROCESSING (existing logic)
+            // ================================================================
+            for (let i = 0; i < validatedData.items.length; i++) {
+                const item = validatedData.items[i];
 
             let price = 0;
             let fabricGroup: number | null = null;
@@ -404,6 +595,7 @@ export const createOrder = async (
             });
 
             subtotal += price;
+            }
         }
 
         // Create order with items
@@ -418,6 +610,8 @@ export const createOrder = async (
                 customerEmail: user.email,
                 customerPhone: user.phone,
                 customerCompany: user.company || null,
+                siteAddress: validatedData.siteAddress || null,
+                contactNumber: validatedData.contactNumber || null,
                 status: OrderStatus.PENDING,
                 subtotal,
                 total: subtotal,
@@ -746,7 +940,9 @@ export const sendToProduction = async (
             throw new AppError(400, 'Only confirmed orders can be sent to production');
         }
 
-        const worksheetResult = await runOptimization(order);
+        const worksheetResult = order.productType === 'CURTAINS'
+            ? await runCurtainWorksheet(order)
+            : await runOptimization(order);
 
         // Update order status
         await prisma.order.update({
@@ -918,6 +1114,148 @@ async function runOptimization(order: any) {
 }
 
 /**
+ * Generate curtain worksheet data (replaces blind optimization for CURTAINS orders)
+ */
+async function runCurtainWorksheet(order: any) {
+    const items = order.items;
+
+    type CurtainRow = {
+        itemNumber: number;
+        location: string;
+        width: number;
+        deductedDrop: number;
+        openingType: string;
+        fabric: string;
+        fabricColour: string;
+        singleHooks: number | null;
+        leftHooks: number | null;
+        rightHooks: number | null;
+        fabricMeters: number;
+        bracketType: string;
+        bracketCount: number;
+        wandCount: number;
+        trackColour: string;
+    };
+
+    const rows: CurtainRow[] = [];
+    let totalHooks = 0;
+    let totalWands = 0;
+    let totalBracketsStandard = 0;
+    let totalBracketsExtended = 0;
+    let totalBracketsCeiling = 0;
+    let totalFabricMeters = 0;
+
+    for (const item of items) {
+        const deductionMm = item.requiresDropDeduction !== false ? (item.dropDeductionValue ?? 35) : 0;
+        const deductedDrop = item.drop - deductionMm;
+
+        const fullness = item.fullness ?? 120;
+        const openingType = item.openingType ?? 'Single Open';
+        const lookup = sheerCurtainPricingService.lookupBreakpoints(item.width, openingType, fullness);
+        const bracketCount = sheerCurtainPricingService.getBracketCount(item.width);
+        const wandCount = (openingType === 'Centre Open' || openingType === 'Free Fold') ? 2 : 1;
+
+        rows.push({
+            itemNumber: item.itemNumber,
+            location: item.location,
+            width: item.width,
+            deductedDrop,
+            openingType,
+            fabric: item.material ?? '',           // curtain fabric name stored in material field
+            fabricColour: item.fabricColour ?? '',
+            singleHooks: openingType !== 'Centre Open' ? lookup.hookCount : null,
+            leftHooks: lookup.leftHooks ?? null,
+            rightHooks: lookup.rightHooks ?? null,
+            fabricMeters: lookup.fabricMeters,
+            bracketType: item.bracketType ?? 'Standard',
+            bracketCount,
+            wandCount,
+            trackColour: item.trackColor ?? item.trackColour ?? '',
+        });
+
+        totalHooks += lookup.hookCount;
+        totalWands += wandCount;
+        if ((item.bracketType ?? 'Standard') === 'Extended') {
+            totalBracketsExtended += bracketCount;
+        } else if (item.bracketType === 'Ceiling') {
+            totalBracketsCeiling += bracketCount;
+        } else {
+            totalBracketsStandard += bracketCount;
+        }
+        totalFabricMeters += lookup.fabricMeters;
+    }
+
+    const curtainData = {
+        type: 'CURTAINS' as const,
+        rows,
+        totals: {
+            totalHooks,
+            totalWands,
+            totalBracketsStandard,
+            totalBracketsExtended,
+            totalBracketsCeiling,
+            totalFabricMeters: Math.round(totalFabricMeters * 1000) / 1000,
+        },
+    };
+
+    // Build inventory requirements for curtain order
+    type Req = { category: InventoryCategory; itemName: string; colorVariant?: string; quantityNeeded: number };
+    const invReqs: Req[] = [];
+
+    if (totalHooks > 0) {
+        invReqs.push({ category: 'SHEER_HOOK', itemName: 'S-Fold Hook', colorVariant: undefined, quantityNeeded: totalHooks });
+    }
+    if (totalBracketsStandard > 0) {
+        invReqs.push({ category: 'SHEER_BRACKET', itemName: 'Standard Bracket', colorVariant: undefined, quantityNeeded: totalBracketsStandard });
+    }
+    if (totalBracketsExtended > 0) {
+        invReqs.push({ category: 'SHEER_BRACKET', itemName: 'Extended Bracket', colorVariant: undefined, quantityNeeded: totalBracketsExtended });
+    }
+    if (totalBracketsCeiling > 0) {
+        invReqs.push({ category: 'SHEER_BRACKET', itemName: 'Ceiling Bracket', colorVariant: undefined, quantityNeeded: totalBracketsCeiling });
+    }
+    if (totalWands > 0) {
+        invReqs.push({ category: 'SHEER_WAND', itemName: 'Wand 1250mm', colorVariant: undefined, quantityNeeded: totalWands });
+    }
+
+    // Fabric per fabric+colour group
+    const fabricMap = new Map<string, number>();
+    for (const row of rows) {
+        const key = `${row.fabric}::${row.fabricColour}`;
+        fabricMap.set(key, (fabricMap.get(key) ?? 0) + row.fabricMeters);
+    }
+    for (const [key, meters] of fabricMap) {
+        const sepIdx = key.indexOf('::');
+        const fabricName = key.slice(0, sepIdx);
+        const colour = key.slice(sepIdx + 2);
+        invReqs.push({ category: 'SHEER_FABRIC', itemName: fabricName, colorVariant: colour || undefined, quantityNeeded: Math.ceil(meters * 10) / 10 });
+    }
+
+    const inventoryCheck = await InventoryService.checkAvailability(invReqs);
+
+    const worksheetData = await prisma.worksheetData.upsert({
+        where: { orderId: order.id },
+        create: {
+            orderId: order.id,
+            fabricCutData: curtainData as any,
+            tubeCutData: { groups: [], totalPiecesNeeded: 0 } as any,
+            totalFabricMm: Math.round(totalFabricMeters * 1000),
+            totalTubePieces: 0,
+        },
+        update: {
+            fabricCutData: curtainData as any,
+            tubeCutData: { groups: [], totalPiecesNeeded: 0 } as any,
+            totalFabricMm: Math.round(totalFabricMeters * 1000),
+            totalTubePieces: 0,
+            acceptedAt: null,
+            acceptedBy: null,
+        },
+    });
+
+    return { worksheetData, inventoryCheck };
+}
+
+/**
  * Serialize fabricCutData for JSON storage (remove circular refs from items)
  */
 function serializeFabricCutData(fabricCutData: Record<string, any>): any {
@@ -956,6 +1294,40 @@ function parseFabricKey(fabricKey: string): { itemName: string; colorVariant: st
     const colorVariant = parts.pop() || '';
     const itemName = parts.join(' - ');
     return { itemName, colorVariant };
+}
+
+/**
+ * Build and check inventory requirements for curtain orders
+ */
+async function buildCurtainInventoryCheck(curtainData: any) {
+    type Req = { category: InventoryCategory; itemName: string; colorVariant?: string; quantityNeeded: number };
+    const reqs: Req[] = [];
+    const t = curtainData.totals;
+
+    if (t.totalHooks > 0)
+        reqs.push({ category: 'SHEER_HOOK', itemName: 'S-Fold Hook', quantityNeeded: t.totalHooks });
+    if (t.totalBracketsStandard > 0)
+        reqs.push({ category: 'SHEER_BRACKET', itemName: 'Standard Bracket', quantityNeeded: t.totalBracketsStandard });
+    if (t.totalBracketsExtended > 0)
+        reqs.push({ category: 'SHEER_BRACKET', itemName: 'Extended Bracket', quantityNeeded: t.totalBracketsExtended });
+    if (t.totalBracketsCeiling > 0)
+        reqs.push({ category: 'SHEER_BRACKET', itemName: 'Ceiling Bracket', quantityNeeded: t.totalBracketsCeiling });
+    if (t.totalWands > 0)
+        reqs.push({ category: 'SHEER_WAND', itemName: 'Wand 1250mm', quantityNeeded: t.totalWands });
+
+    const fabricMap = new Map<string, number>();
+    for (const row of curtainData.rows) {
+        const key = `${row.fabric}::${row.fabricColour}`;
+        fabricMap.set(key, (fabricMap.get(key) ?? 0) + row.fabricMeters);
+    }
+    for (const [key, meters] of fabricMap) {
+        const sepIdx = key.indexOf('::');
+        const fabricName = key.slice(0, sepIdx);
+        const colour = key.slice(sepIdx + 2);
+        reqs.push({ category: 'SHEER_FABRIC', itemName: fabricName, colorVariant: colour || undefined, quantityNeeded: Math.ceil(meters * 10) / 10 });
+    }
+
+    return InventoryService.checkAvailability(reqs);
 }
 
 /**
@@ -1016,7 +1388,6 @@ export const getWorksheetPreview = async (
             throw new AppError(404, 'No worksheet data found. Send order to production first.');
         }
 
-        // Also check inventory availability (including per-blind hardware)
         const fabricCutData = worksheetData.fabricCutData as Record<string, any>;
         const tubeCutData = worksheetData.tubeCutData as any;
 
@@ -1025,8 +1396,13 @@ export const getWorksheetPreview = async (
             include: { items: { orderBy: { itemNumber: 'asc' } } },
         });
 
-        const inventoryRequirements = buildInventoryRequirements(fabricCutData, tubeCutData, order?.items || []);
-        const inventoryCheck = await InventoryService.checkAvailability(inventoryRequirements);
+        let inventoryCheck;
+        if ((fabricCutData as any).type === 'CURTAINS') {
+            inventoryCheck = await buildCurtainInventoryCheck(fabricCutData as any);
+        } else {
+            const inventoryRequirements = buildInventoryRequirements(fabricCutData, tubeCutData, order?.items || []);
+            inventoryCheck = await InventoryService.checkAvailability(inventoryRequirements);
+        }
 
         res.json({
             success: true,
@@ -1226,33 +1602,64 @@ export const acceptWorksheets = async (
         const fabricCutData = worksheetData.fabricCutData as Record<string, any>;
         const tubeCutData = worksheetData.tubeCutData as any;
 
-        // Fabric deductions
-        for (const [fabricKey, groupData] of Object.entries(fabricCutData)) {
-            const { itemName, colorVariant } = parseFabricKey(fabricKey);
-            addDeduction(
-                'FABRIC', itemName, colorVariant,
-                groupData.optimization.statistics.totalFabricNeeded,
-                `Order ${order.orderNumber} - ${groupData.optimization.statistics.usedStockSheets} sheets, ${groupData.optimization.statistics.efficiency}% efficiency`
-            );
-        }
-
-        // Bottom bar deductions
-        for (const group of tubeCutData.groups) {
-            addDeduction(
-                'BOTTOM_BAR', group.bottomRailType, group.bottomRailColour,
-                group.piecesToDeduct,
-                `Order ${order.orderNumber} - ${group.totalWidth}mm total, ${group.piecesToDeduct} pieces`
-            );
-        }
-
-        // Per-blind hardware deductions (chains, brackets, clips, accessories, motors/winders)
-        for (const item of orderItems) {
-            for (const hw of buildPerBlindHardware(item)) {
+        if ((fabricCutData as any).type === 'CURTAINS') {
+            // Curtain inventory deductions from stored curtain worksheet data
+            const curtainData = fabricCutData as any;
+            const t = curtainData.totals;
+            if (t.totalHooks > 0) {
+                addDeduction('SHEER_HOOK', 'S-Fold Hook', undefined, t.totalHooks, `Order ${order.orderNumber} - ${t.totalHooks} hooks`);
+            }
+            if (t.totalBracketsStandard > 0) {
+                addDeduction('SHEER_BRACKET', 'Standard Bracket', undefined, t.totalBracketsStandard, `Order ${order.orderNumber}`);
+            }
+            if (t.totalBracketsExtended > 0) {
+                addDeduction('SHEER_BRACKET', 'Extended Bracket', undefined, t.totalBracketsExtended, `Order ${order.orderNumber}`);
+            }
+            if (t.totalBracketsCeiling > 0) {
+                addDeduction('SHEER_BRACKET', 'Ceiling Bracket', undefined, t.totalBracketsCeiling, `Order ${order.orderNumber}`);
+            }
+            if (t.totalWands > 0) {
+                addDeduction('SHEER_WAND', 'Wand 1250mm', undefined, t.totalWands, `Order ${order.orderNumber}`);
+            }
+            // Fabric by name+colour
+            const fabricMap = new Map<string, number>();
+            for (const row of curtainData.rows) {
+                const key = `${row.fabric}::${row.fabricColour}`;
+                fabricMap.set(key, (fabricMap.get(key) ?? 0) + row.fabricMeters);
+            }
+            for (const [key, meters] of fabricMap) {
+                const sepIdx = key.indexOf('::');
+                const fabricName = key.slice(0, sepIdx);
+                const colour = key.slice(sepIdx + 2);
+                addDeduction('SHEER_FABRIC', fabricName, colour || undefined, Math.ceil(meters * 10) / 10, `Order ${order.orderNumber}`);
+            }
+        } else {
+            // Blind deductions
+            for (const [fabricKey, groupData] of Object.entries(fabricCutData)) {
+                const { itemName, colorVariant } = parseFabricKey(fabricKey);
                 addDeduction(
-                    hw.category as InventoryCategory, hw.itemName, hw.colorVariant,
-                    hw.qty,
-                    `Order ${order.orderNumber} - blind #${item.itemNumber} (${item.location})`
+                    'FABRIC', itemName, colorVariant,
+                    groupData.optimization.statistics.totalFabricNeeded,
+                    `Order ${order.orderNumber} - ${groupData.optimization.statistics.usedStockSheets} sheets, ${groupData.optimization.statistics.efficiency}% efficiency`
                 );
+            }
+
+            for (const group of tubeCutData.groups) {
+                addDeduction(
+                    'BOTTOM_BAR', group.bottomRailType, group.bottomRailColour,
+                    group.piecesToDeduct,
+                    `Order ${order.orderNumber} - ${group.totalWidth}mm total, ${group.piecesToDeduct} pieces`
+                );
+            }
+
+            for (const item of orderItems) {
+                for (const hw of buildPerBlindHardware(item)) {
+                    addDeduction(
+                        hw.category as InventoryCategory, hw.itemName, hw.colorVariant,
+                        hw.qty,
+                        `Order ${order.orderNumber} - blind #${item.itemNumber} (${item.location})`
+                    );
+                }
             }
         }
 
@@ -1437,8 +1844,186 @@ export const downloadWorksheet = async (
                 }
                 break;
             }
+            case 'curtain-csv': {
+                const curtainData = fabricCutData as any;
+                if (curtainData?.type !== 'CURTAINS') {
+                    throw new AppError(400, 'No curtain worksheet data found');
+                }
+                const rows: any[] = curtainData.rows ?? [];
+                const totals = curtainData.totals ?? {};
+                const headers = ['No', 'Location', 'Width (mm)', 'Deducted Drop (mm)', 'Opening Type', 'Fabric Material', 'Colour', 'Single Hooks', 'Left Side Hooks', 'Right Side Hooks', 'Fabric (m)'];
+                const csvLines = [
+                    headers.join(','),
+                    ...rows.map((r: any) => [
+                        r.itemNumber,
+                        `"${r.location}"`,
+                        r.width,
+                        r.deductedDrop,
+                        `"${r.openingType}"`,
+                        `"${r.fabric}"`,
+                        `"${r.fabricColour}"`,
+                        r.singleHooks ?? '',
+                        r.leftHooks ?? '',
+                        r.rightHooks ?? '',
+                        r.fabricMeters?.toFixed(3) ?? '',
+                    ].join(',')),
+                    '',
+                    `"TOTALS"`,
+                    `"Total Hooks",${totals.totalHooks ?? 0}`,
+                    `"Total Wands",${totals.totalWands ?? 0}`,
+                    `"Standard Brackets",${totals.totalBracketsStandard ?? 0}`,
+                    `"Extended Brackets",${totals.totalBracketsExtended ?? 0}`,
+                    `"Total Fabric (m)",${totals.totalFabricMeters?.toFixed(3) ?? 0}`,
+                ];
+                res.setHeader('Content-Type', 'text/csv');
+                res.setHeader('Content-Disposition', `attachment; filename="${order.orderNumber}-curtain.csv"`);
+                res.send(csvLines.join('\n'));
+                break;
+            }
+            case 'curtain-pdf': {
+                try {
+                    const curtainData = fabricCutData as any;
+                    if (curtainData?.type !== 'CURTAINS') throw new AppError(400, 'No curtain worksheet data found');
+                    const PDFDocument = require('pdfkit');
+                    const path = require('path');
+                    const LOGO_PATH = path.join(__dirname, '../assets/logo.png');
+                    const doc = new PDFDocument({ size: 'A4', layout: 'landscape', margin: 30, autoFirstPage: true });
+                    const chunks: Buffer[] = [];
+                    doc.on('data', (chunk: Buffer) => chunks.push(chunk));
+
+                    // ── Header box (same style as blind worksheet) ──────────────
+                    const HDR_X = 30, HDR_Y = 20, HDR_W = 781, HDR_H = 80;
+                    const LOGO_BOX_W = 155, MID_BOX_W = 380;
+                    const RIGHT_BOX_W = HDR_W - LOGO_BOX_W - MID_BOX_W;
+                    doc.lineWidth(1).strokeColor('#333').rect(HDR_X, HDR_Y, HDR_W, HDR_H).stroke();
+                    doc.lineWidth(0.5).strokeColor('#777')
+                        .moveTo(HDR_X + LOGO_BOX_W, HDR_Y).lineTo(HDR_X + LOGO_BOX_W, HDR_Y + HDR_H).stroke();
+                    doc.lineWidth(0.5).strokeColor('#777')
+                        .moveTo(HDR_X + LOGO_BOX_W + MID_BOX_W, HDR_Y).lineTo(HDR_X + LOGO_BOX_W + MID_BOX_W, HDR_Y + HDR_H).stroke();
+                    try { doc.image(LOGO_PATH, HDR_X + 4, HDR_Y + 6, { fit: [LOGO_BOX_W - 8, 60] }); }
+                    catch { doc.fontSize(10).font('Helvetica-Bold').fillColor('#1B2B3A').text('SIGNATURE SHADES', HDR_X + 4, HDR_Y + 28, { width: LOGO_BOX_W - 8, lineBreak: false }); }
+                    doc.fontSize(6.5).font('Helvetica').fillColor('#666').text('Blinds | Curtains | Shutters', HDR_X + 4, HDR_Y + 65, { lineBreak: false });
+
+                    const MID_X = HDR_X + LOGO_BOX_W + 6;
+                    const cxRef = order.customerReference ? `${order.customerName}-${order.customerReference}` : order.customerName;
+                    const midRows: [string, string][] = [
+                        ['Order #:', order.orderNumber],
+                        ['Cx Ref:', cxRef],
+                        ['Ord Rec\'d:', new Date(order.orderDate).toLocaleDateString('en-AU')],
+                        ['Date Printed:', new Date().toLocaleDateString('en-AU')],
+                        ['Remarks:', (order as any).notes || ''],
+                    ];
+                    midRows.forEach(([label, val], idx) => {
+                        const ry = HDR_Y + 8 + idx * 13.5;
+                        doc.fontSize(7).font('Helvetica-Bold').fillColor('#444').text(label, MID_X, ry, { lineBreak: false });
+                        doc.fontSize(7).font('Helvetica').fillColor('#000').text(val, MID_X + 72, ry, { lineBreak: false });
+                    });
+
+                    const RGT_X = HDR_X + LOGO_BOX_W + MID_BOX_W + 6;
+                    const RGT_W = RIGHT_BOX_W - 8;
+                    const BAY_SPLIT_Y = HDR_Y + Math.round(HDR_H * 0.52);
+                    doc.lineWidth(0.5).strokeColor('#777').moveTo(HDR_X + LOGO_BOX_W + MID_BOX_W, BAY_SPLIT_Y).lineTo(HDR_X + HDR_W, BAY_SPLIT_Y).stroke();
+                    doc.fontSize(6.5).font('Helvetica-Bold').fillColor('#444').text('Customer Name', RGT_X, HDR_Y + 5, { lineBreak: false });
+                    doc.fontSize(8).font('Helvetica').fillColor('#000').text(order.customerName, RGT_X, HDR_Y + 16, { width: RGT_W, lineBreak: false });
+                    doc.fontSize(6.5).font('Helvetica-Bold').fillColor('#444').text('BAY', RGT_X, BAY_SPLIT_Y + 4, { lineBreak: false });
+                    doc.lineWidth(0.5).strokeColor('#aaa').rect(RGT_X + 22, BAY_SPLIT_Y + 2, RGT_W - 24, 22).stroke();
+
+                    // ── Section title ───────────────────────────────────────────
+                    doc.fontSize(13).font('Helvetica-Bold').fillColor('#1B2B3A')
+                        .text('Curtain Worksheet — Detail Table', 30, HDR_Y + HDR_H + 8, { align: 'center' });
+
+                    // ── Table ───────────────────────────────────────────────────
+                    // 11 cols summing to 781pt (full usable width)
+                    const colWidths = [28, 100, 58, 68, 80, 90, 68, 58, 58, 58, 55];
+                    const colHeaders = ['No', 'Location', 'Width (mm)', 'Ded. Drop', 'Opening Type', 'Fabric Material', 'Colour', 'Single Hooks', 'L Side Hooks', 'R Side Hooks', 'Fabric (m)'];
+                    const TABLE_LEFT = 30;
+                    const TABLE_W = colWidths.reduce((a, b) => a + b, 0);
+                    const ROW_H = 16;
+                    let ty = HDR_Y + HDR_H + 28;
+
+                    // Header row
+                    doc.fillColor('#DBEAFE').rect(TABLE_LEFT, ty, TABLE_W, ROW_H).fill();
+                    doc.lineWidth(0.5).strokeColor('#888').rect(TABLE_LEFT, ty, TABLE_W, ROW_H).stroke();
+                    doc.fontSize(8).font('Helvetica-Bold').fillColor('#1E3A5F');
+                    let tx = TABLE_LEFT;
+                    colHeaders.forEach((h, i) => {
+                        doc.lineWidth(0.3).strokeColor('#aaa').moveTo(tx, ty).lineTo(tx, ty + ROW_H).stroke();
+                        doc.text(h, tx + 2, ty + 4, { width: colWidths[i] - 4, align: 'center', lineBreak: false });
+                        tx += colWidths[i];
+                    });
+                    ty += ROW_H;
+
+                    // Data rows
+                    const rows: any[] = curtainData.rows ?? [];
+                    doc.font('Helvetica').fontSize(8);
+                    rows.forEach((row: any, idx: number) => {
+                        if (ty > 480) { doc.addPage(); ty = 30; }
+                        if (idx % 2 === 1) { doc.fillColor('#F9FAFB').rect(TABLE_LEFT, ty, TABLE_W, ROW_H).fill(); }
+                        else { doc.fillColor('#FFFFFF').rect(TABLE_LEFT, ty, TABLE_W, ROW_H).fill(); }
+                        doc.lineWidth(0.3).strokeColor('#D1D5DB').rect(TABLE_LEFT, ty, TABLE_W, ROW_H).stroke();
+                        const cells = [
+                            String(row.itemNumber), row.location, String(row.width), String(row.deductedDrop),
+                            row.openingType, row.fabric, row.fabricColour,
+                            row.singleHooks != null ? String(row.singleHooks) : '—',
+                            row.leftHooks != null ? String(row.leftHooks) : '—',
+                            row.rightHooks != null ? String(row.rightHooks) : '—',
+                            row.fabricMeters != null ? Number(row.fabricMeters).toFixed(3) : '',
+                        ];
+                        tx = TABLE_LEFT;
+                        cells.forEach((cell, i) => {
+                            doc.lineWidth(0.3).strokeColor('#E5E7EB').moveTo(tx, ty).lineTo(tx, ty + ROW_H).stroke();
+                            doc.fillColor('#111827').text(cell, tx + 2, ty + 4, { width: colWidths[i] - 4, align: i <= 1 ? 'left' : 'center', lineBreak: false });
+                            tx += colWidths[i];
+                        });
+                        ty += ROW_H;
+                    });
+
+                    // ── Totals box ──────────────────────────────────────────────
+                    const totals = curtainData.totals ?? {};
+                    ty += 10;
+                    const totalItems: [string, string][] = [
+                        ['S-Fold Hooks', String(totals.totalHooks ?? 0)],
+                        ['Wands (1250mm)', String(totals.totalWands ?? 0)],
+                        ['Std Brackets', String(totals.totalBracketsStandard ?? 0)],
+                        ['Ext Brackets', String(totals.totalBracketsExtended ?? 0)],
+                        ['Ceiling Brackets', String(totals.totalBracketsCeiling ?? 0)],
+                        ['Total Fabric', `${Number(totals.totalFabricMeters ?? 0).toFixed(3)} m`],
+                    ];
+                    const TCOL_W = 110;
+                    const TCOL_H = 22;
+                    const TOTALS_W = totalItems.length * TCOL_W;
+                    const TOTALS_X = TABLE_LEFT;
+                    doc.lineWidth(1).strokeColor('#374151').rect(TOTALS_X, ty, TOTALS_W, TCOL_H * 2).stroke();
+                    let ttx = TOTALS_X;
+                    // Label row
+                    totalItems.forEach(([label], i) => {
+                        if (i > 0) doc.lineWidth(0.5).strokeColor('#6B7280').moveTo(ttx, ty).lineTo(ttx, ty + TCOL_H * 2).stroke();
+                        doc.fillColor('#1E3A5F').rect(ttx, ty, TCOL_W, TCOL_H).fill();
+                        doc.font('Helvetica-Bold').fontSize(7).fillColor('#FFFFFF').text(label, ttx + 3, ty + 7, { width: TCOL_W - 6, align: 'center', lineBreak: false });
+                        ttx += TCOL_W;
+                    });
+                    // Value row
+                    ttx = TOTALS_X;
+                    doc.lineWidth(0.5).strokeColor('#D1D5DB').moveTo(TOTALS_X, ty + TCOL_H).lineTo(TOTALS_X + TOTALS_W, ty + TCOL_H).stroke();
+                    totalItems.forEach(([, val]) => {
+                        doc.font('Helvetica-Bold').fontSize(11).fillColor('#111827').text(val, ttx + 3, ty + TCOL_H + 4, { width: TCOL_W - 6, align: 'center', lineBreak: false });
+                        ttx += TCOL_W;
+                    });
+
+                    await new Promise<void>((resolve, reject) => { doc.on('end', resolve); doc.on('error', reject); doc.end(); });
+                    const pdf = Buffer.concat(chunks);
+                    res.setHeader('Content-Type', 'application/pdf');
+                    res.setHeader('Content-Disposition', `attachment; filename="${order.orderNumber}-curtain.pdf"`);
+                    res.setHeader('Content-Length', pdf.length);
+                    res.send(pdf);
+                } catch (pdfErr: any) {
+                    logger.error('Curtain PDF generation error:', { message: pdfErr.message, stack: pdfErr.stack });
+                    throw new AppError(500, `PDF generation failed: ${pdfErr.message}`);
+                }
+                break;
+            }
             default:
-                throw new AppError(400, 'Invalid download type. Use: fabric-cut-csv, fabric-cut-pdf, tube-cut-csv, tube-cut-pdf');
+                throw new AppError(400, 'Invalid download type. Use: fabric-cut-csv, fabric-cut-pdf, tube-cut-csv, tube-cut-pdf, curtain-csv, curtain-pdf');
         }
     } catch (error) {
         next(error);
