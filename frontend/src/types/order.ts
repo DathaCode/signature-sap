@@ -38,14 +38,85 @@ export interface BlindItem {
     chainPrice?: number;
     clipsPrice?: number;
     componentPrice?: number;
+
+    // Pelmet section (Blinds)
+    requiresPelmet?: boolean;
+    pelmetType?: string;
+    pelmetColor?: string;
+    pelmetSize?: string;
+    pelmetCustomSize?: number;
+}
+
+export interface CurtainItem {
+    id?: number;
+    // Common
+    location: string;
+    width: number;
+    drop: number;
+
+    // Curtain configuration
+    curtainType?: string;
+    hem?: number;
+    fabric?: string;
+    fabricColour?: string;
+    installation?: string;
+    bracketType?: string;
+    trackColour?: string;
+    openingType?: string;
+    wandSize?: number;
+    fullness?: number;
+
+    // Track Type section
+    requiresTracks?: boolean;
+    trackType?: string;
+    motorType?: string;
+    trackControlSide?: string;
+    remotes?: string;
+    chargerHub?: string;
+    trackColor?: string;
+
+    // Bend section
+    requiresBentTracks?: boolean;
+    bendType?: string;
+    bendQty?: number;
+    bendFilePath?: string;
+
+    // Drop deduction
+    requiresDropDeduction?: boolean;
+    dropDeductionValue?: number;
+
+    // Calculated fields
+    deductedDrop?: number;
+    hookCount?: number;
+    leftHooks?: number;
+    rightHooks?: number;
+    bracketCount?: number;
+    wandCount?: number;
+    fabricLength?: number;
+    fabricMeters?: number;
+    dropSurcharge?: number;
+
+    // Pricing
+    fabricGroup?: string;
+    fabricCost?: number;
+    hookCost?: number;
+    bracketCost?: number;
+    wandCost?: number;
+    subtotal?: number;
+    gst?: number;
+    total?: number;
+    price?: number;
 }
 
 export interface CreateOrderRequest {
     productType: ProductType;
-    items: BlindItem[];
+    items: BlindItem[] | CurtainItem[];
     dateRequired?: string;
     notes?: string;
     customerReference?: string;
+    // Customer details for the specific order (delivery / contact)
+    siteAddress?: string;
+    contactNumber?: string;
 }
 
 export interface OrderSummary {
@@ -208,7 +279,7 @@ export interface Order {
     fabricOrdered?: boolean;
     label?: string;
 
-    items: BlindItem[];
+    items: (BlindItem | CurtainItem)[];
 
     createdAt: string;
     updatedAt: string;

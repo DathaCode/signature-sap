@@ -15,6 +15,8 @@
         "create:admin": "tsx scripts/create-admin.ts",
         "create:warehouse": "tsx scripts/create-warehouse-user.ts",
         "seed:pricing": "tsx scripts/seed-pricing.ts",
+        "seed:sheer-inventory": "tsx scripts/seed-sheer-inventory.ts",
+        "seed:sheer-pricing": "tsx scripts/seed-sheer-pricing.ts",
         "seed:prod": "node dist/prisma/seed.js",
         "create-admin:prod": "node dist/scripts/create-admin.js",
         "create:warehouse:prod": "node dist/scripts/create-warehouse-user.js",

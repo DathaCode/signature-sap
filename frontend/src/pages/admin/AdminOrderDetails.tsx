@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { webOrderApi, adminOrderApi } from '../../services/api';
-import { Order, BlindItem, WorksheetPreviewResponse } from '../../types/order';
+import { Order, BlindItem, CurtainItem, WorksheetPreviewResponse } from '../../types/order';
 import WorksheetPreview from '../../components/admin/WorksheetPreview';
 import { useAuth } from '../../context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
@@ -170,8 +170,16 @@ export default function AdminOrderDetails() {
     const [adminNotesValue, setAdminNotesValue] = useState('');
     const [savingField, setSavingField] = useState(false);
 
-    const hasPriceBreakdown = (item: BlindItem) =>
-        item.fabricPrice != null || item.motorPrice != null || item.bracketPrice != null;
+    const isCurtainOrder = order?.productType === 'CURTAINS';
+
+    const hasPriceBreakdown = (item: BlindItem | CurtainItem) => {
+        if (isCurtainOrder) {
+            const c = item as CurtainItem;
+            return c.fabricCost != null || c.hookCost != null || c.bracketCost != null;
+        }
+        const b = item as BlindItem;
+        return b.fabricPrice != null || b.motorPrice != null || b.bracketPrice != null;
+    };
 
     useEffect(() => {
         const fetchOrder = async () => {
@@ -251,18 +259,6 @@ export default function AdminOrderDetails() {
         }
     };
 
-    const handlePreviewWorksheets = async () => {
-        setViewingWorksheets(true);
-        try {
-            const result = await adminOrderApi.previewWorksheets(order.id);
-            setWorksheetPreview({ data: result });
-        } catch (error) {
-            gooeyToast.error('Failed to generate worksheet preview');
-        } finally {
-            setViewingWorksheets(false);
-        }
-    };
-
     const handleComplete = async () => {
         if (!await confirmToast({ title: 'Complete Order', message: 'Mark this order as completed?', confirmText: 'Complete', variant: 'info' })) return;
         setActionLoading(true);
@@ -331,7 +327,11 @@ export default function AdminOrderDetails() {
 
     const startEditing = () => {
         if (!order) return;
-        setEditItems(order.items.map(it => ({ ...it })));
+        if (isCurtainOrder) {
+            gooeyToast.error('Curtain order editing is not yet supported');
+            return;
+        }
+        setEditItems(order.items.map(it => ({ ...it })) as BlindItem[]);
         setEditNotes((order as any).notes || '');
         setEditRef((order as any).customerReference || '');
         setEditing(true);
@@ -444,14 +444,6 @@ export default function AdminOrderDetails() {
                         <Button size="sm" onClick={handleApprove} disabled={actionLoading} className="bg-green-600 hover:bg-green-700">
                             <Check className="mr-1.5 h-4 w-4" />
                             Approve
-                        </Button>
-                    )}
-
-                    {/* Preview Worksheets (admin, CONFIRMED) */}
-                    {!isWarehouse && order.status === 'CONFIRMED' && (
-                        <Button variant="outline" size="sm" onClick={handlePreviewWorksheets} disabled={viewingWorksheets} className="text-blue-600 border-blue-200 hover:bg-blue-50">
-                            {viewingWorksheets ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <FileSpreadsheet className="mr-1.5 h-4 w-4" />}
-                            Preview Worksheets
                         </Button>
                     )}
 
@@ -698,102 +690,244 @@ export default function AdminOrderDetails() {
                 {/* Line Items */}
                 <Card>
                     <CardHeader>
-                        <CardTitle>Items ({order.items.length})</CardTitle>
+                        <CardTitle>
+                            {isCurtainOrder ? 'Curtain' : 'Blind'} Items ({order.items.length})
+                        </CardTitle>
                     </CardHeader>
                     <CardContent>
                         <div className="relative w-full overflow-auto">
-                            <table className="w-full caption-bottom text-sm text-left">
-                                <thead>
-                                    <tr className="border-b">
-                                        <th className="h-12 px-4 align-middle font-medium text-muted-foreground w-8"></th>
-                                        <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Location</th>
-                                        <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Details</th>
-                                        <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Dimensions</th>
-                                        <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Control</th>
-                                        {!isWarehouse && <th className="h-12 px-4 align-middle font-medium text-muted-foreground text-right">Price</th>}
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {order.items.map((item, index) => {
-                                        const itemKey = (item as any).id || index;
-                                        const isExpanded = expandedItem === itemKey;
-                                        const hasBreakdown = hasPriceBreakdown(item);
+                            {isCurtainOrder ? (
+                                /* ── Curtain Items Table ── */
+                                <table className="w-full caption-bottom text-sm text-left">
+                                    <thead>
+                                        <tr className="border-b">
+                                            <th className="h-12 px-4 align-middle font-medium text-muted-foreground w-8"></th>
+                                            <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Location</th>
+                                            <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Fabric</th>
+                                            <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Dimensions</th>
+                                            <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Opening</th>
+                                            {!isWarehouse && <th className="h-12 px-4 align-middle font-medium text-muted-foreground text-right">Price</th>}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {order.items.map((rawItem, index) => {
+                                            const item = rawItem as CurtainItem;
+                                            const itemKey = (item as any).id || index;
+                                            const isExpanded = expandedItem === itemKey;
+                                            const hasBreakdown = hasPriceBreakdown(item);
 
-                                        return (
-                                            <Fragment key={itemKey}>
-                                            <tr className="border-b transition-colors hover:bg-muted/50 group">
-                                                <td className="p-4 align-middle">
-                                                    {hasBreakdown && !isWarehouse && (
-                                                        <button onClick={() => setExpandedItem(isExpanded ? null : itemKey)}>
-                                                            {isExpanded
-                                                                ? <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                                                                : <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                                                            }
-                                                        </button>
-                                                    )}
-                                                </td>
-                                                <td className="p-4 align-middle font-medium">{item.location}</td>
-                                                <td className="p-4 align-middle">
-                                                    <div className="flex flex-col">
-                                                        <span className="font-semibold">{item.material} - {item.fabricType}</span>
-                                                        <span className="text-xs text-muted-foreground">{item.fabricColour}</span>
-                                                    </div>
-                                                </td>
-                                                <td className="p-4 align-middle">{item.width}mm × {item.drop}mm</td>
-                                                <td className="p-4 align-middle">{item.controlSide} / {item.roll}</td>
-                                                {!isWarehouse && (
-                                                    <td className="p-4 align-middle text-right font-medium">
-                                                        <span className="text-blue-700">${Number(item.price || 0).toFixed(2)}</span>
+                                            return (
+                                                <Fragment key={itemKey}>
+                                                <tr className="border-b transition-colors hover:bg-muted/50 group">
+                                                    <td className="p-4 align-middle">
+                                                        {!isWarehouse && (
+                                                            <button onClick={() => setExpandedItem(isExpanded ? null : itemKey)}>
+                                                                {isExpanded
+                                                                    ? <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                                                                    : <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                                                                }
+                                                            </button>
+                                                        )}
                                                     </td>
+                                                    <td className="p-4 align-middle font-medium">{item.location}</td>
+                                                    <td className="p-4 align-middle">
+                                                        <div className="flex flex-col">
+                                                            <span className="font-semibold">{item.fabric || 'N/A'}</span>
+                                                            <span className="text-xs text-muted-foreground">{item.fabricColour}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="p-4 align-middle">{item.width}mm × {item.drop}mm</td>
+                                                    <td className="p-4 align-middle">
+                                                        <span>{item.openingType}</span>
+                                                        {item.fullness && <span className="text-xs text-muted-foreground ml-1">({item.fullness}%)</span>}
+                                                    </td>
+                                                    {!isWarehouse && (
+                                                        <td className="p-4 align-middle text-right font-medium">
+                                                            <span className="text-blue-700">${Number(item.price || 0).toFixed(2)}</span>
+                                                        </td>
+                                                    )}
+                                                </tr>
+                                                {isExpanded && !isWarehouse && (
+                                                <tr className="border-b bg-teal-50">
+                                                    <td colSpan={6} className="px-8 py-4">
+                                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-1 text-sm mb-3">
+                                                            {item.curtainType && <div><span className="text-muted-foreground">Type: </span><span className="font-medium">{item.curtainType}</span></div>}
+                                                            {item.installation && <div><span className="text-muted-foreground">Installation: </span><span className="font-medium">{item.installation}</span></div>}
+                                                            {item.bracketType && <div><span className="text-muted-foreground">Bracket: </span><span className="font-medium">{item.bracketType}</span></div>}
+                                                            {item.trackColour && <div><span className="text-muted-foreground">Track Colour: </span><span className="font-medium">{item.trackColour}</span></div>}
+                                                            {item.wandSize && <div><span className="text-muted-foreground">Wand: </span><span className="font-medium">{item.wandSize}mm</span></div>}
+                                                            {item.hem && <div><span className="text-muted-foreground">Hem: </span><span className="font-medium">{item.hem}mm</span></div>}
+                                                        </div>
+                                                        {/* Track Type details */}
+                                                        {item.requiresTracks && (
+                                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-1 text-sm mb-3 border-t border-teal-200 pt-2">
+                                                                {item.trackType && <div><span className="text-muted-foreground">Track: </span><span className="font-medium">{item.trackType}</span></div>}
+                                                                {item.motorType && <div><span className="text-muted-foreground">Motor: </span><span className="font-medium">{item.motorType}</span></div>}
+                                                                {item.trackControlSide && <div><span className="text-muted-foreground">Control: </span><span className="font-medium">{item.trackControlSide}</span></div>}
+                                                                {item.trackColor && <div><span className="text-muted-foreground">Track Color: </span><span className="font-medium">{item.trackColor}</span></div>}
+                                                                {item.remotes && <div><span className="text-muted-foreground">Remote: </span><span className="font-medium">{item.remotes}</span></div>}
+                                                                {item.chargerHub && <div><span className="text-muted-foreground">Charger/Hub: </span><span className="font-medium">{item.chargerHub}</span></div>}
+                                                            </div>
+                                                        )}
+                                                        {/* Bend details */}
+                                                        {item.requiresBentTracks && (
+                                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-1 text-sm mb-3 border-t border-teal-200 pt-2">
+                                                                {item.bendType && <div><span className="text-muted-foreground">Bend: </span><span className="font-medium">{item.bendType}</span></div>}
+                                                                {item.bendQty && <div><span className="text-muted-foreground">Bend Qty: </span><span className="font-medium">{item.bendQty}</span></div>}
+                                                            </div>
+                                                        )}
+                                                        {/* Calculated values */}
+                                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-1 text-sm border-t border-teal-200 pt-2 mb-3">
+                                                            {item.hookCount != null && <div><span className="text-muted-foreground">Hooks: </span><span className="font-medium">{item.hookCount}</span></div>}
+                                                            {item.bracketCount != null && <div><span className="text-muted-foreground">Brackets: </span><span className="font-medium">{item.bracketCount}</span></div>}
+                                                            {item.wandCount != null && <div><span className="text-muted-foreground">Wands: </span><span className="font-medium">{item.wandCount}</span></div>}
+                                                            {item.fabricLength != null && <div><span className="text-muted-foreground">Fabric: </span><span className="font-medium">{item.fabricLength}mm</span></div>}
+                                                        </div>
+                                                        {/* Pricing breakdown */}
+                                                        {hasBreakdown && (
+                                                            <div className="grid grid-cols-2 md:grid-cols-3 gap-x-8 gap-y-1 text-sm border-t border-teal-200 pt-3">
+                                                                {item.fabricCost != null && (
+                                                                    <div className="flex justify-between">
+                                                                        <span className="text-muted-foreground">Fabric:</span>
+                                                                        <span className="font-semibold text-yellow-700">${Number(item.fabricCost).toFixed(2)}</span>
+                                                                    </div>
+                                                                )}
+                                                                {item.hookCost != null && Number(item.hookCost) > 0 && (
+                                                                    <div className="flex justify-between">
+                                                                        <span className="text-muted-foreground">Hooks:</span>
+                                                                        <span>+${Number(item.hookCost).toFixed(2)}</span>
+                                                                    </div>
+                                                                )}
+                                                                {item.bracketCost != null && Number(item.bracketCost) > 0 && (
+                                                                    <div className="flex justify-between">
+                                                                        <span className="text-muted-foreground">Brackets:</span>
+                                                                        <span>+${Number(item.bracketCost).toFixed(2)}</span>
+                                                                    </div>
+                                                                )}
+                                                                {item.wandCost != null && Number(item.wandCost) > 0 && (
+                                                                    <div className="flex justify-between">
+                                                                        <span className="text-muted-foreground">Wands:</span>
+                                                                        <span>+${Number(item.wandCost).toFixed(2)}</span>
+                                                                    </div>
+                                                                )}
+                                                                {item.dropSurcharge != null && Number(item.dropSurcharge) > 0 && (
+                                                                    <div className="flex justify-between">
+                                                                        <span className="text-muted-foreground">Drop Surcharge:</span>
+                                                                        <span>+${Number(item.dropSurcharge).toFixed(2)}</span>
+                                                                    </div>
+                                                                )}
+                                                                {item.gst != null && (
+                                                                    <div className="flex justify-between">
+                                                                        <span className="text-muted-foreground">GST:</span>
+                                                                        <span>+${Number(item.gst).toFixed(2)}</span>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </td>
+                                                </tr>
                                                 )}
-                                            </tr>
-                                            {isExpanded && hasBreakdown && !isWarehouse && (
-                                            <tr className="border-b bg-blue-50">
-                                                <td colSpan={6} className="px-8 py-4">
-                                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-1 text-sm mb-3">
-                                                        {item.fixing && <div><span className="text-muted-foreground">Fixing: </span><span className="font-medium">{item.fixing}</span></div>}
-                                                        {item.bracketType && <div><span className="text-muted-foreground">Bracket: </span><span className="font-medium">{item.bracketType}</span></div>}
-                                                        {item.bracketColour && <div><span className="text-muted-foreground">Bracket Colour: </span><span className="font-medium">{item.bracketColour}</span></div>}
-                                                        {item.chainOrMotor && <div><span className="text-muted-foreground">Chain/Motor: </span><span className="font-medium">{item.chainOrMotor}</span></div>}
-                                                        {(item as any).chainType && <div><span className="text-muted-foreground">Chain Type: </span><span className="font-medium">{(item as any).chainType}</span></div>}
-                                                        {item.bottomRailType && <div><span className="text-muted-foreground">Bottom Rail: </span><span className="font-medium">{item.bottomRailType}</span></div>}
-                                                        {item.bottomRailColour && <div><span className="text-muted-foreground">Rail Colour: </span><span className="font-medium">{item.bottomRailColour}</span></div>}
-                                                    </div>
-                                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-x-8 gap-y-1 text-sm border-t border-blue-200 pt-3">
-                                                        {item.fabricPrice != null && (
-                                                            <div className="flex justify-between">
-                                                                <span className="text-muted-foreground">Fabric:</span>
-                                                                <span className="flex items-center gap-2">
-                                                                    {item.discountPercent != null && Number(item.discountPercent) > 0 && (
-                                                                        <span className="text-xs text-gray-400 line-through bg-yellow-50 px-1 rounded">
-                                                                            ${(Number(item.fabricPrice) / (1 - Number(item.discountPercent) / 100)).toFixed(2)}
-                                                                        </span>
-                                                                    )}
-                                                                    <span className="font-semibold text-yellow-700">${Number(item.fabricPrice).toFixed(2)}</span>
-                                                                </span>
-                                                            </div>
+                                                </Fragment>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            ) : (
+                                /* ── Blind Items Table ── */
+                                <table className="w-full caption-bottom text-sm text-left">
+                                    <thead>
+                                        <tr className="border-b">
+                                            <th className="h-12 px-4 align-middle font-medium text-muted-foreground w-8"></th>
+                                            <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Location</th>
+                                            <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Details</th>
+                                            <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Dimensions</th>
+                                            <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Control</th>
+                                            {!isWarehouse && <th className="h-12 px-4 align-middle font-medium text-muted-foreground text-right">Price</th>}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {order.items.map((rawItem, index) => {
+                                            const item = rawItem as BlindItem;
+                                            const itemKey = (item as any).id || index;
+                                            const isExpanded = expandedItem === itemKey;
+                                            const hasBreakdown = hasPriceBreakdown(item);
+
+                                            return (
+                                                <Fragment key={itemKey}>
+                                                <tr className="border-b transition-colors hover:bg-muted/50 group">
+                                                    <td className="p-4 align-middle">
+                                                        {hasBreakdown && !isWarehouse && (
+                                                            <button onClick={() => setExpandedItem(isExpanded ? null : itemKey)}>
+                                                                {isExpanded
+                                                                    ? <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                                                                    : <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                                                                }
+                                                            </button>
                                                         )}
-                                                        {item.motorPrice != null && Number(item.motorPrice) > 0 && (
-                                                            <div className="flex justify-between">
-                                                                <span className="text-muted-foreground">Motor/Chain:</span>
-                                                                <span>+${Number(item.motorPrice).toFixed(2)}</span>
-                                                            </div>
-                                                        )}
-                                                        {item.bracketPrice != null && Number(item.bracketPrice) > 0 && (
-                                                            <div className="flex justify-between">
-                                                                <span className="text-muted-foreground">Brackets:</span>
-                                                                <span>+${Number(item.bracketPrice).toFixed(2)}</span>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                            )}
-                                            </Fragment>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
+                                                    </td>
+                                                    <td className="p-4 align-middle font-medium">{item.location}</td>
+                                                    <td className="p-4 align-middle">
+                                                        <div className="flex flex-col">
+                                                            <span className="font-semibold">{item.material} - {item.fabricType}</span>
+                                                            <span className="text-xs text-muted-foreground">{item.fabricColour}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="p-4 align-middle">{item.width}mm × {item.drop}mm</td>
+                                                    <td className="p-4 align-middle">{item.controlSide} / {item.roll}</td>
+                                                    {!isWarehouse && (
+                                                        <td className="p-4 align-middle text-right font-medium">
+                                                            <span className="text-blue-700">${Number(item.price || 0).toFixed(2)}</span>
+                                                        </td>
+                                                    )}
+                                                </tr>
+                                                {isExpanded && hasBreakdown && !isWarehouse && (
+                                                <tr className="border-b bg-blue-50">
+                                                    <td colSpan={6} className="px-8 py-4">
+                                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-1 text-sm mb-3">
+                                                            {item.fixing && <div><span className="text-muted-foreground">Fixing: </span><span className="font-medium">{item.fixing}</span></div>}
+                                                            {item.bracketType && <div><span className="text-muted-foreground">Bracket: </span><span className="font-medium">{item.bracketType}</span></div>}
+                                                            {item.bracketColour && <div><span className="text-muted-foreground">Bracket Colour: </span><span className="font-medium">{item.bracketColour}</span></div>}
+                                                            {item.chainOrMotor && <div><span className="text-muted-foreground">Chain/Motor: </span><span className="font-medium">{item.chainOrMotor}</span></div>}
+                                                            {(item as any).chainType && <div><span className="text-muted-foreground">Chain Type: </span><span className="font-medium">{(item as any).chainType}</span></div>}
+                                                            {item.bottomRailType && <div><span className="text-muted-foreground">Bottom Rail: </span><span className="font-medium">{item.bottomRailType}</span></div>}
+                                                            {item.bottomRailColour && <div><span className="text-muted-foreground">Rail Colour: </span><span className="font-medium">{item.bottomRailColour}</span></div>}
+                                                        </div>
+                                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-x-8 gap-y-1 text-sm border-t border-blue-200 pt-3">
+                                                            {item.fabricPrice != null && (
+                                                                <div className="flex justify-between">
+                                                                    <span className="text-muted-foreground">Fabric:</span>
+                                                                    <span className="flex items-center gap-2">
+                                                                        {item.discountPercent != null && Number(item.discountPercent) > 0 && (
+                                                                            <span className="text-xs text-gray-400 line-through bg-yellow-50 px-1 rounded">
+                                                                                ${(Number(item.fabricPrice) / (1 - Number(item.discountPercent) / 100)).toFixed(2)}
+                                                                            </span>
+                                                                        )}
+                                                                        <span className="font-semibold text-yellow-700">${Number(item.fabricPrice).toFixed(2)}</span>
+                                                                    </span>
+                                                                </div>
+                                                            )}
+                                                            {item.motorPrice != null && Number(item.motorPrice) > 0 && (
+                                                                <div className="flex justify-between">
+                                                                    <span className="text-muted-foreground">Motor/Chain:</span>
+                                                                    <span>+${Number(item.motorPrice).toFixed(2)}</span>
+                                                                </div>
+                                                            )}
+                                                            {item.bracketPrice != null && Number(item.bracketPrice) > 0 && (
+                                                                <div className="flex justify-between">
+                                                                    <span className="text-muted-foreground">Brackets:</span>
+                                                                    <span>+${Number(item.bracketPrice).toFixed(2)}</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                )}
+                                                </Fragment>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            )}
                         </div>
                     </CardContent>
                 </Card>
@@ -803,6 +937,7 @@ export default function AdminOrderDetails() {
                 <WorksheetPreview
                     orderId={order.id}
                     orderNumber={order.orderNumber}
+                    productType={order.productType}
                     customerName={order.customerName}
                     customerReference={(order as any).customerReference}
                     notes={(order as any).notes}

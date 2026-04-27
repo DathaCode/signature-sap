@@ -23,6 +23,7 @@ import {
 } from '../../data/hardware';
 import { Trash2, AlertCircle, Copy, PlusCircle } from 'lucide-react';
 import { pricingApi } from '../../services/api';
+import { PELMET_TYPES, PELMET_COLORS, PELMET_SIZES } from '../../data/sheerHardware';
 
 interface SimplePriceBreakdown {
     fabricBase: number;
@@ -59,6 +60,8 @@ export function BlindItemForm({ index, onRemove, onCopy, onContinue, canRemove =
     const bottomRailType = useWatch({ control, name: `items.${index}.bottomRailType` });
     const bottomRailColour = useWatch({ control, name: `items.${index}.bottomRailColour` });
     const controlSide = useWatch({ control, name: `items.${index}.controlSide` });
+    const requiresPelmet = useWatch({ control, name: `items.${index}.requiresPelmet` });
+    const pelmetSize = useWatch({ control, name: `items.${index}.pelmetSize` });
 
     // Validation error state
     const [validationError, setValidationError] = useState<string | null>(null);
@@ -416,6 +419,77 @@ export function BlindItemForm({ index, onRemove, onCopy, onContinue, canRemove =
                             placeholder="Select Colour"
                         />
                     </div>
+                </div>
+
+                {/* ---- PELMET SECTION (indigo) ---- */}
+                <div className="bg-indigo-50 rounded-lg p-4 space-y-3">
+                    <div className="flex items-center gap-4">
+                        <Label className="font-semibold">Do you require Pelmet?</Label>
+                        <div className="flex gap-3">
+                            <label className="flex items-center gap-1 cursor-pointer">
+                                <input
+                                    type="radio"
+                                    value="false"
+                                    checked={!requiresPelmet}
+                                    onChange={() => setValue(`items.${index}.requiresPelmet`, false)}
+                                />
+                                <span className="text-sm">No</span>
+                            </label>
+                            <label className="flex items-center gap-1 cursor-pointer">
+                                <input
+                                    type="radio"
+                                    value="true"
+                                    checked={requiresPelmet === true}
+                                    onChange={() => setValue(`items.${index}.requiresPelmet`, true)}
+                                />
+                                <span className="text-sm">Yes</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    {requiresPelmet && (
+                        <div className="space-y-3 pt-2">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <Label>Pelmet Type</Label>
+                                    <Select
+                                        {...register(`items.${index}.pelmetType`)}
+                                        options={PELMET_TYPES.map(t => ({ label: t, value: t }))}
+                                        placeholder="Select pelmet type..."
+                                    />
+                                </div>
+                                <div>
+                                    <Label>Pelmet Color</Label>
+                                    <Select
+                                        {...register(`items.${index}.pelmetColor`)}
+                                        options={PELMET_COLORS.map(c => ({ label: c, value: c }))}
+                                        placeholder="Select color..."
+                                    />
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <Label>Pelmet Size</Label>
+                                    <Select
+                                        {...register(`items.${index}.pelmetSize`)}
+                                        options={PELMET_SIZES.map(s => ({ label: s, value: s }))}
+                                        placeholder="Select size..."
+                                    />
+                                </div>
+                                {pelmetSize === 'Custom Size' && (
+                                    <div>
+                                        <Label>Pelmet Custom Size (mm)</Label>
+                                        <Input
+                                            type="number"
+                                            {...register(`items.${index}.pelmetCustomSize`, { valueAsNumber: true })}
+                                            min={1}
+                                            placeholder="Enter custom size"
+                                        />
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Action Buttons */}

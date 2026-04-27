@@ -39,6 +39,13 @@ enum InventoryCategory {
   TBS        // TBS winder-32mm, TBS brackets
   MOTOR      // Automate / Alpha motors + their brackets
   ACCESSORY  // Stop bolt, safety lock
+  SHEER_HOOK     // S-Fold curtain hooks
+  SHEER_BRACKET  // Standard / Extended brackets for sheer curtains
+  SHEER_WAND     // Control wand for sheer curtains
+  SHEER_FABRIC   // Sheer curtain fabric
+  SHEER_MOTOR    // Track motors for motorised sheer curtains
+  SHEER_REMOTE   // Remote controls for motorised tracks
+  SHEER_CHARGER  // Charger / Hub for motorised tracks
 }
 
 enum TransactionType {
@@ -107,8 +114,9 @@ model User {
   updatedAt            DateTime    @updatedAt @map("updated_at") @db.Timestamp(6)
 
   // Relations
-  orders     Order[]     @relation("UserOrders")
-  quotes     Quote[]     @relation("UserQuotes")
+  orders        Order[]              @relation("UserOrders")
+  quotes        Quote[]              @relation("UserQuotes")
+  sheerPricing  SheerFabricPricing[]
 
   @@map("users")
   @@index([email])
@@ -133,7 +141,9 @@ model Order {
   customerEmail       String?           @map("customer_email") @db.VarChar(255)
   customerPhone       String?           @map("customer_phone") @db.VarChar(50)
   customerCompany     String?           @map("customer_company") @db.VarChar(255)
-  
+  siteAddress         String?           @map("site_address") @db.Text
+  contactNumber       String?           @map("contact_number") @db.VarChar(50)
+
   // Status workflow
   status              OrderStatus       @default(PENDING)
   
@@ -318,6 +328,59 @@ model OrderItem {
   clipsPrice        Decimal?      @map("clips_price") @db.Decimal(10, 2)
   componentPrice    Decimal?      @map("component_price") @db.Decimal(10, 2) // Idler, clutch, stop bolt, safety lock
 
+  // ========================================================================
+  // Sheer Curtain specific fields
+  // ========================================================================
+
+  // Curtain configuration
+  curtainType       String?       @map("curtain_type") @db.VarChar(50)      // "S Fold"
+  hem               Int?                                                     // 70mm
+  installation      String?       @db.VarChar(50)                            // "Wall" / "Ceiling"
+  trackColour       String?       @map("track_colour") @db.VarChar(100)     // Free text
+  openingType       String?       @map("opening_type") @db.VarChar(50)      // "Single Open" / "Centre Open" / "Free Fold"
+  wandSize          Int?          @map("wand_size")                          // 1250mm
+  fullness          Int?                                                     // 120 / 140 / 144
+
+  // Track Type section
+  requiresTracks    Boolean?      @map("requires_tracks")
+  trackType         String?       @map("track_type") @db.VarChar(50)        // "Standard" / "Motorised"
+  motorType         String?       @map("motor_type") @db.VarChar(100)       // "Alpha AC" / "Alpha DC" / "Versa AC" / "Versa DC"
+  trackControlSide  String?       @map("track_control_side") @db.VarChar(20) // "Right" / "Left"
+  remotes           String?       @db.VarChar(50)                            // "Single Channel" / "5 Channel" / "15 Channel"
+  chargerHub        String?       @map("charger_hub") @db.VarChar(50)       // "Alpha Charger" / "PULSE 2 Hub" / "Alpha Neo"
+  trackColor        String?       @map("track_color") @db.VarChar(20)       // "Black" / "White"
+
+  // Bend section
+  requiresBentTracks Boolean?     @map("requires_bent_tracks")
+  bendType          String?       @map("bend_type") @db.VarChar(50)         // "Angle" / "Radius"
+  bendQty           Int?          @map("bend_qty")
+  bendFilePath      String?       @map("bend_file_path") @db.VarChar(500)   // Uploaded drawing file
+
+  // Pelmet section
+  requiresPelmet    Boolean?      @map("requires_pelmet")
+  pelmetType        String?       @map("pelmet_type") @db.VarChar(100)
+  pelmetColor       String?       @map("pelmet_color") @db.VarChar(20)      // "White" / "Black"
+  pelmetSize        String?       @map("pelmet_size") @db.VarChar(50)       // "Outside Box" / "Custom Size"
+  pelmetCustomSize  Int?          @map("pelmet_custom_size")                // mm if Custom Size
+
+  // Drop deduction (configurable per item)
+  requiresDropDeduction Boolean?  @map("requires_drop_deduction")           // default true
+  dropDeductionValue    Int?      @map("drop_deduction_value")               // 30/35/40/50/60 mm
+
+  // Curtain calculated fields
+  deductedDrop      Int?          @map("deducted_drop")                      // drop - deductionValue
+  hookCount         Int?          @map("hook_count")
+  leftHooks         Int?          @map("left_hooks")
+  rightHooks        Int?          @map("right_hooks")
+  bracketCount      Int?          @map("bracket_count")
+  wandCount         Int?          @map("wand_count")
+  fabricLength      Int?          @map("fabric_length")                      // mm
+  dropSurcharge     Decimal?      @map("drop_surcharge") @db.Decimal(10, 2)
+
+  // Curtain pricing breakdown (reuses fabricPrice, bracketPrice from above)
+  hookCost          Decimal?      @map("hook_cost") @db.Decimal(10, 2)
+  wandCost          Decimal?      @map("wand_cost") @db.Decimal(10, 2)
+
   createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamp(6)
 
   @@map("order_items")
@@ -365,20 +428,48 @@ model Quote {
   quoteNumber      String      @unique @map("quote_number") @db.VarChar(50) // QT-YYMMDD-XXXX
   userId           String      @map("user_id") @db.Uuid
   user             User        @relation("UserQuotes", fields: [userId], references: [id], onDelete: Cascade)
-  
+
   productType      ProductType @map("product_type")
   items            Json        // Store items as JSON
   subtotal         Decimal     @db.Decimal(10, 2)
   total            Decimal     @db.Decimal(10, 2)
   notes            String?     @db.Text
-  
+
   convertedToOrder  String?     @map("converted_to_order") @db.Uuid // Order ID if converted
   customerReference String?     @map("customer_reference") @db.VarChar(255)
 
   createdAt        DateTime    @default(now()) @map("created_at") @db.Timestamp(6)
   expiresAt        DateTime    @map("expires_at") @db.Timestamp(6) // +30 days
-  
+
   @@map("quotes")
   @@index([userId])
   @@index([quoteNumber])
+}
+
+model SheerFabricPricing {
+  id             Int       @id @default(autoincrement())
+  fabricGroup    String    @map("fabric_group") @db.VarChar(50)    // "Group 1" / "Group 2" / "Budget"
+  fabricName     String    @map("fabric_name") @db.VarChar(100)    // "Cannes", "Bali", etc
+  pricePerMeter  Decimal   @map("price_per_meter") @db.Decimal(10, 2) // Base price per meter width
+  userId         String?   @map("user_id") @db.Uuid               // NULL = default, set = customer override
+  user           User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamp(6)
+
+  @@unique([fabricGroup, fabricName, userId], name: "unique_sheer_fabric_pricing")
+  @@map("sheer_fabric_pricing")
+  @@index([fabricGroup])
+  @@index([userId])
+}
+
+model SheerGroupSettings {
+  id                 Int      @id @default(autoincrement())
+  fabricGroup        String   @unique @map("fabric_group") @db.VarChar(50)
+  dropSurchargePerM  Decimal  @map("drop_surcharge_per_m") @db.Decimal(10, 2) @default(60)
+
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamp(6)
+
+  @@map("sheer_group_settings")
 }
