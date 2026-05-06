@@ -327,11 +327,9 @@ export default function AdminOrderDetails() {
 
     const startEditing = () => {
         if (!order) return;
-        if (isCurtainOrder) {
-            gooeyToast.error('Curtain order editing is not yet supported');
-            return;
+        if (!isCurtainOrder) {
+            setEditItems(order.items.map(it => ({ ...it })) as BlindItem[]);
         }
-        setEditItems(order.items.map(it => ({ ...it })) as BlindItem[]);
         setEditNotes((order as any).notes || '');
         setEditRef((order as any).customerReference || '');
         setEditing(true);
@@ -672,17 +670,19 @@ export default function AdminOrderDetails() {
                                     <Input className="mt-1" value={editNotes} onChange={e => setEditNotes(e.target.value)} placeholder="Order notes" />
                                 </div>
                             </div>
-                            <div className="space-y-3">
-                                <div className="flex items-center justify-between">
-                                    <span className="text-sm font-semibold text-gray-700">Blind Items ({editItems.length})</span>
-                                    <Button size="sm" variant="outline" onClick={handleAddItem}>
-                                        <Plus className="mr-1 h-3 w-3" />Add Item
-                                    </Button>
+                            {!isCurtainOrder && (
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-sm font-semibold text-gray-700">Blind Items ({editItems.length})</span>
+                                        <Button size="sm" variant="outline" onClick={handleAddItem}>
+                                            <Plus className="mr-1 h-3 w-3" />Add Item
+                                        </Button>
+                                    </div>
+                                    {editItems.map((item, idx) => (
+                                        <EditItemRow key={idx} item={item} index={idx} onChange={handleItemChange} onRemove={handleRemoveItem} />
+                                    ))}
                                 </div>
-                                {editItems.map((item, idx) => (
-                                    <EditItemRow key={idx} item={item} index={idx} onChange={handleItemChange} onRemove={handleRemoveItem} />
-                                ))}
-                            </div>
+                            )}
                         </CardContent>
                     </Card>
                 )}
@@ -732,7 +732,7 @@ export default function AdminOrderDetails() {
                                                     <td className="p-4 align-middle font-medium">{item.location}</td>
                                                     <td className="p-4 align-middle">
                                                         <div className="flex flex-col">
-                                                            <span className="font-semibold">{item.fabric || 'N/A'}</span>
+                                                            <span className="font-semibold">{(item as any).material || item.fabric || 'N/A'}</span>
                                                             <span className="text-xs text-muted-foreground">{item.fabricColour}</span>
                                                         </div>
                                                     </td>

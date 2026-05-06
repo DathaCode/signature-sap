@@ -479,32 +479,34 @@ export const updateSheerFabricPricing = async (
     next: NextFunction
 ): Promise<void> => {
     try {
+        // Express already URL-decodes path params
         const group = req.params.group as string;
         const fabricName = req.params.fabricName as string;
         const { pricePerMeter, userId } = req.body;
 
-        if (!pricePerMeter || pricePerMeter <= 0) {
+        if (!pricePerMeter || Number(pricePerMeter) <= 0) {
             throw new AppError(400, 'Price per meter must be a positive number');
         }
 
-        const updated = await prisma.sheerFabricPricing.upsert({
-            where: {
-                unique_sheer_fabric_pricing: {
-                    fabricGroup: group,
-                    fabricName: decodeURIComponent(fabricName),
-                    userId: userId || null,
-                },
-            },
-            update: {
-                pricePerMeter,
-            },
-            create: {
-                fabricGroup: group,
-                fabricName: decodeURIComponent(fabricName),
-                pricePerMeter,
-                userId: userId || null,
-            },
+        const effectiveUserId = userId || null;
+        const price = Number(pricePerMeter);
+
+        // Use find + update/create to avoid Prisma composite-null unique constraint issues
+        const existing = await prisma.sheerFabricPricing.findFirst({
+            where: { fabricGroup: group, fabricName, userId: effectiveUserId },
         });
+
+        let updated;
+        if (existing) {
+            updated = await prisma.sheerFabricPricing.update({
+                where: { id: existing.id },
+                data: { pricePerMeter: price },
+            });
+        } else {
+            updated = await prisma.sheerFabricPricing.create({
+                data: { fabricGroup: group, fabricName, pricePerMeter: price, userId: effectiveUserId },
+            });
+        }
 
         res.json({
             success: true,

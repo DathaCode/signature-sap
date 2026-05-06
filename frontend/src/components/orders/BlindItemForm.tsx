@@ -23,7 +23,7 @@ import {
 } from '../../data/hardware';
 import { Trash2, AlertCircle, Copy, PlusCircle } from 'lucide-react';
 import { pricingApi } from '../../services/api';
-import { PELMET_TYPES, PELMET_COLORS, PELMET_SIZES } from '../../data/sheerHardware';
+import { PELMET_TYPES, PELMET_COLORS, PELMET_SIZES, REMOTE_OPTIONS, CHARGER_HUB_OPTIONS } from '../../data/sheerHardware';
 
 interface SimplePriceBreakdown {
     fabricBase: number;
@@ -490,6 +490,29 @@ export function BlindItemForm({ index, onRemove, onCopy, onContinue, canRemove =
                             </div>
                         </div>
                     )}
+                </div>
+
+                {/* Remote / Charger (optional motorised accessories) */}
+                <div className="bg-teal-50 rounded-lg p-4 space-y-3">
+                    <Label className="font-semibold text-teal-800">Remote &amp; Charger (optional)</Label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+                        <div className="space-y-2">
+                            <Label>Remote Control</Label>
+                            <Select
+                                {...register(`items.${index}.remotes`)}
+                                options={REMOTE_OPTIONS.map(r => ({ label: r, value: r }))}
+                                placeholder="Not Required"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Charger / Hub</Label>
+                            <Select
+                                {...register(`items.${index}.chargerHub`)}
+                                options={CHARGER_HUB_OPTIONS.map(c => ({ label: c, value: c }))}
+                                placeholder="Not Required"
+                            />
+                        </div>
+                    </div>
                 </div>
 
                 {/* Action Buttons */}

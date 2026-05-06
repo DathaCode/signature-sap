@@ -37,19 +37,33 @@ const s3Client = new S3Client({
     region: process.env.AWS_REGION || 'ap-southeast-2',
 });
 
-const bendDrawingUpload = multer({
-    storage: multerS3({
-        s3: s3Client,
-        bucket: process.env.AWS_S3_BUCKET!,
-        contentType: multerS3.AUTO_CONTENT_TYPE,
-        key: (_req: Express.Request, file: Express.Multer.File, cb: (error: Error | null, key: string) => void) => {
-            const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1E9)}`;
-            const ext = path.extname(file.originalname);
-            cb(null, `bend-drawings/bend-${uniqueSuffix}${ext}`);
-        },
-    }),
-    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
-});
+const S3_BUCKET = process.env.AWS_S3_BUCKET;
+
+// Use S3 storage in production (when bucket is configured), disk storage in local dev
+const bendDrawingUpload = S3_BUCKET
+    ? multer({
+        storage: multerS3({
+            s3: s3Client,
+            bucket: S3_BUCKET,
+            contentType: multerS3.AUTO_CONTENT_TYPE,
+            key: (_req: Express.Request, file: Express.Multer.File, cb: (error: Error | null, key: string) => void) => {
+                const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1E9)}`;
+                const ext = path.extname(file.originalname);
+                cb(null, `bend-drawings/bend-${uniqueSuffix}${ext}`);
+            },
+        }),
+        limits: { fileSize: 10 * 1024 * 1024 },
+    })
+    : multer({
+        storage: multer.diskStorage({
+            destination: '/tmp/bend-drawings',
+            filename: (_req, file, cb) => {
+                const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1E9)}`;
+                cb(null, `bend-${uniqueSuffix}${path.extname(file.originalname)}`);
+            },
+        }),
+        limits: { fileSize: 10 * 1024 * 1024 },
+    });
 
 // Admin-specific fixed routes (must come BEFORE /:id parameterised routes)
 router.get('/admin/all', authenticateToken, requireAdminOrWarehouse, getAllOrders);
@@ -61,7 +75,10 @@ router.post('/upload/bend-drawing', authenticateToken, bendDrawingUpload.single(
         res.status(400).json({ success: false, error: 'No file uploaded' });
         return;
     }
-    const filePath = (req.file as Express.MulterS3.File).key;
+    // S3 upload returns .key; local disk upload returns .filename
+    const filePath = S3_BUCKET
+        ? (req.file as Express.MulterS3.File).key
+        : req.file.filename;
     res.json({ success: true, filePath });
 });
 

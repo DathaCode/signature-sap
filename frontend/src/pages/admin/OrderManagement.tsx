@@ -238,8 +238,8 @@ export default function OrderManagement() {
                             <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
                         </div>
                     ) : (
-                        <div className="relative w-full overflow-auto">
-                            <table className="w-full caption-bottom text-sm text-left">
+                        <div className="relative w-full overflow-x-auto">
+                            <table className="min-w-[960px] w-full caption-bottom text-sm text-left">
                                 <thead className="[&_tr]:border-b">
                                     <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
                                         <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Order #</th>
@@ -298,7 +298,7 @@ export default function OrderManagement() {
                                             )}
                                             <td className="p-4 align-middle">{order.items.length} items</td>
                                             {!isWarehouse && <td className="p-4 align-middle">${Number(order.total).toFixed(2)}</td>}
-                                            <td className="p-4 align-middle text-right">
+                                            <td className="p-4 align-middle text-right whitespace-nowrap">
                                                 <div className="flex justify-end gap-2">
                                                     <Link to={`${basePath}/orders/${order.orderNumber}?tab=${statusFilter}`}>
                                                         <Button variant="ghost" size="icon" title="View Details">

@@ -78,7 +78,7 @@ function buildBracketGroups(items: ComponentItem[]): BracketGroup[] {
 }
 
 export default function PricingManagement() {
-    const [activeTab, setActiveTab] = useState<'fabric' | 'components' | 'sheerFabric' | 'sheerParts'>('fabric');
+    const [activeTab, setActiveTab] = useState<'fabric' | 'components' | 'sheerFabric'>('fabric');
 
     // Fabric matrix state
     const [loading, setLoading] = useState(true);
@@ -151,7 +151,7 @@ export default function PricingManagement() {
     }, [activeTab, sheerFabricGroup]);
 
     useEffect(() => {
-        if (activeTab === 'sheerParts') {
+        if (activeTab === 'components') {
             fetchSheerParts();
         }
     }, [activeTab]);
@@ -476,7 +476,7 @@ export default function PricingManagement() {
                             Save Surcharge Changes
                         </Button>
                     )}
-                    {activeTab === 'sheerParts' && editedSheerParts.size > 0 && (
+                    {activeTab === 'components' && editedSheerParts.size > 0 && (
                         <Button onClick={saveSheerPartsChanges} disabled={savingSheerParts}>
                             {savingSheerParts ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                             Save {editedSheerParts.size} Changes
@@ -490,9 +490,8 @@ export default function PricingManagement() {
             <div className="flex gap-2 border-b pb-0">
                 {([
                     ['fabric', 'Fabric Matrix'],
-                    ['components', 'Blind Parts'],
                     ['sheerFabric', 'Sheer Fabric'],
-                    ['sheerParts', 'Sheer Parts'],
+                    ['components', 'Automatic'],
                 ] as [typeof activeTab, string][]).map(([tab, label]) => (
                     <button
                         key={tab}
@@ -703,34 +702,6 @@ export default function PricingManagement() {
                         ))}
                     </div>
 
-                    {/* Drop Surcharge per group */}
-                    <Card className="border-amber-200 bg-amber-50">
-                        <CardHeader className="py-3">
-                            <CardTitle className="text-base text-amber-800">Drop Surcharge Rates ($ per meter over 2980mm)</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                {SHEER_FABRIC_GROUPS.map(group => (
-                                    <div key={group}>
-                                        <label className="text-xs font-medium text-gray-600 block mb-1">{group}</label>
-                                        <div className="flex items-center gap-1">
-                                            <span className="text-sm text-gray-500">$</span>
-                                            <Input
-                                                type="number"
-                                                step="0.01"
-                                                min="0"
-                                                className="h-8 text-right px-2"
-                                                value={editedGroupSettings[group] ?? (groupSettings[group] ?? 60)}
-                                                onChange={(e) => setEditedGroupSettings(prev => ({ ...prev, [group]: e.target.value }))}
-                                            />
-                                            <span className="text-xs text-gray-500">/m</span>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </CardContent>
-                    </Card>
-
                     <Card>
                         <CardHeader>
                             <CardTitle>Sheer Fabric Pricing - {sheerFabricGroup}</CardTitle>
@@ -819,11 +790,39 @@ export default function PricingManagement() {
                             )}
                         </CardContent>
                     </Card>
+
+                    {/* Drop Surcharge per group */}
+                    <Card className="border-amber-200 bg-amber-50">
+                        <CardHeader className="py-3">
+                            <CardTitle className="text-base text-amber-800">Drop Surcharge Rates ($ per meter over 2980mm)</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                {SHEER_FABRIC_GROUPS.map(group => (
+                                    <div key={group}>
+                                        <label className="text-xs font-medium text-gray-600 block mb-1">{group}</label>
+                                        <div className="flex items-center gap-1">
+                                            <span className="text-sm text-gray-500">$</span>
+                                            <Input
+                                                type="number"
+                                                step="0.01"
+                                                min="0"
+                                                className="h-8 text-right px-2"
+                                                value={editedGroupSettings[group] ?? (groupSettings[group] ?? 60)}
+                                                onChange={(e) => setEditedGroupSettings(prev => ({ ...prev, [group]: e.target.value }))}
+                                            />
+                                            <span className="text-xs text-gray-500">/m</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </CardContent>
+                    </Card>
                 </>
             )}
 
-            {/* SHEER PARTS TAB */}
-            {activeTab === 'sheerParts' && (
+            {/* AUTOMATIC PARTS — appended to components tab */}
+            {activeTab === 'components' && (
                 <div className="space-y-6">
                     <p className="text-sm text-muted-foreground">
                         Set the price charged to customers for motorised track components. Changes take effect on new orders immediately.

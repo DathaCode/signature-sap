@@ -26,31 +26,6 @@ function getMotorDeduction(motorType: string | undefined): number {
 
 const prisma = new PrismaClient();
 
-// Validation schemas (reuse from webOrder.controller.ts)
-const QuoteItemSchema = z.object({
-    location: z.string().min(1, 'Location is required'),
-    width: z.coerce.number().min(350, 'Width must be at least 350mm').max(2950, 'Width must be at most 2950mm'),
-    drop: z.coerce.number().min(100, 'Drop must be at least 100mm'),
-    fixing: z.string().optional(),
-    bracketType: z.string().optional(),
-    bracketColour: z.string().optional(),
-    controlSide: z.string().optional(),
-    chainOrMotor: z.string().optional(),
-    chainType: z.string().optional().nullable(),
-    roll: z.string().optional(),
-    material: z.string().optional(),
-    fabricType: z.string().optional(),
-    fabricColour: z.string().optional(),
-    bottomRailType: z.string().optional(),
-    bottomRailColour: z.string().optional(),
-    price: z.coerce.number().optional(),
-    fabricGroup: z.coerce.number().optional(),
-    discountPercent: z.coerce.number().optional(),
-    fabricPrice: z.coerce.number().optional(),
-    motorPrice: z.coerce.number().optional(),
-    bracketPrice: z.coerce.number().optional(),
-});
-
 const CreateQuoteSchema = z.object({
     productType: z.enum(['BLINDS', 'CURTAINS', 'SHUTTERS']),
     items: z.array(z.any()).min(1, 'At least one item is required'),
@@ -299,6 +274,92 @@ export const convertQuoteToOrder = async (
         const subtotal = parseFloat(quote.subtotal.toString());
         const total = parseFloat(quote.total.toString());
 
+        const isCurtainOrder = quote.productType === 'CURTAINS';
+
+        const mappedItems = items.map((item: any, index: number) => {
+            const w = parseInt(item.width) || 0;
+            const d = parseInt(item.drop) || 0;
+
+            if (isCurtainOrder) {
+                return {
+                    itemNumber: index + 1,
+                    itemType: 'curtain',
+                    location: item.location || '',
+                    width: w,
+                    drop: d,
+                    // Fabric stored in item.fabric (quote JSON) → material column
+                    material: item.fabric || item.material || null,
+                    fabricColour: item.fabricColour || null,
+                    installation: item.installation || null,
+                    bracketType: item.bracketType || null,
+                    openingType: item.openingType || null,
+                    fullness: item.fullness ? Number(item.fullness) : null,
+                    curtainType: item.curtainType || 'S Fold',
+                    hem: item.hem ? Number(item.hem) : 70,
+                    trackColour: item.trackColour || null,
+                    wandSize: item.wandSize ? Number(item.wandSize) : 1250,
+                    requiresTracks: item.requiresTracks || false,
+                    trackType: item.trackType || null,
+                    motorType: item.motorType || null,
+                    trackControlSide: item.trackControlSide || null,
+                    remotes: item.remotes || null,
+                    chargerHub: item.chargerHub || null,
+                    trackColor: item.trackColor || null,
+                    requiresBentTracks: item.requiresBentTracks || false,
+                    bendType: item.bendType || null,
+                    bendQty: item.bendQty ? Number(item.bendQty) : null,
+                    bendFilePath: item.bendFilePath || null,
+                    requiresDropDeduction: item.requiresDropDeduction !== false,
+                    dropDeductionValue: item.dropDeductionValue ? Number(item.dropDeductionValue) : 35,
+                    deductedDrop: item.deductedDrop ? Number(item.deductedDrop) : null,
+                    hookCount: item.hookCount ? Number(item.hookCount) : null,
+                    leftHooks: item.leftHooks ? Number(item.leftHooks) : null,
+                    rightHooks: item.rightHooks ? Number(item.rightHooks) : null,
+                    bracketCount: item.bracketCount ? Number(item.bracketCount) : null,
+                    wandCount: item.wandCount ? Number(item.wandCount) : null,
+                    fabricLength: item.fabricLength ? Number(item.fabricLength) : null,
+                    dropSurcharge: item.dropSurcharge ? Number(item.dropSurcharge) : 0,
+                    price: item.price || 0,
+                    fabricPrice: item.fabricPrice || null,
+                    discountPercent: 0,
+                };
+            }
+
+            // Blind item mapping
+            const motorDeduction = getMotorDeduction(item.chainOrMotor);
+            return {
+                itemNumber: index + 1,
+                itemType: 'blind',
+                location: item.location || '',
+                width: w,
+                drop: d,
+                fixing: item.fixing || null,
+                bracketType: item.bracketType || null,
+                bracketColour: item.bracketColour || null,
+                controlSide: item.controlSide || 'Left',
+                chainOrMotor: item.chainOrMotor || null,
+                chainType: item.chainType || null,
+                roll: item.roll || 'Front',
+                material: item.material || null,
+                fabricType: item.fabricType || null,
+                fabricColour: item.fabricColour || null,
+                bottomRailType: item.bottomRailType || null,
+                bottomRailColour: item.bottomRailColour || null,
+                calculatedWidth: w > 0 ? w - motorDeduction : null,
+                calculatedDrop: d > 0 ? d + 200 : null,
+                fabricCutWidth: w > 0 ? w - motorDeduction : null,
+                fabricGroup: item.fabricGroup || null,
+                discountPercent: item.discountPercent || 0,
+                price: item.price || 0,
+                fabricPrice: item.fabricPrice || null,
+                motorPrice: item.motorPrice || null,
+                bracketPrice: item.bracketPrice || null,
+                chainPrice: item.chainPrice || null,
+                clipsPrice: item.clipsPrice || null,
+                componentPrice: item.componentPrice || null,
+            };
+        });
+
         const order = await prisma.order.create({
             data: {
                 orderNumber,
@@ -314,43 +375,9 @@ export const convertQuoteToOrder = async (
                 orderDate: new Date(),
                 fileSource: 'WEB_FORM',
                 notes: quote.notes ? `Converted from quote ${quote.quoteNumber}: ${quote.notes}` : `Converted from quote ${quote.quoteNumber}`,
+                customerReference: (quote as any).customerReference || null,
                 items: {
-                    create: items.map((item: any, index: number) => {
-                        const w = parseInt(item.width) || 0;
-                        const d = parseInt(item.drop) || 0;
-                        const motorDeduction = getMotorDeduction(item.chainOrMotor);
-                        return {
-                            itemNumber: index + 1,
-                            itemType: 'blind',
-                            location: item.location || '',
-                            width: w,
-                            drop: d,
-                            fixing: item.fixing || null,
-                            bracketType: item.bracketType || null,
-                            bracketColour: item.bracketColour || null,
-                            controlSide: item.controlSide || 'Left',
-                            chainOrMotor: item.chainOrMotor || null,
-                            chainType: item.chainType || null,
-                            roll: item.roll || 'Front',
-                            material: item.material || null,
-                            fabricType: item.fabricType || null,
-                            fabricColour: item.fabricColour || null,
-                            bottomRailType: item.bottomRailType || null,
-                            bottomRailColour: item.bottomRailColour || null,
-                            calculatedWidth: w > 0 ? w - motorDeduction : null,
-                            calculatedDrop: d > 0 ? d + 200 : null,
-                            fabricCutWidth: w > 0 ? w - motorDeduction : null,
-                            fabricGroup: item.fabricGroup || null,
-                            discountPercent: item.discountPercent || 0,
-                            price: item.price || 0,
-                            fabricPrice: item.fabricPrice || null,
-                            motorPrice: item.motorPrice || null,
-                            bracketPrice: item.bracketPrice || null,
-                            chainPrice: item.chainPrice || null,
-                            clipsPrice: item.clipsPrice || null,
-                            componentPrice: item.componentPrice || null,
-                        };
-                    }),
+                    create: mappedItems,
                 },
             },
             include: {
@@ -398,7 +425,7 @@ export const updateQuote = async (
         if (quote.convertedToOrder) throw new AppError(400, 'Cannot edit a quote that has been converted to an order');
 
         const UpdateQuoteSchema = z.object({
-            items: z.array(QuoteItemSchema).min(1).optional(),
+            items: z.array(z.any()).min(1).optional(),
             notes: z.string().optional(),
             customerReference: z.string().max(255).optional().nullable(),
         });

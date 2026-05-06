@@ -39,6 +39,10 @@ export interface BlindItem {
     clipsPrice?: number;
     componentPrice?: number;
 
+    // Remote / Charger (shared with curtains)
+    remotes?: string;
+    chargerHub?: string;
+
     // Pelmet section (Blinds)
     requiresPelmet?: boolean;
     pelmetType?: string;

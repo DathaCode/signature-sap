@@ -52,7 +52,7 @@ const emptyCurtain: CurtainItem = {
     requiresTracks: false,
     trackType: 'Standard',
     trackControlSide: 'Right',
-    trackColor: 'Black',
+    trackColor: 'White',
     remotes: 'Not Required',
     chargerHub: 'Not Required',
     requiresBentTracks: false,

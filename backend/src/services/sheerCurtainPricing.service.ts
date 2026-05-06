@@ -200,9 +200,9 @@ class SheerCurtainPricingService {
     const surchargePerM = await this.getDropSurchargeRate(item.fabricGroup);
     const dropSurcharge = this.calculateDropSurcharge(item.drop, surchargePerM);
 
-    // 6. All component costs (hooks, brackets, wands, motor, remote, charger)
+    // 6. All component costs (motor, remote, charger); fabric cost = raw chart meters × price/m
     const pricing = await this.calculateAllCosts(
-      item, lookup.hookCount, bracketCount, wandCount, dropSurcharge
+      item, lookup.rawFabricMeters, lookup.hookCount, bracketCount, wandCount, dropSurcharge
     );
 
     return {
@@ -221,7 +221,7 @@ class SheerCurtainPricingService {
 
   /**
    * Look up hook count and fabric meters from the breakpoints table.
-   * Returns null values for hook split when not Centre Open.
+   * Returns rawFabricMeters (chart value, used for pricing) and fabricMeters (with allowance, for production).
    */
   lookupBreakpoints(width: number, openingType: string, fullness: number) {
     const fi = FULLNESS_IDX[fullness] ?? 2; // default to 140 index
@@ -252,7 +252,8 @@ class SheerCurtainPricingService {
         hookCount: co_lh * 2,
         leftHooks: co_lh,
         rightHooks: co_lh,
-        fabricMeters: Math.round((coFabric + CO_ALLOWANCE) * 1000) / 1000,
+        rawFabricMeters: coFabric,                                               // used for pricing
+        fabricMeters: Math.round((coFabric + CO_ALLOWANCE) * 1000) / 1000,      // with allowance for production
       };
     } else {
       // Single Open or Free Fold — use SO columns
@@ -260,7 +261,8 @@ class SheerCurtainPricingService {
         hookCount: so_th,
         leftHooks: undefined,
         rightHooks: undefined,
-        fabricMeters: Math.round((soFabric + SO_ALLOWANCE) * 1000) / 1000,
+        rawFabricMeters: soFabric,                                               // used for pricing
+        fabricMeters: Math.round((soFabric + SO_ALLOWANCE) * 1000) / 1000,      // with allowance for production
       };
     }
   }
@@ -282,8 +284,8 @@ class SheerCurtainPricingService {
   }
 
   private calculateDropSurcharge(drop: number, surchargePerM: number): number {
-    if (drop <= 2980) return 0;
-    const extraMeters = Math.ceil((drop - 2980) / 1000);
+    if (drop <= 3000) return 0;
+    const extraMeters = Math.ceil((drop - 3000) / 1000);
     return extraMeters * surchargePerM;
   }
 
@@ -296,27 +298,16 @@ class SheerCurtainPricingService {
 
   private async calculateAllCosts(
     item: CurtainPricingData,
-    hookCount: number,
-    bracketCount: number,
-    wandCount: number,
+    rawFabricMeters: number,
+    _hookCount: number,
+    _bracketCount: number,
+    _wandCount: number,
     dropSurcharge: number
   ) {
-    // Fabric cost: width (m) × price per meter
+    // Fabric cost: chart fabric meters × price per meter
+    // The per-meter price from admin pricing already covers hooks, brackets, and wands
     const fabricPricePerMeter = await this.getFabricPrice(item.fabric, item.fabricGroup, item.userId);
-    const fabricCost = (item.width / 1000) * fabricPricePerMeter;
-
-    // Hook cost
-    const hookUnitPrice = await this.getInventoryPrice('SHEER_HOOK', 'S-Fold Hook');
-    const hookCost = hookCount * hookUnitPrice;
-
-    // Bracket cost (bracket type determines Standard vs Extended; Ceiling uses Standard price)
-    const bracketItemName = item.bracketType === 'Extended' ? 'Extended Bracket' : 'Standard Bracket';
-    const bracketUnitPrice = await this.getInventoryPrice('SHEER_BRACKET', bracketItemName);
-    const bracketCost = bracketCount * bracketUnitPrice;
-
-    // Wand cost
-    const wandUnitPrice = await this.getInventoryPrice('SHEER_WAND', 'Wand 1250mm');
-    const wandCost = wandCount * wandUnitPrice;
+    const fabricCost = rawFabricMeters * fabricPricePerMeter;
 
     // Motor cost (only when motorised track selected)
     let motorCost = 0;
@@ -336,21 +327,20 @@ class SheerCurtainPricingService {
       chargerCost = await this.getInventoryPrice('SHEER_CHARGER', item.chargerHub);
     }
 
-    const subtotal = fabricCost + hookCost + bracketCost + wandCost + motorCost + remoteCost + chargerCost + dropSurcharge;
-    const gst = subtotal * 0.10;
-    const total = subtotal + gst;
+    // No GST on curtain items; drop surcharge is additional when drop > 3000mm
+    const total = fabricCost + motorCost + remoteCost + chargerCost + dropSurcharge;
 
     const r = (n: number) => Math.round(n * 100) / 100;
     return {
       fabricCost: r(fabricCost),
-      hookCost: r(hookCost),
-      bracketCost: r(bracketCost),
-      wandCost: r(wandCost),
+      hookCost: 0,
+      bracketCost: 0,
+      wandCost: 0,
       motorCost: r(motorCost),
       remoteCost: r(remoteCost),
       chargerCost: r(chargerCost),
-      subtotal: r(subtotal),
-      gst: r(gst),
+      subtotal: r(total),
+      gst: 0,
       total: r(total),
     };
   }

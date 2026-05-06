@@ -245,7 +245,7 @@ export function CurtainItemForm({ index, curtainNumber, highlightEmpty = false }
                     <span>Curtain #{curtainNumber || index + 1}</span>
                     {price > 0 && (
                         <Badge variant="default" className="text-base px-3 py-1 bg-green-600">
-                            ${Number(price).toFixed(2)} inc. GST
+                            ${Number(price).toFixed(2)}
                         </Badge>
                     )}
                 </CardTitle>
@@ -284,9 +284,9 @@ export function CurtainItemForm({ index, curtainNumber, highlightEmpty = false }
                             min={100}
                             className={emptyRing(drop)}
                         />
-                        {drop > 2980 && (
+                        {drop > 3000 && (
                             <p className="text-xs text-orange-600 mt-1">
-                                Drop exceeds 2980mm - surcharge applies
+                                Drop exceeds 3000mm - surcharge applies
                             </p>
                         )}
                     </div>
