@@ -251,7 +251,7 @@ const CurtainOrderItemSchema = z.object({
     motorType: z.string().optional(),
     trackControlSide: z.string().optional(),
     remotes: z.string().optional(),
-    chargerHub: z.string().optional(),
+    chargerHub: z.array(z.string()).optional(),
     trackColor: z.string().optional(),
 
     // Drop deduction
@@ -435,7 +435,7 @@ export const createOrder = async (
                     motorType: item.motorType || null,
                     trackControlSide: item.trackControlSide || null,
                     remotes: item.remotes || null,
-                    chargerHub: item.chargerHub || null,
+                    chargerHub: item.chargerHub?.length ? JSON.stringify(item.chargerHub) : null,
                     trackColor: item.trackColor || null,
 
                     // Drop deduction
@@ -468,9 +468,14 @@ export const createOrder = async (
                     // Pricing
                     price,
                     fabricPrice: curtainCalc?.fabricCost || null,
-                    bracketPrice: curtainCalc?.bracketCost || null,
-                    hookCost: curtainCalc?.hookCost || null,
-                    wandCost: curtainCalc?.wandCost || null,
+                    bracketPrice: null,
+                    // hookCost repurposed: stores fullness surcharge for curtain items
+                    hookCost: curtainCalc?.fullnessSurcharge ?? null,
+                    wandCost: null,
+                    // Reuse blind price columns for curtain motor/remote/charger costs
+                    motorPrice: curtainCalc?.motorCost || null,
+                    chainPrice: curtainCalc?.remoteCost || null,
+                    clipsPrice: curtainCalc?.chargerCost || null,
                     discountPercent: 0,
                 });
 
@@ -803,7 +808,7 @@ export const getAllOrders = async (
 ): Promise<void> => {
     try {
         const user = (req as AuthRequest).user;
-        const { status, productType, userId, customerName, dateFrom, dateTo } = req.query;
+        const { status, productType, userId, customerName, search, dateFrom, dateTo } = req.query;
 
         // Warehouse agents can only see PRODUCTION, COMPLETED, CANCELLED orders
         const warehouseStatuses: OrderStatus[] = ['PRODUCTION', 'COMPLETED', 'CANCELLED'];
@@ -828,10 +833,12 @@ export const getAllOrders = async (
                 ...(statusIn && !statusFilter && { status: { in: statusIn } }),
                 ...(productType && { productType: productType as any }),
                 ...(user?.role !== 'WAREHOUSE' && userId && { userId: userId as string }),
-                ...(user?.role !== 'WAREHOUSE' && customerName && {
-                    user: {
-                        name: { contains: customerName as string, mode: 'insensitive' as const },
-                    },
+                ...(user?.role !== 'WAREHOUSE' && (customerName || search) && {
+                    OR: [
+                        { user: { name: { contains: (search || customerName) as string, mode: 'insensitive' as const } } },
+                        { customerReference: { contains: (search || customerName) as string, mode: 'insensitive' as const } },
+                        { orderNumber: { contains: (search || customerName) as string, mode: 'insensitive' as const } },
+                    ],
                 }),
                 ...((dateFrom || dateTo) && {
                     createdAt: {
@@ -1125,6 +1132,7 @@ async function runCurtainWorksheet(order: any) {
         width: number;
         deductedDrop: number;
         openingType: string;
+        fullness: number;
         fabric: string;
         fabricColour: string;
         singleHooks: number | null;
@@ -1135,6 +1143,16 @@ async function runCurtainWorksheet(order: any) {
         bracketCount: number;
         wandCount: number;
         trackColour: string;
+        // Track type details
+        requiresTracks: boolean;
+        trackType: string | null;
+        motorType: string | null;
+        remotes: string | null;
+        chargerHub: string | null;
+        // Bend details
+        requiresBentTracks: boolean;
+        bendType: string | null;
+        bendQty: number | null;
     };
 
     const rows: CurtainRow[] = [];
@@ -1161,6 +1179,7 @@ async function runCurtainWorksheet(order: any) {
             width: item.width,
             deductedDrop,
             openingType,
+            fullness,
             fabric: item.material ?? '',           // curtain fabric name stored in material field
             fabricColour: item.fabricColour ?? '',
             singleHooks: openingType !== 'Centre Open' ? lookup.hookCount : null,
@@ -1171,6 +1190,14 @@ async function runCurtainWorksheet(order: any) {
             bracketCount,
             wandCount,
             trackColour: item.trackColor ?? item.trackColour ?? '',
+            requiresTracks: item.requiresTracks ?? false,
+            trackType: item.trackType ?? null,
+            motorType: item.motorType ?? null,
+            remotes: item.remotes ?? null,
+            chargerHub: item.chargerHub ? (() => { try { return JSON.parse(item.chargerHub!).join(', '); } catch { return item.chargerHub; } })() : null,
+            requiresBentTracks: item.requiresBentTracks ?? false,
+            bendType: item.bendType ?? null,
+            bendQty: item.bendQty ?? null,
         });
 
         totalHooks += lookup.hookCount;
@@ -1417,6 +1444,100 @@ export const getWorksheetPreview = async (
 };
 
 /**
+ * Build curtain worksheet preview data without saving to DB (for CONFIRMED orders)
+ */
+async function buildCurtainPreview(order: any) {
+    const items = order.items;
+    let totalHooks = 0, totalWands = 0, totalBracketsStandard = 0;
+    let totalBracketsExtended = 0, totalBracketsCeiling = 0, totalFabricMeters = 0;
+    const rows: any[] = [];
+
+    for (const item of items) {
+        const deductionMm = item.requiresDropDeduction !== false ? (item.dropDeductionValue ?? 35) : 0;
+        const fullness = item.fullness ?? 120;
+        const openingType = item.openingType ?? 'Single Open';
+        const lookup = sheerCurtainPricingService.lookupBreakpoints(item.width, openingType, fullness);
+        const bracketCount = sheerCurtainPricingService.getBracketCount(item.width);
+        const wandCount = (openingType === 'Centre Open' || openingType === 'Free Fold') ? 2 : 1;
+
+        rows.push({
+            itemNumber: item.itemNumber,
+            location: item.location,
+            width: item.width,
+            deductedDrop: item.drop - deductionMm,
+            openingType,
+            fullness,
+            fabric: item.material ?? '',
+            fabricColour: item.fabricColour ?? '',
+            singleHooks: openingType !== 'Centre Open' ? lookup.hookCount : null,
+            leftHooks: lookup.leftHooks ?? null,
+            rightHooks: lookup.rightHooks ?? null,
+            fabricMeters: lookup.fabricMeters,
+            bracketType: item.bracketType ?? 'Standard',
+            bracketCount,
+            wandCount,
+            trackColour: item.trackColor ?? item.trackColour ?? '',
+            requiresTracks: item.requiresTracks ?? false,
+            trackType: item.trackType ?? null,
+            motorType: item.motorType ?? null,
+            remotes: item.remotes ?? null,
+            chargerHub: item.chargerHub ? (() => { try { return JSON.parse(item.chargerHub!).join(', '); } catch { return item.chargerHub; } })() : null,
+            requiresBentTracks: item.requiresBentTracks ?? false,
+            bendType: item.bendType ?? null,
+            bendQty: item.bendQty ?? null,
+        });
+
+        totalHooks += lookup.hookCount;
+        totalWands += wandCount;
+        const bt = item.bracketType ?? 'Standard';
+        if (bt === 'Extended') totalBracketsExtended += bracketCount;
+        else if (bt === 'Ceiling') totalBracketsCeiling += bracketCount;
+        else totalBracketsStandard += bracketCount;
+        totalFabricMeters += lookup.fabricMeters;
+    }
+
+    const curtainData = {
+        type: 'CURTAINS' as const,
+        rows,
+        totals: {
+            totalHooks, totalWands,
+            totalBracketsStandard, totalBracketsExtended, totalBracketsCeiling,
+            totalFabricMeters: Math.round(totalFabricMeters * 1000) / 1000,
+        },
+    };
+
+    // Build inventory requirements
+    type Req = { category: InventoryCategory; itemName: string; colorVariant?: string; quantityNeeded: number };
+    const invReqs: Req[] = [];
+    if (totalHooks > 0) invReqs.push({ category: 'SHEER_HOOK', itemName: 'S-Fold Hook', quantityNeeded: totalHooks });
+    if (totalBracketsStandard > 0) invReqs.push({ category: 'SHEER_BRACKET', itemName: 'Standard Bracket', quantityNeeded: totalBracketsStandard });
+    if (totalBracketsExtended > 0) invReqs.push({ category: 'SHEER_BRACKET', itemName: 'Extended Bracket', quantityNeeded: totalBracketsExtended });
+    if (totalWands > 0) invReqs.push({ category: 'SHEER_WAND', itemName: 'Wand 1250mm', quantityNeeded: totalWands });
+    const fabricMap = new Map<string, number>();
+    for (const row of rows) {
+        const key = `${row.fabric}::${row.fabricColour}`;
+        fabricMap.set(key, (fabricMap.get(key) ?? 0) + row.fabricMeters);
+    }
+    for (const [key, meters] of fabricMap) {
+        const sep = key.indexOf('::');
+        invReqs.push({ category: 'SHEER_FABRIC', itemName: key.slice(0, sep), colorVariant: key.slice(sep + 2) || undefined, quantityNeeded: Math.ceil(meters * 10) / 10 });
+    }
+
+    const inventoryCheck = await InventoryService.checkAvailability(invReqs);
+
+    return {
+        worksheetData: {
+            fabricCutData: curtainData as any,
+            tubeCutData: { groups: [], totalPiecesNeeded: 0 },
+            totalFabricMm: Math.round(totalFabricMeters * 1000),
+            totalTubePieces: 0,
+        },
+        inventoryCheck,
+        isPreview: true,
+    };
+}
+
+/**
  * Preview worksheets for a CONFIRMED order (runs optimization without saving)
  */
 export const previewWorksheets = async (
@@ -1436,6 +1557,17 @@ export const previewWorksheets = async (
 
         if (order.status !== OrderStatus.CONFIRMED) {
             throw new AppError(400, 'Preview is only available for confirmed orders');
+        }
+
+        // Handle CURTAINS separately — no cut optimization needed
+        if (order.productType === 'CURTAINS') {
+            const curtainResult = await buildCurtainPreview(order);
+            res.json({
+                success: true,
+                data: curtainResult,
+                isPreview: true,
+            });
+            return;
         }
 
         const items = order.items;

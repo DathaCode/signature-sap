@@ -41,7 +41,7 @@ export interface BlindItem {
 
     // Remote / Charger (shared with curtains)
     remotes?: string;
-    chargerHub?: string;
+    chargerHub?: string;   // BlindItem keeps as string
 
     // Pelmet section (Blinds)
     requiresPelmet?: boolean;
@@ -76,7 +76,7 @@ export interface CurtainItem {
     motorType?: string;
     trackControlSide?: string;
     remotes?: string;
-    chargerHub?: string;
+    chargerHub?: string[];  // multi-select array for curtains
     trackColor?: string;
 
     // Bend section
@@ -103,9 +103,11 @@ export interface CurtainItem {
     // Pricing
     fabricGroup?: string;
     fabricCost?: number;
-    hookCost?: number;
-    bracketCost?: number;
-    wandCost?: number;
+    fullnessSurcharge?: number;  // stored in hookCost DB column for curtains
+    // Motor/remote/charger costs (stored in motorPrice/chainPrice/clipsPrice columns)
+    motorPrice?: number;
+    chainPrice?: number;
+    clipsPrice?: number;
     subtotal?: number;
     gst?: number;
     total?: number;

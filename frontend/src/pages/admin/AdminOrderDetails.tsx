@@ -160,7 +160,7 @@ export default function AdminOrderDetails() {
     const [editNotes, setEditNotes] = useState('');
     const [editRef, setEditRef] = useState('');
     const [savingEdit, setSavingEdit] = useState(false);
-    const [worksheetPreview, setWorksheetPreview] = useState<{ data: WorksheetPreviewResponse } | null>(null);
+    const [worksheetPreview, setWorksheetPreview] = useState<{ data: WorksheetPreviewResponse; isPreview?: boolean } | null>(null);
     const [viewingWorksheets, setViewingWorksheets] = useState(false);
 
     // Admin fields inline editing
@@ -175,7 +175,7 @@ export default function AdminOrderDetails() {
     const hasPriceBreakdown = (item: BlindItem | CurtainItem) => {
         if (isCurtainOrder) {
             const c = item as CurtainItem;
-            return c.fabricCost != null || c.hookCost != null || c.bracketCost != null;
+            return c.fabricCost != null || c.fullnessSurcharge != null || c.motorPrice != null || c.dropSurcharge != null;
         }
         const b = item as BlindItem;
         return b.fabricPrice != null || b.motorPrice != null || b.bracketPrice != null;
@@ -254,6 +254,18 @@ export default function AdminOrderDetails() {
             setWorksheetPreview({ data: result });
         } catch (error) {
             gooeyToast.error('No worksheet data available');
+        } finally {
+            setViewingWorksheets(false);
+        }
+    };
+
+    const handlePreviewConfirmedWorksheets = async () => {
+        setViewingWorksheets(true);
+        try {
+            const result = await adminOrderApi.previewWorksheets(order.id);
+            setWorksheetPreview({ data: result, isPreview: true });
+        } catch (error) {
+            gooeyToast.error('Failed to generate worksheet preview');
         } finally {
             setViewingWorksheets(false);
         }
@@ -458,6 +470,14 @@ export default function AdminOrderDetails() {
                         <Button size="sm" variant="outline" onClick={handleComplete} disabled={actionLoading}>
                             <CheckCircle className="mr-1.5 h-4 w-4" />
                             Mark Completed
+                        </Button>
+                    )}
+
+                    {/* Preview Worksheets (admin, CONFIRMED) */}
+                    {!isWarehouse && order.status === 'CONFIRMED' && (
+                        <Button variant="outline" size="sm" onClick={handlePreviewConfirmedWorksheets} disabled={viewingWorksheets} className="text-teal-600 border-teal-200 hover:bg-teal-50">
+                            {viewingWorksheets ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <FileSpreadsheet className="mr-1.5 h-4 w-4" />}
+                            Preview Worksheets
                         </Button>
                     )}
 
@@ -766,7 +786,10 @@ export default function AdminOrderDetails() {
                                                                 {item.trackControlSide && <div><span className="text-muted-foreground">Control: </span><span className="font-medium">{item.trackControlSide}</span></div>}
                                                                 {item.trackColor && <div><span className="text-muted-foreground">Track Color: </span><span className="font-medium">{item.trackColor}</span></div>}
                                                                 {item.remotes && <div><span className="text-muted-foreground">Remote: </span><span className="font-medium">{item.remotes}</span></div>}
-                                                                {item.chargerHub && <div><span className="text-muted-foreground">Charger/Hub: </span><span className="font-medium">{item.chargerHub}</span></div>}
+                                                                {item.chargerHub && (() => {
+                                                                    const hubs = Array.isArray(item.chargerHub) ? item.chargerHub : (() => { try { return JSON.parse(item.chargerHub as any); } catch { return [item.chargerHub]; } })();
+                                                                    return hubs.length > 0 ? <div className="col-span-2"><span className="text-muted-foreground">Charger/Hub: </span><span className="font-medium">{hubs.join(', ')}</span></div> : null;
+                                                                })()}
                                                             </div>
                                                         )}
                                                         {/* Bend details */}
@@ -792,22 +815,28 @@ export default function AdminOrderDetails() {
                                                                         <span className="font-semibold text-yellow-700">${Number(item.fabricCost).toFixed(2)}</span>
                                                                     </div>
                                                                 )}
-                                                                {item.hookCost != null && Number(item.hookCost) > 0 && (
+                                                                {item.fullnessSurcharge != null && Number(item.fullnessSurcharge) > 0 && (
                                                                     <div className="flex justify-between">
-                                                                        <span className="text-muted-foreground">Hooks:</span>
-                                                                        <span>+${Number(item.hookCost).toFixed(2)}</span>
+                                                                        <span className="text-muted-foreground">Fullness Surcharge:</span>
+                                                                        <span>+${Number(item.fullnessSurcharge).toFixed(2)}</span>
                                                                     </div>
                                                                 )}
-                                                                {item.bracketCost != null && Number(item.bracketCost) > 0 && (
+                                                                {item.motorPrice != null && Number(item.motorPrice) > 0 && (
                                                                     <div className="flex justify-between">
-                                                                        <span className="text-muted-foreground">Brackets:</span>
-                                                                        <span>+${Number(item.bracketCost).toFixed(2)}</span>
+                                                                        <span className="text-muted-foreground">Motor:</span>
+                                                                        <span>+${Number(item.motorPrice).toFixed(2)}</span>
                                                                     </div>
                                                                 )}
-                                                                {item.wandCost != null && Number(item.wandCost) > 0 && (
+                                                                {item.chainPrice != null && Number(item.chainPrice) > 0 && (
                                                                     <div className="flex justify-between">
-                                                                        <span className="text-muted-foreground">Wands:</span>
-                                                                        <span>+${Number(item.wandCost).toFixed(2)}</span>
+                                                                        <span className="text-muted-foreground">Remote:</span>
+                                                                        <span>+${Number(item.chainPrice).toFixed(2)}</span>
+                                                                    </div>
+                                                                )}
+                                                                {item.clipsPrice != null && Number(item.clipsPrice) > 0 && (
+                                                                    <div className="flex justify-between">
+                                                                        <span className="text-muted-foreground">Charger/Hub:</span>
+                                                                        <span>+${Number(item.clipsPrice).toFixed(2)}</span>
                                                                     </div>
                                                                 )}
                                                                 {item.dropSurcharge != null && Number(item.dropSurcharge) > 0 && (
@@ -822,6 +851,11 @@ export default function AdminOrderDetails() {
                                                                         <span>+${Number(item.gst).toFixed(2)}</span>
                                                                     </div>
                                                                 )}
+                                                            </div>
+                                                        )}
+                                                        {item.requiresBentTracks && (
+                                                            <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800 font-medium">
+                                                                Bent track pricing will be confirmed separately — Total will be added after reviewing your drawings
                                                             </div>
                                                         )}
                                                     </td>
@@ -891,7 +925,17 @@ export default function AdminOrderDetails() {
                                                             {(item as any).chainType && <div><span className="text-muted-foreground">Chain Type: </span><span className="font-medium">{(item as any).chainType}</span></div>}
                                                             {item.bottomRailType && <div><span className="text-muted-foreground">Bottom Rail: </span><span className="font-medium">{item.bottomRailType}</span></div>}
                                                             {item.bottomRailColour && <div><span className="text-muted-foreground">Rail Colour: </span><span className="font-medium">{item.bottomRailColour}</span></div>}
+                                                            {(item as any).remotes && (item as any).remotes !== 'Not Required' && <div><span className="text-muted-foreground">Remote: </span><span className="font-medium">{(item as any).remotes}</span></div>}
+                                                            {(item as any).chargerHub && (item as any).chargerHub !== 'Not Required' && <div><span className="text-muted-foreground">Charger/Hub: </span><span className="font-medium">{(item as any).chargerHub}</span></div>}
                                                         </div>
+                                                        {(item as any).requiresPelmet && (
+                                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-1 text-sm mb-3 border-t border-blue-200 pt-2">
+                                                                <div><span className="text-muted-foreground">Pelmet: </span><span className="font-medium text-indigo-700">Yes</span></div>
+                                                                {(item as any).pelmetType && <div><span className="text-muted-foreground">Type: </span><span className="font-medium">{(item as any).pelmetType}</span></div>}
+                                                                {(item as any).pelmetColor && <div><span className="text-muted-foreground">Colour: </span><span className="font-medium">{(item as any).pelmetColor}</span></div>}
+                                                                {(item as any).pelmetSize && <div><span className="text-muted-foreground">Size: </span><span className="font-medium">{(item as any).pelmetSize}{(item as any).pelmetCustomSize ? ` (${(item as any).pelmetCustomSize}mm)` : ''}</span></div>}
+                                                            </div>
+                                                        )}
                                                         <div className="grid grid-cols-2 md:grid-cols-3 gap-x-8 gap-y-1 text-sm border-t border-blue-200 pt-3">
                                                             {item.fabricPrice != null && (
                                                                 <div className="flex justify-between">
@@ -943,6 +987,7 @@ export default function AdminOrderDetails() {
                     notes={(order as any).notes}
                     createdAt={order.createdAt}
                     data={worksheetPreview.data}
+                    isPreview={worksheetPreview.isPreview}
                     onClose={() => setWorksheetPreview(null)}
                     onAccepted={() => setWorksheetPreview(null)}
                 />

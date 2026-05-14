@@ -14,6 +14,8 @@ import {
     deleteSheerFabric,
     getSheerGroupSettings,
     updateSheerGroupSettings,
+    getSheerMotorPricing,
+    updateSheerMotorPricing,
 } from '../controllers/pricing.controller';
 import { authenticateToken, requireAdmin } from '../middleware/auth';
 
@@ -43,9 +45,13 @@ router.post('/sheer-fabric/:group', authenticateToken, requireAdmin, addSheerFab
 router.put('/sheer-fabric/:group/:fabricName', authenticateToken, requireAdmin, updateSheerFabricPricing);
 router.delete('/sheer-fabric/:group/:fabricName', authenticateToken, requireAdmin, deleteSheerFabric);
 
-// Sheer group settings (drop surcharge per group)
+// Sheer group settings (drop + fullness surcharges per group)
 router.get('/sheer-group-settings', authenticateToken, requireAdmin, getSheerGroupSettings);
 router.put('/sheer-group-settings/:group', authenticateToken, requireAdmin, updateSheerGroupSettings);
+
+// Sheer motor pricing by width range (admin)
+router.get('/sheer-motor-pricing', authenticateToken, requireAdmin, getSheerMotorPricing);
+router.put('/sheer-motor-pricing/:motorType/:widthFrom', authenticateToken, requireAdmin, updateSheerMotorPricing);
 
 // View pricing matrix — supports groups 1-5
 router.get('/:fabricGroup', authenticateToken, getPricingMatrix);

@@ -56,7 +56,7 @@ export default function OrderManagement() {
         try {
             const params: any = {};
             if (statusFilter !== 'ALL') params.status = statusFilter;
-            if (customerSearch.trim()) params.customerName = customerSearch.trim();
+            if (customerSearch.trim()) params.search = customerSearch.trim();
             if (dateFrom) params.dateFrom = dateFrom;
             if (dateTo) params.dateTo = dateTo;
             if (productTypeFilter !== 'ALL') params.productType = productTypeFilter;
@@ -198,11 +198,11 @@ export default function OrderManagement() {
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <input
                         type="text"
-                        placeholder="Search by customer..."
+                        placeholder="Customer or reference..."
                         value={customerSearch}
                         onChange={(e) => setCustomerSearch(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && fetchOrders()}
-                        className="h-9 w-52 rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        className="h-9 w-60 rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     />
                 </div>
                 <div className="flex items-center gap-2">
@@ -298,8 +298,8 @@ export default function OrderManagement() {
                                             )}
                                             <td className="p-4 align-middle">{order.items.length} items</td>
                                             {!isWarehouse && <td className="p-4 align-middle">${Number(order.total).toFixed(2)}</td>}
-                                            <td className="p-4 align-middle text-right whitespace-nowrap">
-                                                <div className="flex justify-end gap-2">
+                                            <td className="p-2 align-middle text-right whitespace-nowrap min-w-[220px]">
+                                                <div className="flex justify-end flex-wrap gap-1.5">
                                                     <Link to={`${basePath}/orders/${order.orderNumber}?tab=${statusFilter}`}>
                                                         <Button variant="ghost" size="icon" title="View Details">
                                                             <Eye className="h-4 w-4" />

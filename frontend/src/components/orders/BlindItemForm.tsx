@@ -23,7 +23,7 @@ import {
 } from '../../data/hardware';
 import { Trash2, AlertCircle, Copy, PlusCircle } from 'lucide-react';
 import { pricingApi } from '../../services/api';
-import { PELMET_TYPES, PELMET_COLORS, PELMET_SIZES, REMOTE_OPTIONS, CHARGER_HUB_OPTIONS } from '../../data/sheerHardware';
+import { PELMET_TYPES, PELMET_COLORS, PELMET_SIZES, BLIND_REMOTE_OPTIONS, BLIND_CHARGER_HUB_OPTIONS } from '../../data/sheerHardware';
 
 interface SimplePriceBreakdown {
     fabricBase: number;
@@ -62,6 +62,8 @@ export function BlindItemForm({ index, onRemove, onCopy, onContinue, canRemove =
     const controlSide = useWatch({ control, name: `items.${index}.controlSide` });
     const requiresPelmet = useWatch({ control, name: `items.${index}.requiresPelmet` });
     const pelmetSize = useWatch({ control, name: `items.${index}.pelmetSize` });
+    const remotes = useWatch({ control, name: `items.${index}.remotes` });
+    const chargerHub = useWatch({ control, name: `items.${index}.chargerHub` });
 
     // Validation error state
     const [validationError, setValidationError] = useState<string | null>(null);
@@ -76,6 +78,9 @@ export function BlindItemForm({ index, onRemove, onCopy, onContinue, canRemove =
 
     // Show chain type dropdown only for winders
     const showChainType = chainOrMotor && isWinderMotor(chainOrMotor);
+
+    // Show Remote & Charger only for motorised (non-winder) selections
+    const showRemoteCharger = !!(chainOrMotor && !isWinderMotor(chainOrMotor));
 
     // Helper: returns red ring class if highlightEmpty is on and the field is empty/zero
     const emptyRing = (val: any) =>
@@ -328,24 +333,50 @@ export function BlindItemForm({ index, onRemove, onCopy, onContinue, canRemove =
                 </div>
 
                 {/* Motor/Chain Selection */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-green-50 p-4 rounded-md">
-                    <div className="space-y-2">
-                        <Label>Chain/Motor</Label>
-                        <Select
-                            {...register(`items.${index}.chainOrMotor`)}
-                            options={MOTOR_OPTIONS}
-                            placeholder="Select Motor/Winder"
-                        />
-                    </div>
-                    {showChainType && (
+                <div className="bg-green-50 p-4 rounded-md space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <Label>Chain Type <span className="text-xs text-gray-500">(Winder only)</span></Label>
+                            <Label>Chain/Motor</Label>
                             <Select
-                                {...register(`items.${index}.chainType`)}
-                                options={toSelectOptions(CHAIN_TYPES)}
-                                placeholder="Select Chain"
-                                className={emptyRing(chainType)}
+                                {...register(`items.${index}.chainOrMotor`)}
+                                options={MOTOR_OPTIONS}
+                                placeholder="Select Motor/Winder"
                             />
+                        </div>
+                        {showChainType && (
+                            <div className="space-y-2">
+                                <Label>Chain Type <span className="text-xs text-gray-500">(Winder only)</span></Label>
+                                <Select
+                                    {...register(`items.${index}.chainType`)}
+                                    options={toSelectOptions(CHAIN_TYPES)}
+                                    placeholder="Select Chain"
+                                    className={emptyRing(chainType)}
+                                />
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Remote & Charger — mandatory for motorised (non-winder) blinds */}
+                    {showRemoteCharger && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1 border-t border-green-200">
+                            <div className="space-y-2">
+                                <Label>Remote Control <span className="text-red-500">*</span></Label>
+                                <Select
+                                    {...register(`items.${index}.remotes`)}
+                                    options={BLIND_REMOTE_OPTIONS.map(r => ({ label: r, value: r }))}
+                                    placeholder="Select Remote"
+                                    className={emptyRing(remotes)}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Charger / Hub <span className="text-red-500">*</span></Label>
+                                <Select
+                                    {...register(`items.${index}.chargerHub`)}
+                                    options={BLIND_CHARGER_HUB_OPTIONS.map(c => ({ label: c, value: c }))}
+                                    placeholder="Select Charger/Hub"
+                                    className={emptyRing(chargerHub)}
+                                />
+                            </div>
                         </div>
                     )}
                 </div>
@@ -492,28 +523,6 @@ export function BlindItemForm({ index, onRemove, onCopy, onContinue, canRemove =
                     )}
                 </div>
 
-                {/* Remote / Charger (optional motorised accessories) */}
-                <div className="bg-teal-50 rounded-lg p-4 space-y-3">
-                    <Label className="font-semibold text-teal-800">Remote &amp; Charger (optional)</Label>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
-                        <div className="space-y-2">
-                            <Label>Remote Control</Label>
-                            <Select
-                                {...register(`items.${index}.remotes`)}
-                                options={REMOTE_OPTIONS.map(r => ({ label: r, value: r }))}
-                                placeholder="Not Required"
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Charger / Hub</Label>
-                            <Select
-                                {...register(`items.${index}.chargerHub`)}
-                                options={CHARGER_HUB_OPTIONS.map(c => ({ label: c, value: c }))}
-                                placeholder="Not Required"
-                            />
-                        </div>
-                    </div>
-                </div>
 
                 {/* Action Buttons */}
                 <div className="border-t pt-4 mt-2">

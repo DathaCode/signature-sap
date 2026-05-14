@@ -347,7 +347,7 @@ model OrderItem {
   motorType         String?       @map("motor_type") @db.VarChar(100)       // "Alpha AC" / "Alpha DC" / "Versa AC" / "Versa DC"
   trackControlSide  String?       @map("track_control_side") @db.VarChar(20) // "Right" / "Left"
   remotes           String?       @db.VarChar(50)                            // "Single Channel" / "5 Channel" / "15 Channel"
-  chargerHub        String?       @map("charger_hub") @db.VarChar(50)       // "Alpha Charger" / "PULSE 2 Hub" / "Alpha Neo"
+  chargerHub        String?       @map("charger_hub") @db.Text              // JSON array: ["Alpha Charger","PULSE 2 Hub"]
   trackColor        String?       @map("track_color") @db.VarChar(20)       // "Black" / "White"
 
   // Bend section
@@ -463,13 +463,30 @@ model SheerFabricPricing {
   @@index([userId])
 }
 
-model SheerGroupSettings {
-  id                 Int      @id @default(autoincrement())
-  fabricGroup        String   @unique @map("fabric_group") @db.VarChar(50)
-  dropSurchargePerM  Decimal  @map("drop_surcharge_per_m") @db.Decimal(10, 2) @default(60)
+model SheerMotorPricing {
+  id         Int     @id @default(autoincrement())
+  motorType  String  @map("motor_type") @db.VarChar(20)  // "Alpha AC" | "Alpha DC" | "Versa AC" | "Versa DC"
+  widthFrom  Int     @map("width_from")                   // exclusive lower bound (0, 1999, 2999, 3999, 4999)
+  widthTo    Int     @map("width_to")                     // inclusive upper bound (1999, 2999, 3999, 4999, 6000)
+  price      Decimal @db.Decimal(10, 2)
 
-  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamp(6)
-  updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamp(6)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamp(6)
+
+  @@unique([motorType, widthFrom])
+  @@map("sheer_motor_pricing")
+}
+
+model SheerGroupSettings {
+  id                    Int      @id @default(autoincrement())
+  fabricGroup           String   @unique @map("fabric_group") @db.VarChar(50)
+  dropSurchargePerM     Decimal  @map("drop_surcharge_per_m") @db.Decimal(10, 2) @default(60)
+  fullness130Surcharge  Decimal  @map("fullness_130_surcharge") @db.Decimal(10, 2) @default(15)
+  fullness140Surcharge  Decimal  @map("fullness_140_surcharge") @db.Decimal(10, 2) @default(25)
+  fullness150Surcharge  Decimal  @map("fullness_150_surcharge") @db.Decimal(10, 2) @default(45)
+
+  createdAt             DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt             DateTime @updatedAt @map("updated_at") @db.Timestamp(6)
 
   @@map("sheer_group_settings")
 }

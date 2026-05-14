@@ -110,7 +110,7 @@ export function CurtainItemForm({ index, curtainNumber, highlightEmpty = false }
         if (!isMotorised) {
             setValue(`items.${index}.motorType`, '');
             setValue(`items.${index}.remotes`, 'Not Required');
-            setValue(`items.${index}.chargerHub`, 'Not Required');
+            setValue(`items.${index}.chargerHub`, []);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isMotorised, index]);
@@ -162,7 +162,7 @@ export function CurtainItemForm({ index, curtainNumber, highlightEmpty = false }
             trackType: trackType || undefined,
             motorType: motorType || undefined,
             remotes: remotes || undefined,
-            chargerHub: chargerHub || undefined,
+            chargerHub: Array.isArray(chargerHub) && chargerHub.length > 0 ? chargerHub : undefined,
         });
 
         setValue(`items.${index}.price`, result.total);
@@ -177,6 +177,10 @@ export function CurtainItemForm({ index, curtainNumber, highlightEmpty = false }
         setValue(`items.${index}.fabricMeters`, result.fabricMeters);
         setValue(`items.${index}.dropSurcharge`, result.dropSurcharge);
         setValue(`items.${index}.fabricCost`, result.fabricCost);
+        setValue(`items.${index}.fullnessSurcharge`, result.fullnessSurcharge);
+        setValue(`items.${index}.motorPrice`, result.motorCost);
+        setValue(`items.${index}.chainPrice`, result.remoteCost);
+        setValue(`items.${index}.clipsPrice`, result.chargerCost);
         setValue(`items.${index}.subtotal`, result.subtotal);
         setValue(`items.${index}.gst`, result.gst);
         setValue(`items.${index}.total`, result.total);
@@ -284,9 +288,9 @@ export function CurtainItemForm({ index, curtainNumber, highlightEmpty = false }
                             min={100}
                             className={emptyRing(drop)}
                         />
-                        {drop > 3000 && (
+                        {drop >= 3000 && (
                             <p className="text-xs text-orange-600 mt-1">
-                                Drop exceeds 3000mm - surcharge applies
+                                Drop exceeds 3000mm — surcharge applies
                             </p>
                         )}
                     </div>
@@ -452,13 +456,31 @@ export function CurtainItemForm({ index, curtainNumber, highlightEmpty = false }
                                 </div>
                                 <div>
                                     <Label>Charger / Hub</Label>
-                                    <Select
-                                        {...register(`items.${index}.chargerHub`)}
-                                        options={CHARGER_HUB_OPTIONS.map(t => ({ label: t, value: t }))}
-                                        placeholder={isMotorised ? 'Select charger/hub...' : 'Motorised only'}
-                                        disabled={!isMotorised}
-                                        className={isMotorised ? emptyRing(chargerHub) : ''}
-                                    />
+                                    {isMotorised ? (
+                                        <div className="mt-1 space-y-1">
+                                            {CHARGER_HUB_OPTIONS.map(opt => (
+                                                <label key={opt} className="flex items-center gap-2 text-sm cursor-pointer">
+                                                    <input
+                                                        type="checkbox"
+                                                        className="rounded border-gray-300"
+                                                        checked={Array.isArray(chargerHub) && chargerHub.includes(opt)}
+                                                        onChange={e => {
+                                                            const current: string[] = Array.isArray(chargerHub) ? chargerHub : [];
+                                                            setValue(
+                                                                `items.${index}.chargerHub`,
+                                                                e.target.checked
+                                                                    ? [...current, opt]
+                                                                    : current.filter(v => v !== opt)
+                                                            );
+                                                        }}
+                                                    />
+                                                    {opt}
+                                                </label>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <p className="text-sm text-muted-foreground mt-1 italic">Motorised only</p>
+                                    )}
                                 </div>
                                 <div>
                                     <Label>Track Color</Label>
@@ -498,6 +520,12 @@ export function CurtainItemForm({ index, curtainNumber, highlightEmpty = false }
                             </label>
                         </div>
                     </div>
+
+                    {requiresBentTracks && (
+                        <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800 font-medium">
+                            Bent track pricing will be confirmed separately — Total will be added after reviewing your drawings
+                        </div>
+                    )}
 
                     {requiresBentTracks && (
                         <div className="space-y-3 pt-2">

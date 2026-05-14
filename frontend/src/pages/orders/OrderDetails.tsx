@@ -22,7 +22,7 @@ export default function OrderDetails() {
     const hasPriceBreakdown = (item: BlindItem | CurtainItem) => {
         if (isCurtainOrder) {
             const c = item as CurtainItem;
-            return c.fabricCost != null || c.hookCost != null || c.bracketCost != null;
+            return c.fabricCost != null || c.fullnessSurcharge != null || c.motorPrice != null || c.dropSurcharge != null;
         }
         const b = item as BlindItem;
         return b.fabricPrice != null || b.motorPrice != null || b.bracketPrice != null || b.fixing != null;
@@ -232,38 +232,53 @@ export default function OrderDetails() {
                                                                     {item.motorType && <div><span className="text-muted-foreground">Motor: </span><span className="font-medium">{item.motorType}</span></div>}
                                                                     {item.trackControlSide && <div><span className="text-muted-foreground">Control: </span><span className="font-medium">{item.trackControlSide}</span></div>}
                                                                     {item.remotes && <div><span className="text-muted-foreground">Remote: </span><span className="font-medium">{item.remotes}</span></div>}
+                                                                    {item.chargerHub && (() => {
+                                                                        const hubs = Array.isArray(item.chargerHub) ? item.chargerHub : (() => { try { return JSON.parse(item.chargerHub as any); } catch { return [item.chargerHub]; } })();
+                                                                        return hubs.length > 0 ? <div className="col-span-full"><span className="text-muted-foreground">Charger/Hub: </span><span className="font-medium">{hubs.join(', ')}</span></div> : null;
+                                                                    })()}
                                                                 </div>
                                                             )}
                                                             {hasBreakdown && (
                                                                 <div className="grid grid-cols-2 md:grid-cols-3 gap-x-8 gap-y-1 text-sm border-t border-teal-200 pt-3">
                                                                     {item.fabricCost != null && (
                                                                         <div className="flex justify-between">
-                                                                            <span className="text-muted-foreground">Fabric:</span>
+                                                                            <span className="text-muted-foreground">Fabric ({(item as CurtainItem).fullness ?? 120}mm):</span>
                                                                             <span className="font-medium">${Number(item.fabricCost).toFixed(2)}</span>
                                                                         </div>
                                                                     )}
-                                                                    {item.hookCost != null && Number(item.hookCost) > 0 && (
+                                                                    {(item as CurtainItem).fullnessSurcharge != null && Number((item as CurtainItem).fullnessSurcharge) > 0 && (
                                                                         <div className="flex justify-between">
-                                                                            <span className="text-muted-foreground">Hooks:</span>
-                                                                            <span>+${Number(item.hookCost).toFixed(2)}</span>
+                                                                            <span className="text-muted-foreground">Fullness surcharge:</span>
+                                                                            <span>+${Number((item as CurtainItem).fullnessSurcharge).toFixed(2)}</span>
                                                                         </div>
                                                                     )}
-                                                                    {item.bracketCost != null && Number(item.bracketCost) > 0 && (
+                                                                    {item.motorPrice != null && Number(item.motorPrice) > 0 && (
                                                                         <div className="flex justify-between">
-                                                                            <span className="text-muted-foreground">Brackets:</span>
-                                                                            <span>+${Number(item.bracketCost).toFixed(2)}</span>
+                                                                            <span className="text-muted-foreground">Motor:</span>
+                                                                            <span>+${Number(item.motorPrice).toFixed(2)}</span>
                                                                         </div>
                                                                     )}
-                                                                    {item.wandCost != null && Number(item.wandCost) > 0 && (
+                                                                    {item.chainPrice != null && Number(item.chainPrice) > 0 && (
                                                                         <div className="flex justify-between">
-                                                                            <span className="text-muted-foreground">Wands:</span>
-                                                                            <span>+${Number(item.wandCost).toFixed(2)}</span>
+                                                                            <span className="text-muted-foreground">Remote:</span>
+                                                                            <span>+${Number(item.chainPrice).toFixed(2)}</span>
+                                                                        </div>
+                                                                    )}
+                                                                    {item.clipsPrice != null && Number(item.clipsPrice) > 0 && (
+                                                                        <div className="flex justify-between">
+                                                                            <span className="text-muted-foreground">Charger/Hub:</span>
+                                                                            <span>+${Number(item.clipsPrice).toFixed(2)}</span>
                                                                         </div>
                                                                     )}
                                                                     {item.dropSurcharge != null && Number(item.dropSurcharge) > 0 && (
                                                                         <div className="flex justify-between">
                                                                             <span className="text-muted-foreground">Drop Surcharge:</span>
-                                                                            <span>+${Number(item.dropSurcharge).toFixed(2)}</span>
+                                                                            <span className="text-orange-600">+${Number(item.dropSurcharge).toFixed(2)}</span>
+                                                                        </div>
+                                                                    )}
+                                                                    {(item as CurtainItem).requiresBentTracks && (
+                                                                        <div className="col-span-full text-amber-700 text-xs font-medium">
+                                                                            Bent track pricing will be confirmed separately — Total will be added after reviewing your drawings
                                                                         </div>
                                                                     )}
                                                                 </div>
@@ -317,7 +332,17 @@ export default function OrderDetails() {
                                                             {item.chainType && <div><span className="text-muted-foreground">Chain Type: </span><span className="font-medium">{item.chainType}</span></div>}
                                                             {item.bottomRailType && <div><span className="text-muted-foreground">Bottom Rail: </span><span className="font-medium">{item.bottomRailType}</span></div>}
                                                             {item.bottomRailColour && <div><span className="text-muted-foreground">Rail Colour: </span><span className="font-medium">{item.bottomRailColour}</span></div>}
+                                                            {item.remotes && item.remotes !== 'Not Required' && <div><span className="text-muted-foreground">Remote: </span><span className="font-medium">{item.remotes}</span></div>}
+                                                            {item.chargerHub && item.chargerHub !== 'Not Required' && <div><span className="text-muted-foreground">Charger/Hub: </span><span className="font-medium">{item.chargerHub as string}</span></div>}
                                                         </div>
+                                                        {item.requiresPelmet && (
+                                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-1 text-sm mb-3 border-t border-blue-200 pt-2">
+                                                                <div><span className="text-muted-foreground">Pelmet: </span><span className="font-medium text-indigo-700">Yes</span></div>
+                                                                {item.pelmetType && <div><span className="text-muted-foreground">Type: </span><span className="font-medium">{item.pelmetType}</span></div>}
+                                                                {item.pelmetColor && <div><span className="text-muted-foreground">Colour: </span><span className="font-medium">{item.pelmetColor}</span></div>}
+                                                                {item.pelmetSize && <div><span className="text-muted-foreground">Size: </span><span className="font-medium">{item.pelmetSize}{item.pelmetCustomSize ? ` (${item.pelmetCustomSize}mm)` : ''}</span></div>}
+                                                            </div>
+                                                        )}
                                                         <div className="grid grid-cols-2 md:grid-cols-3 gap-x-8 gap-y-1 text-sm border-t border-blue-200 pt-3">
                                                             {item.fabricPrice != null && (
                                                                 <div className="flex justify-between">

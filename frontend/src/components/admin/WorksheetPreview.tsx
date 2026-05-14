@@ -20,9 +20,11 @@ interface Props {
     data: WorksheetPreviewResponse;
     onClose: () => void;
     onAccepted: () => void;
+    /** When true (CONFIRMED state preview) hides Accept/Download buttons */
+    isPreview?: boolean;
 }
 
-export default function WorksheetPreview({ orderId, orderNumber, productType, customerReference, data, onClose, onAccepted }: Props) {
+export default function WorksheetPreview({ orderId, orderNumber, productType, customerReference, data, onClose, onAccepted, isPreview = false }: Props) {
     const isCurtain = productType === 'CURTAINS' || (data.worksheetData.fabricCutData as any)?.type === 'CURTAINS';
     const [activeTab, setActiveTab] = useState<'fabric' | 'tube'>('fabric');
     const [accepting, setAccepting] = useState(false);
@@ -104,7 +106,9 @@ export default function WorksheetPreview({ orderId, orderNumber, productType, cu
                             )}
                         </h2>
                         <p className="text-sm text-gray-500">
-                            {isAccepted
+                            {isPreview
+                                ? 'Preview only — send to production to accept worksheets'
+                                : isAccepted
                                 ? `Accepted on ${new Date(previewData.worksheetData.acceptedAt!).toLocaleDateString()}`
                                 : 'Review and accept worksheets'
                             }
@@ -188,7 +192,7 @@ export default function WorksheetPreview({ orderId, orderNumber, productType, cu
                 <div className="flex items-center justify-between px-6 py-4 border-t bg-gray-50">
                     <div className="flex gap-2">
                         {/* Download buttons for curtain orders */}
-                        {isCurtain && (
+                        {isCurtain && !isPreview && (
                             <>
                                 <Button
                                     variant="outline"
@@ -210,8 +214,8 @@ export default function WorksheetPreview({ orderId, orderNumber, productType, cu
                                 </Button>
                             </>
                         )}
-                        {/* Download buttons — not shown for curtain orders */}
-                        {!isCurtain && activeTab === 'fabric' && (
+                        {/* Download buttons — not shown for curtain orders or preview mode */}
+                        {!isCurtain && !isPreview && activeTab === 'fabric' && (
                             <>
                                 <Button
                                     variant="outline"
@@ -233,7 +237,7 @@ export default function WorksheetPreview({ orderId, orderNumber, productType, cu
                                 </Button>
                             </>
                         )}
-                        {!isCurtain && activeTab === 'tube' && (
+                        {!isCurtain && !isPreview && activeTab === 'tube' && (
                             <>
                                 <Button
                                     variant="outline"
@@ -258,7 +262,7 @@ export default function WorksheetPreview({ orderId, orderNumber, productType, cu
                     </div>
 
                     <div className="flex gap-2">
-                        {!isAccepted && (
+                        {!isPreview && !isAccepted && (
                             <Button
                                 onClick={handleAccept}
                                 disabled={accepting || hasInsufficientStock}

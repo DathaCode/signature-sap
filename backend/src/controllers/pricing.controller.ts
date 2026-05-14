@@ -323,7 +323,7 @@ const calculateCurtainPriceSchema = z.object({
     trackType: z.string().optional(),
     motorType: z.string().optional(),
     remotes: z.string().optional(),
-    chargerHub: z.string().optional(),
+    chargerHub: z.array(z.string()).optional(),
 });
 
 /**
@@ -547,19 +547,84 @@ export const updateSheerGroupSettings = async (
 ): Promise<void> => {
     try {
         const group = decodeURIComponent(req.params.group as string);
-        const { dropSurchargePerM } = req.body;
+        const { dropSurchargePerM, fullness130Surcharge, fullness140Surcharge, fullness150Surcharge } = req.body;
 
-        if (dropSurchargePerM === undefined || dropSurchargePerM < 0) {
-            throw new AppError(400, 'dropSurchargePerM must be a non-negative number');
+        const updateData: Record<string, any> = {};
+        if (dropSurchargePerM !== undefined) {
+            if (dropSurchargePerM < 0) throw new AppError(400, 'dropSurchargePerM must be non-negative');
+            updateData.dropSurchargePerM = dropSurchargePerM;
+        }
+        if (fullness130Surcharge !== undefined) updateData.fullness130Surcharge = fullness130Surcharge;
+        if (fullness140Surcharge !== undefined) updateData.fullness140Surcharge = fullness140Surcharge;
+        if (fullness150Surcharge !== undefined) updateData.fullness150Surcharge = fullness150Surcharge;
+
+        if (Object.keys(updateData).length === 0) {
+            throw new AppError(400, 'No fields to update');
         }
 
         const updated = await prisma.sheerGroupSettings.upsert({
             where: { fabricGroup: group },
-            update: { dropSurchargePerM },
-            create: { fabricGroup: group, dropSurchargePerM },
+            update: updateData,
+            create: {
+                fabricGroup: group,
+                dropSurchargePerM: dropSurchargePerM ?? 60,
+                fullness130Surcharge: fullness130Surcharge ?? 15,
+                fullness140Surcharge: fullness140Surcharge ?? 25,
+                fullness150Surcharge: fullness150Surcharge ?? 45,
+            },
         });
 
         res.json({ success: true, data: { settings: updated } });
+    } catch (error) {
+        next(error);
+    }
+};
+
+// ============================================================================
+// SHEER MOTOR PRICING (by width range)
+// ============================================================================
+
+/**
+ * GET /api/pricing/sheer-motor — returns all motor pricing rows for admin UI
+ */
+export const getSheerMotorPricing = async (
+    _req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> => {
+    try {
+        const rows = await prisma.sheerMotorPricing.findMany({
+            orderBy: [{ motorType: 'asc' }, { widthFrom: 'asc' }],
+        });
+        res.json({ success: true, data: { rows } });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * PUT /api/pricing/sheer-motor/:motorType/:widthFrom — update one cell
+ */
+export const updateSheerMotorPricing = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> => {
+    try {
+        const motorType = decodeURIComponent(req.params.motorType as string);
+        const widthFrom = parseInt(req.params.widthFrom as string, 10);
+        const { price } = req.body;
+
+        if (typeof price !== 'number' || price < 0) {
+            throw new AppError(400, 'price must be a non-negative number');
+        }
+
+        const updated = await prisma.sheerMotorPricing.update({
+            where: { motorType_widthFrom: { motorType, widthFrom } },
+            data: { price },
+        });
+
+        res.json({ success: true, data: { row: updated } });
     } catch (error) {
         next(error);
     }

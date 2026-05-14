@@ -276,7 +276,7 @@ export const pricingApi = {
         trackType?: string;
         motorType?: string;
         remotes?: string;
-        chargerHub?: string;
+        chargerHub?: string[];
     }): Promise<{
         deductedDrop: number;
         hookCount: number;
@@ -288,13 +288,11 @@ export const pricingApi = {
         wandCount: number;
         dropSurcharge: number;
         fabricCost: number;
-        hookCost: number;
-        bracketCost: number;
-        wandCost: number;
-        subtotal: number;
+        fullnessSurcharge: number;
         motorCost: number;
         remoteCost: number;
         chargerCost: number;
+        subtotal: number;
         gst: number;
         total: number;
     }> => {
@@ -365,16 +363,37 @@ export const pricingApi = {
         id: number;
         fabricGroup: string;
         dropSurchargePerM: number;
+        fullness130Surcharge: number;
+        fullness140Surcharge: number;
+        fullness150Surcharge: number;
     }>> => {
         const response = await api.get('/pricing/sheer-group-settings')
         return response.data.data.settings
     },
 
+    updateSheerGroupSettings: async (
+        group: string,
+        data: { dropSurchargePerM?: number; fullness130Surcharge?: number; fullness140Surcharge?: number; fullness150Surcharge?: number }
+    ): Promise<void> => {
+        await api.put(`/pricing/sheer-group-settings/${encodeURIComponent(group)}`, data)
+    },
+
     /**
-     * Update drop surcharge for a sheer group (admin)
+     * Get sheer motor pricing by width range (admin)
      */
-    updateSheerGroupSettings: async (group: string, dropSurchargePerM: number): Promise<void> => {
-        await api.put(`/pricing/sheer-group-settings/${encodeURIComponent(group)}`, { dropSurchargePerM })
+    getSheerMotorPricing: async (): Promise<Array<{
+        id: number;
+        motorType: string;
+        widthFrom: number;
+        widthTo: number;
+        price: number;
+    }>> => {
+        const response = await api.get('/pricing/sheer-motor-pricing')
+        return response.data.data.rows
+    },
+
+    updateSheerMotorPricing: async (motorType: string, widthFrom: number, price: number): Promise<void> => {
+        await api.put(`/pricing/sheer-motor-pricing/${encodeURIComponent(motorType)}/${widthFrom}`, { price })
     },
 }
 

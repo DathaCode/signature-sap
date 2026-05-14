@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Ca
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
-import { Loader2, ArrowLeft, ShoppingCart, Calendar, ChevronDown, ChevronUp, Pencil, Save, X, Plus, RefreshCw } from 'lucide-react';
+import { Loader2, ArrowLeft, ShoppingCart, Calendar, ChevronDown, ChevronUp, Pencil, Save, X, Plus } from 'lucide-react';
 import { format } from 'date-fns';
 import { gooeyToast } from 'goey-toast';
 import { confirmToast } from '../../utils/confirmToast';
@@ -68,14 +68,20 @@ interface QuoteItem {
     motorType?: string;
     trackControlSide?: string;
     remotes?: string;
-    chargerHub?: string;
+    chargerHub?: string[];
     trackColor?: string;
+    requiresBentTracks?: boolean;
     // Shared pricing
     price?: number;
     discountPercent?: number;
     fabricPrice?: number;
     motorPrice?: number;
     bracketPrice?: number;
+    // Curtain-specific pricing breakdown
+    fullnessSurcharge?: number;
+    chainPrice?: number;
+    clipsPrice?: number;
+    dropSurcharge?: number;
 }
 
 interface QuoteDetail {
@@ -106,24 +112,18 @@ const sel = "h-8 text-xs px-2 rounded-md border border-input bg-background w-ful
 const inp = "h-8 text-xs px-2";
 
 // ─── Blind edit item ─────────────────────────────────────────────────────────
-function EditBlindItem({ item, index, onChange, onRemove, onRecalculate }: {
+function EditBlindItem({ item, index, onChange, onRemove }: {
     item: QuoteItem;
     index: number;
     onChange: (idx: number, field: keyof QuoteItem, value: any) => void;
     onRemove: (idx: number) => void;
-    onRecalculate: (idx: number) => void;
 }) {
     const f = (field: keyof QuoteItem, value: any) => onChange(index, field, value);
     return (
         <div className="border rounded-lg p-3 space-y-2 bg-gray-50">
             <div className="flex items-center justify-between mb-1">
                 <span className="text-xs font-semibold text-gray-600">Blind {index + 1}</span>
-                <div className="flex gap-2">
-                    <button onClick={() => onRecalculate(index)} className="text-blue-500 hover:text-blue-700 text-xs flex items-center gap-1">
-                        <RefreshCw className="h-3 w-3" />Recalculate
-                    </button>
-                    <button onClick={() => onRemove(index)} className="text-red-400 hover:text-red-600"><X className="h-4 w-4" /></button>
-                </div>
+                <button onClick={() => onRemove(index)} className="text-red-400 hover:text-red-600"><X className="h-4 w-4" /></button>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 <div><label className="text-xs text-gray-500">Location</label><Input className={inp} value={item.location || ''} onChange={e => f('location', e.target.value)} /></div>
@@ -217,12 +217,11 @@ function EditBlindItem({ item, index, onChange, onRemove, onRecalculate }: {
 }
 
 // ─── Curtain edit item ────────────────────────────────────────────────────────
-function EditCurtainItem({ item, index, onChange, onRemove, onRecalculate, fabrics }: {
+function EditCurtainItem({ item, index, onChange, onRemove, fabrics }: {
     item: QuoteItem;
     index: number;
     onChange: (idx: number, field: keyof QuoteItem, value: any) => void;
     onRemove: (idx: number) => void;
-    onRecalculate: (idx: number) => void;
     fabrics: Array<{ fabricName: string; fabricGroup: string }>;
 }) {
     const f = (field: keyof QuoteItem, value: any) => onChange(index, field, value);
@@ -230,12 +229,7 @@ function EditCurtainItem({ item, index, onChange, onRemove, onRecalculate, fabri
         <div className="border rounded-lg p-3 space-y-2 bg-purple-50">
             <div className="flex items-center justify-between mb-1">
                 <span className="text-xs font-semibold text-purple-700">Curtain {index + 1}</span>
-                <div className="flex gap-2">
-                    <button onClick={() => onRecalculate(index)} className="text-blue-500 hover:text-blue-700 text-xs flex items-center gap-1">
-                        <RefreshCw className="h-3 w-3" />Recalculate
-                    </button>
-                    <button onClick={() => onRemove(index)} className="text-red-400 hover:text-red-600"><X className="h-4 w-4" /></button>
-                </div>
+                <button onClick={() => onRemove(index)} className="text-red-400 hover:text-red-600"><X className="h-4 w-4" /></button>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 <div><label className="text-xs text-gray-500">Location</label><Input className={inp} value={item.location || ''} onChange={e => f('location', e.target.value)} /></div>
@@ -405,81 +399,72 @@ export default function QuoteDetails() {
         }
     };
 
-    const handleRecalculate = async (idx: number) => {
-        const item = editItems[idx];
-        if (!item) return;
-        try {
-            if (isCurtainQuote) {
-                if (!item.fabric || !item.openingType || !item.fullness || !item.bracketType || !item.fabricGroup) {
-                    gooeyToast.error('Fill in fabric, opening type, fullness and bracket type first');
-                    return;
-                }
-                const calc = await pricingApi.calculateCurtainPrice({
-                    width: Number(item.width),
-                    drop: Number(item.drop),
-                    openingType: item.openingType!,
-                    fullness: Number(item.fullness),
-                    bracketType: item.bracketType!,
-                    fabric: item.fabric!,
-                    fabricGroup: item.fabricGroup!,
-                    requiresDropDeduction: true,
-                    dropDeductionValue: 35,
-                    requiresTracks: item.requiresTracks || false,
-                    trackType: item.trackType,
-                    motorType: item.motorType,
-                    remotes: item.remotes,
-                    chargerHub: item.chargerHub,
-                });
-                handleItemChange(idx, 'price', calc.total);
-                gooeyToast.success(`Price updated: $${calc.total.toFixed(2)}`);
-            } else {
-                if (!item.material || !item.fabricType || !item.fabricColour || !item.chainOrMotor || !item.bracketType || !item.bracketColour || !item.bottomRailType || !item.bottomRailColour) {
-                    gooeyToast.error('Fill in all fabric and hardware fields first');
-                    return;
-                }
-                const result = await pricingApi.calculateBlindPrice({
-                    width: Number(item.width),
-                    drop: Number(item.drop),
-                    material: item.material!,
-                    fabricType: item.fabricType!,
-                    fabricColour: item.fabricColour!,
-                    chainOrMotor: item.chainOrMotor!,
-                    chainType: item.chainType,
-                    bracketType: item.bracketType!,
-                    bracketColour: item.bracketColour!,
-                    bottomRailType: item.bottomRailType!,
-                    bottomRailColour: item.bottomRailColour!,
-                });
-                setEditItems(prev => prev.map((it, i) => i === idx ? {
-                    ...it,
-                    price: result.totalPrice,
-                    discountPercent: result.discountPercent,
-                    fabricPrice: result.fabricPrice,
-                    motorPrice: result.motorChainPrice,
-                    bracketPrice: result.bracketPrice,
-                } : it));
-                gooeyToast.success(`Price updated: $${result.totalPrice.toFixed(2)}`);
-            }
-        } catch (err: any) {
-            gooeyToast.error(err.response?.data?.message || 'Failed to recalculate price');
-        }
-    };
-
     const handleSaveEdit = async () => {
         if (!quote) return;
         if (editItems.length === 0) { gooeyToast.error('At least one item required'); return; }
         setSavingEdit(true);
-        // Recalculate subtotal/total from items
-        const subtotal = editItems.reduce((sum, it) => sum + (Number(it.price) || 0), 0);
         try {
+            // Auto-recalculate all item prices before saving
+            const recalculated = await Promise.all(editItems.map(async (item) => {
+                try {
+                    if (isCurtainQuote) {
+                        if (!item.fabric || !item.openingType || !item.fullness || !item.bracketType || !item.fabricGroup) return item;
+                        const calc = await pricingApi.calculateCurtainPrice({
+                            width: Number(item.width),
+                            drop: Number(item.drop),
+                            openingType: item.openingType!,
+                            fullness: Number(item.fullness),
+                            bracketType: item.bracketType!,
+                            fabric: item.fabric!,
+                            fabricGroup: item.fabricGroup!,
+                            requiresDropDeduction: true,
+                            dropDeductionValue: 35,
+                            requiresTracks: item.requiresTracks || false,
+                            trackType: item.trackType,
+                            motorType: item.motorType,
+                            remotes: item.remotes,
+                            chargerHub: item.chargerHub,
+                        });
+                        return {
+                            ...item,
+                            price: calc.total,
+                            fabricPrice: calc.fabricCost,
+                            fullnessSurcharge: calc.fullnessSurcharge,
+                            motorPrice: calc.motorCost,
+                            chainPrice: calc.remoteCost,
+                            clipsPrice: calc.chargerCost,
+                            dropSurcharge: calc.dropSurcharge,
+                        };
+                    } else {
+                        if (!item.material || !item.fabricType || !item.fabricColour || !item.chainOrMotor || !item.bracketType || !item.bracketColour || !item.bottomRailType || !item.bottomRailColour) return item;
+                        const result = await pricingApi.calculateBlindPrice({
+                            width: Number(item.width),
+                            drop: Number(item.drop),
+                            material: item.material!,
+                            fabricType: item.fabricType!,
+                            fabricColour: item.fabricColour!,
+                            chainOrMotor: item.chainOrMotor!,
+                            chainType: item.chainType,
+                            bracketType: item.bracketType!,
+                            bracketColour: item.bracketColour!,
+                            bottomRailType: item.bottomRailType!,
+                            bottomRailColour: item.bottomRailColour!,
+                        });
+                        return { ...item, price: result.totalPrice, discountPercent: result.discountPercent, fabricPrice: result.fabricPrice, motorPrice: result.motorChainPrice, bracketPrice: result.bracketPrice };
+                    }
+                } catch {
+                    return item;
+                }
+            }));
+            const subtotal = recalculated.reduce((sum, it) => sum + (Number(it.price) || 0), 0);
             const updated = await quoteApi.updateQuote(quote.id, {
-                items: editItems,
+                items: recalculated,
                 notes: editNotes,
                 customerReference: editRef || null,
             });
-            setQuote({ ...quote, ...updated, items: editItems, notes: editNotes, customerReference: editRef, subtotal, total: subtotal });
+            setQuote({ ...quote, ...updated, items: recalculated, notes: editNotes, customerReference: editRef, subtotal, total: subtotal });
             setEditing(false);
-            gooeyToast.success('Quote updated');
+            gooeyToast.success('Quote updated with recalculated prices');
         } catch (err: any) {
             gooeyToast.error(err.response?.data?.message || 'Failed to save changes');
         } finally {
@@ -629,7 +614,6 @@ export default function QuoteDetails() {
                                         index={idx}
                                         onChange={handleItemChange}
                                         onRemove={handleRemoveItem}
-                                        onRecalculate={handleRecalculate}
                                         fabrics={fabrics}
                                     />
                                 ) : (
@@ -639,7 +623,6 @@ export default function QuoteDetails() {
                                         index={idx}
                                         onChange={handleItemChange}
                                         onRemove={handleRemoveItem}
-                                        onRecalculate={handleRecalculate}
                                     />
                                 )
                             )}
@@ -733,12 +716,22 @@ export default function QuoteDetails() {
                                                                     <DetailRow label="Track Type" value={item.trackType} />
                                                                     {item.motorType && <DetailRow label="Motor Type" value={item.motorType} />}
                                                                     {item.remotes && item.remotes !== 'Not Required' && <DetailRow label="Remotes" value={item.remotes} />}
-                                                                    {item.chargerHub && item.chargerHub !== 'Not Required' && <DetailRow label="Charger/Hub" value={item.chargerHub} />}
+                                                                    {item.chargerHub && Array.isArray(item.chargerHub) && item.chargerHub.length > 0 && <DetailRow label="Charger/Hub" value={item.chargerHub.join(', ')} />}
                                                                     <DetailRow label="Track Color" value={item.trackColor} />
                                                                 </>}
-                                                                {item.fabricPrice != null && (
+                                                                {(item.fabricPrice != null || item.fullnessSurcharge != null || item.motorPrice != null || item.dropSurcharge != null) && (
                                                                     <div className="col-span-full mt-2 pt-2 border-t border-purple-200 grid grid-cols-2 md:grid-cols-3 gap-x-8 gap-y-1">
-                                                                        <DetailRow label="Fabric Cost" value={`$${Number(item.fabricPrice).toFixed(2)}`} />
+                                                                        {item.fabricPrice != null && <DetailRow label={`Fabric (${item.fullness ?? 120}mm)`} value={`$${Number(item.fabricPrice).toFixed(2)}`} />}
+                                                                        {item.fullnessSurcharge != null && Number(item.fullnessSurcharge) > 0 && <DetailRow label="Fullness surcharge" value={`+$${Number(item.fullnessSurcharge).toFixed(2)}`} />}
+                                                                        {item.motorPrice != null && Number(item.motorPrice) > 0 && <DetailRow label="Motor" value={`+$${Number(item.motorPrice).toFixed(2)}`} />}
+                                                                        {item.chainPrice != null && Number(item.chainPrice) > 0 && <DetailRow label="Remote" value={`+$${Number(item.chainPrice).toFixed(2)}`} />}
+                                                                        {item.clipsPrice != null && Number(item.clipsPrice) > 0 && <DetailRow label="Charger/Hub" value={`+$${Number(item.clipsPrice).toFixed(2)}`} />}
+                                                                        {item.dropSurcharge != null && Number(item.dropSurcharge) > 0 && <DetailRow label="Drop surcharge" value={`+$${Number(item.dropSurcharge).toFixed(2)}`} />}
+                                                                    </div>
+                                                                )}
+                                                                {item.requiresBentTracks && (
+                                                                    <div className="col-span-full mt-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800 font-medium">
+                                                                        Bent track pricing will be confirmed separately — Total will be added after reviewing your drawings
                                                                     </div>
                                                                 )}
                                                             </div>

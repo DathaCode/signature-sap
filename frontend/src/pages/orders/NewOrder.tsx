@@ -54,7 +54,7 @@ const emptyCurtain: CurtainItem = {
     trackControlSide: 'Right',
     trackColor: 'White',
     remotes: 'Not Required',
-    chargerHub: 'Not Required',
+    chargerHub: [],
     requiresBentTracks: false,
     bendType: 'Angle',
     requiresDropDeduction: true,
@@ -646,6 +646,52 @@ export default function NewOrderPage() {
                                                         </>
                                                     )}
                                                 </div>
+                                                {/* Price breakdown */}
+                                                {(curtain.fabricCost != null || curtain.motorPrice != null || curtain.dropSurcharge != null) && (
+                                                    <div className="mt-2 pt-2 border-t border-gray-100 grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-1 text-xs">
+                                                        {curtain.fabricCost != null && (
+                                                            <div className="flex justify-between gap-2">
+                                                                <span className="text-gray-500">Fabric ({curtain.fullness ?? 120}mm):</span>
+                                                                <span className="font-semibold">${Number(curtain.fabricCost).toFixed(2)}</span>
+                                                            </div>
+                                                        )}
+                                                        {curtain.fullnessSurcharge != null && Number(curtain.fullnessSurcharge) > 0 && (
+                                                            <div className="flex justify-between gap-2">
+                                                                <span className="text-gray-500">Fullness surcharge:</span>
+                                                                <span className="font-semibold">+${Number(curtain.fullnessSurcharge).toFixed(2)}</span>
+                                                            </div>
+                                                        )}
+                                                        {curtain.motorPrice != null && Number(curtain.motorPrice) > 0 && (
+                                                            <div className="flex justify-between gap-2">
+                                                                <span className="text-gray-500">Motor:</span>
+                                                                <span className="font-semibold">+${Number(curtain.motorPrice).toFixed(2)}</span>
+                                                            </div>
+                                                        )}
+                                                        {curtain.chainPrice != null && Number(curtain.chainPrice) > 0 && (
+                                                            <div className="flex justify-between gap-2">
+                                                                <span className="text-gray-500">Remote:</span>
+                                                                <span className="font-semibold">+${Number(curtain.chainPrice).toFixed(2)}</span>
+                                                            </div>
+                                                        )}
+                                                        {curtain.clipsPrice != null && Number(curtain.clipsPrice) > 0 && (
+                                                            <div className="flex justify-between gap-2">
+                                                                <span className="text-gray-500">Charger/Hub:</span>
+                                                                <span className="font-semibold">+${Number(curtain.clipsPrice).toFixed(2)}</span>
+                                                            </div>
+                                                        )}
+                                                        {curtain.dropSurcharge != null && Number(curtain.dropSurcharge) > 0 && (
+                                                            <div className="flex justify-between gap-2">
+                                                                <span className="text-gray-500">Drop surcharge:</span>
+                                                                <span className="font-semibold text-orange-600">+${Number(curtain.dropSurcharge).toFixed(2)}</span>
+                                                            </div>
+                                                        )}
+                                                        {curtain.requiresBentTracks && (
+                                                            <div className="col-span-full text-amber-700 font-medium mt-1">
+                                                                Bent track pricing will be confirmed separately — Total will be added after reviewing your drawings
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
                                                 <div className="flex gap-2 pt-2 border-t">
                                                     <button type="button" onClick={() => handleEditItem(i)} className="text-blue-600 hover:text-blue-800 text-sm px-3 py-1 rounded hover:bg-blue-50 border border-blue-200">Edit</button>
                                                     <button type="button" onClick={() => handleDeleteItem(i)} className="text-red-600 hover:text-red-800 text-sm px-3 py-1 rounded hover:bg-red-50 border border-red-200">Delete</button>

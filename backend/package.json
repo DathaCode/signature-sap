@@ -17,6 +17,7 @@
         "seed:pricing": "tsx scripts/seed-pricing.ts",
         "seed:sheer-inventory": "tsx scripts/seed-sheer-inventory.ts",
         "seed:sheer-pricing": "tsx scripts/seed-sheer-pricing.ts",
+        "seed:sheer-motor-pricing": "tsx scripts/seed-sheer-motor-pricing.ts",
         "seed:prod": "node dist/prisma/seed.js",
         "create-admin:prod": "node dist/scripts/create-admin.js",
         "create:warehouse:prod": "node dist/scripts/create-warehouse-user.js",
@@ -56,6 +57,7 @@
         "papaparse": "^5.4.1",
         "pdfkit": "^0.17.2",
         "winston": "^3.17.0",
+        "xlsx": "^0.18.5",
         "zod": "^3.24.1"
     },
     "devDependencies": {

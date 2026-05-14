@@ -463,8 +463,8 @@ export class WorksheetExportService {
 
         // Column widths sized for landscape A4 (841pt wide). Total ~752pt from x=30.
         // Fabric & Colour columns removed; Chain/Motor widened for motor names.
-        const colWidths = [42, 85, 65, 60, 45, 60, 145, 45, 70, 55, 80];
-        const headers = ['Blind#', 'Location', 'Fab Cut W', 'Calc D', 'Ctrl', 'Ctrl Col', 'Chain/Motor', 'Roll', 'BR Colour', 'Chain', 'Bracket Type'];
+        const colWidths = [42, 85, 65, 60, 45, 60, 130, 45, 70, 45, 65, 55];
+        const headers = ['Blind#', 'Location', 'Fab Cut W', 'Calc D', 'Ctrl', 'Ctrl Col', 'Chain/Motor', 'Roll', 'BR Colour', 'Chain', 'Bracket Type', 'Pelmet'];
         const TABLE_LEFT = 30;
         const ROW_HEIGHT = 15; // Fixed row height in pt (prevents overlap)
         const TABLE_WIDTH = colWidths.reduce((a, b) => a + b, 0);
@@ -525,10 +525,13 @@ export class WorksheetExportService {
                     const isBracketHighlighted = /dual/i.test(bracketType) || /extension/i.test(bracketType);
                     const isMotorHighlighted = /motor/i.test(motorType);
                     const isRollMinority = minorityRolls.includes(rollValue);
-                    // CHAIN/MOTOR col = index 6, ROLL col = index 7, BRACKET TYPE col = last (index 10)
+                    // CHAIN/MOTOR col = index 6, ROLL col = index 7, BRACKET TYPE col = index 10, PELMET col = 11
                     const CHAIN_MOTOR_COL = 6;
                     const ROLL_COL = 7;
                     const BRACKET_TYPE_COL = 10;
+                    const pelmetValue = item?.requiresPelmet
+                        ? [item.pelmetType || '', item.pelmetColor || '', item.pelmetSize || ''].filter(Boolean).join(' / ') || 'Yes'
+                        : '-';
                     const values = [
                         String(panel.blindNumber ?? ''),
                         item?.location || panel.location || panel.label,
@@ -541,6 +544,7 @@ export class WorksheetExportService {
                         item?.bottomRailColour || '-',
                         chainSize ? `${chainSize}mm` : '-',
                         bracketType,
+                        pelmetValue,
                     ];
                     // Row background (alternating)
                     const altBg = (sortedPanels.indexOf(panel) % 2 === 1);

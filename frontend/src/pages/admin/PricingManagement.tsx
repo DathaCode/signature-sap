@@ -108,18 +108,78 @@ export default function PricingManagement() {
     const [newFabricPrice, setNewFabricPrice] = useState('');
     const [addingFabric, setAddingFabric] = useState(false);
 
-    // Sheer parts pricing state (motors, remotes, chargers)
+    // Sheer parts pricing state (remotes, chargers)
     const [sheerPartsLoading, setSheerPartsLoading] = useState(false);
-    const [sheerMotors, setSheerMotors] = useState<ComponentItem[]>([]);
     const [sheerRemotes, setSheerRemotes] = useState<ComponentItem[]>([]);
     const [sheerChargers, setSheerChargers] = useState<ComponentItem[]>([]);
     const [editedSheerParts, setEditedSheerParts] = useState<Map<string, number>>(new Map());
     const [savingSheerParts, setSavingSheerParts] = useState(false);
 
-    // Drop surcharge per group state
-    const [groupSettings, setGroupSettings] = useState<Record<string, number>>({});
-    const [editedGroupSettings, setEditedGroupSettings] = useState<Record<string, string>>({});
+    // Surcharge settings per group (drop + fullness 130/140/150)
+    interface GroupSetting { dropSurchargePerM: number; fullness130Surcharge: number; fullness140Surcharge: number; fullness150Surcharge: number; }
+    const [groupSettings, setGroupSettings] = useState<Record<string, GroupSetting>>({});
+    const [editedGroupSettings, setEditedGroupSettings] = useState<Record<string, Partial<GroupSetting>>>({});
     const [savingGroupSettings, setSavingGroupSettings] = useState(false);
+
+    // Motor pricing by width range
+    interface MotorPricingRow { id: number; motorType: string; widthFrom: number; widthTo: number; price: number; }
+    const MOTOR_TYPES = ['Alpha DC', 'Alpha AC', 'Versa DC', 'Versa AC'];
+    const WIDTH_RANGES = [
+        { from: 0,    to: 1999,  label: '0–1999mm' },
+        { from: 1999, to: 2999,  label: '2000–2999mm' },
+        { from: 2999, to: 3999,  label: '3000–3999mm' },
+        { from: 3999, to: 4999,  label: '4000–4999mm' },
+        { from: 4999, to: 6000,  label: '5000–6000mm' },
+    ];
+    const [motorPricing, setMotorPricing] = useState<MotorPricingRow[]>([]);
+    const [editedMotorPricing, setEditedMotorPricing] = useState<Map<string, number>>(new Map());
+    const [savingMotorPricing, setSavingMotorPricing] = useState(false);
+
+    const fetchMotorPricing = useCallback(async () => {
+        try {
+            const data = await pricingApi.getSheerMotorPricing();
+            setMotorPricing(data);
+        } catch (error) {
+            console.error('Failed to fetch motor pricing:', error);
+        }
+    }, []);
+
+    const motorPricingKey = (motorType: string, widthFrom: number) => `${motorType}::${widthFrom}`;
+
+    const getMotorPrice = (motorType: string, widthFrom: number): number => {
+        const key = motorPricingKey(motorType, widthFrom);
+        if (editedMotorPricing.has(key)) return editedMotorPricing.get(key)!;
+        const row = motorPricing.find(r => r.motorType === motorType && r.widthFrom === widthFrom);
+        return row ? row.price : 0;
+    };
+
+    const handleMotorPriceChange = (motorType: string, widthFrom: number, val: string) => {
+        const key = motorPricingKey(motorType, widthFrom);
+        const num = parseFloat(val);
+        if (!isNaN(num)) {
+            setEditedMotorPricing(prev => new Map(prev).set(key, num));
+        }
+    };
+
+    const saveMotorPricing = async () => {
+        if (editedMotorPricing.size === 0) return;
+        setSavingMotorPricing(true);
+        try {
+            await Promise.all(
+                Array.from(editedMotorPricing.entries()).map(([key, price]) => {
+                    const [motorType, widthFromStr] = key.split('::');
+                    return pricingApi.updateSheerMotorPricing(motorType, parseInt(widthFromStr), price);
+                })
+            );
+            setEditedMotorPricing(new Map());
+            await fetchMotorPricing();
+            gooeyToast.success('Motor pricing saved');
+        } catch {
+            gooeyToast.error('Failed to save motor pricing');
+        } finally {
+            setSavingMotorPricing(false);
+        }
+    };
 
 
     useEffect(() => {
@@ -135,8 +195,15 @@ export default function PricingManagement() {
     const fetchGroupSettings = useCallback(async () => {
         try {
             const data = await pricingApi.getSheerGroupSettings();
-            const map: Record<string, number> = {};
-            data.forEach(s => { map[s.fabricGroup] = s.dropSurchargePerM; });
+            const map: Record<string, GroupSetting> = {};
+            data.forEach(s => {
+                map[s.fabricGroup] = {
+                    dropSurchargePerM: s.dropSurchargePerM,
+                    fullness130Surcharge: s.fullness130Surcharge,
+                    fullness140Surcharge: s.fullness140Surcharge,
+                    fullness150Surcharge: s.fullness150Surcharge,
+                };
+            });
             setGroupSettings(map);
         } catch (error) {
             console.error('Failed to fetch group settings:', error);
@@ -153,6 +220,7 @@ export default function PricingManagement() {
     useEffect(() => {
         if (activeTab === 'components') {
             fetchSheerParts();
+            fetchMotorPricing();
         }
     }, [activeTab]);
 
@@ -200,12 +268,10 @@ export default function PricingManagement() {
     const fetchSheerParts = async () => {
         setSheerPartsLoading(true);
         try {
-            const [motors, remotes, chargers] = await Promise.all([
-                pricingApi.getAllComponentPrices('SHEER_MOTOR'),
+            const [remotes, chargers] = await Promise.all([
                 pricingApi.getAllComponentPrices('SHEER_REMOTE'),
                 pricingApi.getAllComponentPrices('SHEER_CHARGER'),
             ]);
-            setSheerMotors(motors.components);
             setSheerRemotes(remotes.components);
             setSheerChargers(chargers.components);
             setEditedSheerParts(new Map());
@@ -421,16 +487,31 @@ export default function PricingManagement() {
     };
 
 
+    const setGroupField = (group: string, field: keyof GroupSetting, value: string) => {
+        const num = parseFloat(value);
+        if (isNaN(num) || num < 0) return;
+        setEditedGroupSettings(prev => ({
+            ...prev,
+            [group]: { ...(prev[group] || {}), [field]: num },
+        }));
+    };
+
+    const getGroupField = (group: string, field: keyof GroupSetting): number => {
+        return editedGroupSettings[group]?.[field] ?? groupSettings[group]?.[field] ?? (
+            field === 'dropSurchargePerM' ? 60 : field === 'fullness130Surcharge' ? 15 : field === 'fullness140Surcharge' ? 25 : 45
+        );
+    };
+
     const saveGroupSettings = async () => {
         if (Object.keys(editedGroupSettings).length === 0) return;
         setSavingGroupSettings(true);
         try {
             await Promise.all(
-                Object.entries(editedGroupSettings).map(([group, val]) =>
-                    pricingApi.updateSheerGroupSettings(group, parseFloat(val))
+                Object.entries(editedGroupSettings).map(([group, data]) =>
+                    pricingApi.updateSheerGroupSettings(group, data)
                 )
             );
-            gooeyToast.success('Drop surcharge rates updated');
+            gooeyToast.success('Surcharge rates updated');
             setEditedGroupSettings({});
             fetchGroupSettings();
         } catch (error) {
@@ -480,6 +561,12 @@ export default function PricingManagement() {
                         <Button onClick={saveSheerPartsChanges} disabled={savingSheerParts}>
                             {savingSheerParts ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                             Save {editedSheerParts.size} Changes
+                        </Button>
+                    )}
+                    {activeTab === 'components' && editedMotorPricing.size > 0 && (
+                        <Button onClick={saveMotorPricing} disabled={savingMotorPricing}>
+                            {savingMotorPricing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                            Save Motor Prices
                         </Button>
                     )}
 
@@ -791,30 +878,58 @@ export default function PricingManagement() {
                         </CardContent>
                     </Card>
 
-                    {/* Drop Surcharge per group */}
+                    {/* Per-group surcharge settings */}
                     <Card className="border-amber-200 bg-amber-50">
                         <CardHeader className="py-3">
-                            <CardTitle className="text-base text-amber-800">Drop Surcharge Rates ($ per meter over 2980mm)</CardTitle>
+                            <CardTitle className="text-base text-amber-800">Surcharge Rates — {sheerFabricGroup}</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                {SHEER_FABRIC_GROUPS.map(group => (
-                                    <div key={group}>
-                                        <label className="text-xs font-medium text-gray-600 block mb-1">{group}</label>
-                                        <div className="flex items-center gap-1">
-                                            <span className="text-sm text-gray-500">$</span>
-                                            <Input
-                                                type="number"
-                                                step="0.01"
-                                                min="0"
-                                                className="h-8 text-right px-2"
-                                                value={editedGroupSettings[group] ?? (groupSettings[group] ?? 60)}
-                                                onChange={(e) => setEditedGroupSettings(prev => ({ ...prev, [group]: e.target.value }))}
-                                            />
-                                            <span className="text-xs text-gray-500">/m</span>
-                                        </div>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                                <div>
+                                    <label className="text-xs font-semibold text-gray-700 block mb-1">Drop Surcharge (drop &gt; 3000mm)</label>
+                                    <div className="flex items-center gap-1">
+                                        <span className="text-sm text-gray-500">$</span>
+                                        <Input
+                                            type="number" step="0.01" min="0" className="h-8 text-right px-2"
+                                            value={getGroupField(sheerFabricGroup, 'dropSurchargePerM')}
+                                            onChange={e => setGroupField(sheerFabricGroup, 'dropSurchargePerM', e.target.value)}
+                                        />
+                                        <span className="text-xs text-gray-500">per 1000mm</span>
                                     </div>
-                                ))}
+                                </div>
+                                <div>
+                                    <label className="text-xs font-semibold text-gray-700 block mb-1">130mm Fullness surcharge</label>
+                                    <div className="flex items-center gap-1">
+                                        <span className="text-sm text-gray-500">$</span>
+                                        <Input
+                                            type="number" step="0.01" min="0" className="h-8 text-right px-2"
+                                            value={getGroupField(sheerFabricGroup, 'fullness130Surcharge')}
+                                            onChange={e => setGroupField(sheerFabricGroup, 'fullness130Surcharge', e.target.value)}
+                                        />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="text-xs font-semibold text-gray-700 block mb-1">140mm Fullness surcharge</label>
+                                    <div className="flex items-center gap-1">
+                                        <span className="text-sm text-gray-500">$</span>
+                                        <Input
+                                            type="number" step="0.01" min="0" className="h-8 text-right px-2"
+                                            value={getGroupField(sheerFabricGroup, 'fullness140Surcharge')}
+                                            onChange={e => setGroupField(sheerFabricGroup, 'fullness140Surcharge', e.target.value)}
+                                        />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="text-xs font-semibold text-gray-700 block mb-1">150mm Fullness surcharge</label>
+                                    <div className="flex items-center gap-1">
+                                        <span className="text-sm text-gray-500">$</span>
+                                        <Input
+                                            type="number" step="0.01" min="0" className="h-8 text-right px-2"
+                                            value={getGroupField(sheerFabricGroup, 'fullness150Surcharge')}
+                                            onChange={e => setGroupField(sheerFabricGroup, 'fullness150Surcharge', e.target.value)}
+                                        />
+                                    </div>
+                                </div>
                             </div>
                         </CardContent>
                     </Card>
@@ -832,39 +947,7 @@ export default function PricingManagement() {
                             <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
                         </div>
                     ) : (
-                        <div className="grid md:grid-cols-3 gap-6">
-                            {/* Track Motors */}
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="text-lg">Track Motors</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <table className="w-full text-sm">
-                                        <thead>
-                                            <tr className="border-b">
-                                                <th className="py-2 text-left font-medium text-muted-foreground">Motor</th>
-                                                <th className="py-2 text-right font-medium text-muted-foreground w-28">Price ($)</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {sheerMotors.length === 0 && (
-                                                <tr><td colSpan={2} className="py-6 text-center text-muted-foreground">No motors found. Run seed script.</td></tr>
-                                            )}
-                                            {sheerMotors.map(item => (
-                                                <tr key={item.id} className="border-b last:border-0">
-                                                    <td className="py-2 pr-4">{item.name}</td>
-                                                    <td className="py-2">
-                                                        <Input type="number" step="0.01" min="0" className="h-8 w-full text-right px-2"
-                                                            value={getSheerPartPrice(item)}
-                                                            onChange={(e) => handleSheerPartPriceChange(item.id, e.target.value)} />
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </CardContent>
-                            </Card>
-
+                        <div className="grid md:grid-cols-2 gap-6">
                             {/* Remotes */}
                             <Card>
                                 <CardHeader>
@@ -930,6 +1013,54 @@ export default function PricingManagement() {
                             </Card>
                         </div>
                     )}
+
+                    {/* Motor Pricing by Width Range */}
+                    <Card className="mt-6">
+                        <CardHeader>
+                            <CardTitle className="text-lg">Motor Pricing by Width Range</CardTitle>
+                            <p className="text-sm text-muted-foreground">Price charged per motor type based on curtain width</p>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm">
+                                    <thead>
+                                        <tr className="border-b">
+                                            <th className="py-2 text-left font-medium text-muted-foreground w-36">Motor Type</th>
+                                            {WIDTH_RANGES.map(r => (
+                                                <th key={r.from} className="py-2 text-center font-medium text-muted-foreground px-2">{r.label}</th>
+                                            ))}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {MOTOR_TYPES.map(motor => (
+                                            <tr key={motor} className="border-b last:border-0">
+                                                <td className="py-2 font-medium">{motor}</td>
+                                                {WIDTH_RANGES.map(r => {
+                                                    const key = motorPricingKey(motor, r.from);
+                                                    const isEdited = editedMotorPricing.has(key);
+                                                    return (
+                                                        <td key={r.from} className="py-2 px-2">
+                                                            <div className="relative">
+                                                                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                                                                <Input
+                                                                    type="number"
+                                                                    step="0.01"
+                                                                    min="0"
+                                                                    className={`h-8 pl-5 text-right text-sm ${isEdited ? 'ring-2 ring-blue-400' : ''}`}
+                                                                    value={getMotorPrice(motor, r.from)}
+                                                                    onChange={e => handleMotorPriceChange(motor, r.from, e.target.value)}
+                                                                />
+                                                            </div>
+                                                        </td>
+                                                    );
+                                                })}
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </CardContent>
+                    </Card>
                 </div>
             )}
 

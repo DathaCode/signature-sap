@@ -1,9 +1,13 @@
+import { useState } from 'react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
+
 interface CurtainRow {
     itemNumber: number;
     location: string;
     width: number;
     deductedDrop: number;
     openingType: string;
+    fullness: number;
     fabric: string;
     fabricColour: string;
     singleHooks: number | null;
@@ -14,6 +18,14 @@ interface CurtainRow {
     bracketCount: number;
     wandCount: number;
     trackColour: string;
+    requiresTracks?: boolean;
+    trackType?: string | null;
+    motorType?: string | null;
+    remotes?: string | null;
+    chargerHub?: string | null;
+    requiresBentTracks?: boolean;
+    bendType?: string | null;
+    bendQty?: number | null;
 }
 
 interface CurtainTotals {
@@ -37,6 +49,7 @@ interface Props {
 
 export default function CurtainWorksheet({ curtainData }: Props) {
     const { rows, totals } = curtainData;
+    const [expandedRow, setExpandedRow] = useState<number | null>(null);
 
     const trackColours = [...new Set(rows.map(r => r.trackColour).filter(Boolean))];
 
@@ -47,6 +60,8 @@ export default function CurtainWorksheet({ curtainData }: Props) {
         fabricTotals.set(key, (fabricTotals.get(key) ?? 0) + row.fabricMeters);
     }
 
+    const hasTrackOrBend = rows.some(r => r.requiresTracks || r.requiresBentTracks);
+
     return (
         <div className="space-y-6">
             {/* Main worksheet table */}
@@ -54,11 +69,13 @@ export default function CurtainWorksheet({ curtainData }: Props) {
                 <table className="w-full text-sm">
                     <thead className="bg-gray-100 text-xs font-semibold text-gray-600 uppercase tracking-wide">
                         <tr>
+                            {hasTrackOrBend && <th className="px-2 py-2 w-8"></th>}
                             <th className="px-3 py-2 text-center w-10">No</th>
                             <th className="px-3 py-2 text-left">Location</th>
                             <th className="px-3 py-2 text-center">Width (mm)</th>
                             <th className="px-3 py-2 text-center">Deducted Drop (mm)</th>
                             <th className="px-3 py-2 text-center">Opening Type</th>
+                            <th className="px-3 py-2 text-center">Fullness</th>
                             <th className="px-3 py-2 text-left">Fabric Material</th>
                             <th className="px-3 py-2 text-left">Colour</th>
                             <th className="px-3 py-2 text-center">Single Hooks</th>
@@ -68,39 +85,93 @@ export default function CurtainWorksheet({ curtainData }: Props) {
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                        {rows.map((row, idx) => (
-                            <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                                <td className="px-3 py-2 text-center font-medium text-gray-700">{row.itemNumber}</td>
-                                <td className="px-3 py-2 text-gray-800">{row.location}</td>
-                                <td className="px-3 py-2 text-center">{row.width}</td>
-                                <td className="px-3 py-2 text-center">{row.deductedDrop}</td>
-                                <td className="px-3 py-2 text-center">
-                                    <span className="px-1.5 py-0.5 rounded text-xs font-medium bg-teal-100 text-teal-800">
-                                        {row.openingType}
-                                    </span>
-                                </td>
-                                <td className="px-3 py-2 text-gray-800">{row.fabric}</td>
-                                <td className="px-3 py-2 text-gray-600">{row.fabricColour}</td>
-                                <td className="px-3 py-2 text-center">
-                                    {row.singleHooks !== null ? (
-                                        <span className="font-semibold text-blue-700">{row.singleHooks}</span>
-                                    ) : '—'}
-                                </td>
-                                <td className="px-3 py-2 text-center">
-                                    {row.leftHooks !== null ? (
-                                        <span className="font-semibold text-purple-700">{row.leftHooks}</span>
-                                    ) : '—'}
-                                </td>
-                                <td className="px-3 py-2 text-center">
-                                    {row.rightHooks !== null ? (
-                                        <span className="font-semibold text-purple-700">{row.rightHooks}</span>
-                                    ) : '—'}
-                                </td>
-                                <td className="px-3 py-2 text-center font-semibold text-green-700">
-                                    {row.fabricMeters.toFixed(3)}
-                                </td>
-                            </tr>
-                        ))}
+                        {rows.map((row, idx) => {
+                            const hasDetails = row.requiresTracks || row.requiresBentTracks;
+                            const isExpanded = expandedRow === idx;
+                            return (
+                                <>
+                                    <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                                        {hasTrackOrBend && (
+                                            <td className="px-2 py-2 text-center">
+                                                {hasDetails && (
+                                                    <button
+                                                        onClick={() => setExpandedRow(isExpanded ? null : idx)}
+                                                        className="text-gray-400 hover:text-gray-600"
+                                                    >
+                                                        {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                                                    </button>
+                                                )}
+                                            </td>
+                                        )}
+                                        <td className="px-3 py-2 text-center font-medium text-gray-700">{row.itemNumber}</td>
+                                        <td className="px-3 py-2 text-gray-800">{row.location}</td>
+                                        <td className="px-3 py-2 text-center">{row.width}</td>
+                                        <td className="px-3 py-2 text-center">{row.deductedDrop}</td>
+                                        <td className="px-3 py-2 text-center">
+                                            <span className="px-1.5 py-0.5 rounded text-xs font-medium bg-teal-100 text-teal-800">
+                                                {row.openingType}
+                                            </span>
+                                        </td>
+                                        <td className="px-3 py-2 text-center text-gray-700">{row.fullness ?? 120}mm</td>
+                                        <td className="px-3 py-2 text-gray-800">{row.fabric}</td>
+                                        <td className="px-3 py-2 text-gray-600">{row.fabricColour}</td>
+                                        <td className="px-3 py-2 text-center">
+                                            {row.singleHooks !== null ? (
+                                                <span className="font-semibold text-blue-700">{row.singleHooks}</span>
+                                            ) : '—'}
+                                        </td>
+                                        <td className="px-3 py-2 text-center">
+                                            {row.leftHooks !== null ? (
+                                                <span className="font-semibold text-purple-700">{row.leftHooks}</span>
+                                            ) : '—'}
+                                        </td>
+                                        <td className="px-3 py-2 text-center">
+                                            {row.rightHooks !== null ? (
+                                                <span className="font-semibold text-purple-700">{row.rightHooks}</span>
+                                            ) : '—'}
+                                        </td>
+                                        <td className="px-3 py-2 text-center font-semibold text-green-700">
+                                            {row.fabricMeters.toFixed(3)}
+                                        </td>
+                                    </tr>
+
+                                    {/* Expanded track / bend details */}
+                                    {isExpanded && hasDetails && (
+                                        <tr key={`${idx}-detail`} className="bg-teal-50">
+                                            <td colSpan={hasTrackOrBend ? 13 : 12} className="px-6 py-3">
+                                                <div className="flex flex-wrap gap-x-8 gap-y-1 text-xs">
+                                                    {row.requiresTracks && (
+                                                        <div className="flex flex-wrap gap-x-6 gap-y-1">
+                                                            <span className="font-semibold text-teal-700 mr-1">Track:</span>
+                                                            <span>{row.trackType || 'Standard'}</span>
+                                                            {row.trackType === 'Motorised' && row.motorType && (
+                                                                <span><span className="text-gray-500">Motor:</span> <strong>{row.motorType}</strong></span>
+                                                            )}
+                                                            {row.remotes && row.remotes !== 'Not Required' && (
+                                                                <span><span className="text-gray-500">Remote:</span> <strong>{row.remotes}</strong></span>
+                                                            )}
+                                                            {row.chargerHub && row.chargerHub !== 'Not Required' && (
+                                                                <span><span className="text-gray-500">Charger/Hub:</span> <strong>{row.chargerHub}</strong></span>
+                                                            )}
+                                                            {row.trackColour && (
+                                                                <span><span className="text-gray-500">Colour:</span> <strong>{row.trackColour}</strong></span>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                    {row.requiresBentTracks && (
+                                                        <div className="flex flex-wrap gap-x-6 gap-y-1">
+                                                            <span className="font-semibold text-orange-700 mr-1">Bent Tracks:</span>
+                                                            <span>{row.bendType}</span>
+                                                            {row.bendQty && <span><span className="text-gray-500">Qty:</span> <strong>{row.bendQty}</strong></span>}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    )}
+                                </>
+                            );
+                        })}
                     </tbody>
                 </table>
             </div>
