@@ -219,8 +219,11 @@ const OrderItemSchema = z.object({
     chainPrice: z.coerce.number().optional(),
     clipsPrice: z.coerce.number().optional(),
     componentPrice: z.coerce.number().optional(),
+    // Remote / Charger (blind-specific)
+    remotes: z.string().optional().nullable(),
+    chargerHub: z.string().optional().nullable(),
     // Pelmet section (also available for blinds)
-    requiresPelmet: z.boolean().optional(),
+    requiresPelmet: z.boolean().nullable().optional(),
     pelmetType: z.string().optional(),
     pelmetColor: z.string().optional(),
     pelmetSize: z.string().optional(),
@@ -246,7 +249,7 @@ const CurtainOrderItemSchema = z.object({
     fullness: z.coerce.number().optional(),
 
     // Track Type section
-    requiresTracks: z.boolean().optional(),
+    requiresTracks: z.boolean().nullable().optional(),
     trackType: z.string().optional(),
     motorType: z.string().optional(),
     trackControlSide: z.string().optional(),
@@ -255,17 +258,17 @@ const CurtainOrderItemSchema = z.object({
     trackColor: z.string().optional(),
 
     // Drop deduction
-    requiresDropDeduction: z.boolean().optional(),
+    requiresDropDeduction: z.boolean().nullable().optional(),
     dropDeductionValue: z.coerce.number().optional(),
 
     // Bend section
-    requiresBentTracks: z.boolean().optional(),
+    requiresBentTracks: z.boolean().nullable().optional(),
     bendType: z.string().optional(),
     bendQty: z.coerce.number().optional(),
     bendFilePath: z.string().optional(),
 
     // Pelmet section
-    requiresPelmet: z.boolean().optional(),
+    requiresPelmet: z.boolean().nullable().optional(),
     pelmetType: z.string().optional(),
     pelmetColor: z.string().optional(),
     pelmetSize: z.string().optional(),
@@ -2413,6 +2416,13 @@ export const editOrderDetails = async (
                     chainPrice,
                     clipsPrice,
                     componentPrice,
+                    remotes: item.remotes || null,
+                    chargerHub: item.chargerHub || null,
+                    requiresPelmet: item.requiresPelmet ?? null,
+                    pelmetType: item.pelmetType || null,
+                    pelmetColor: item.pelmetColor || null,
+                    pelmetSize: item.pelmetSize || null,
+                    pelmetCustomSize: item.pelmetCustomSize || null,
                 });
             }
 

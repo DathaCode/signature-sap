@@ -134,7 +134,6 @@ function EditItemRow({ item, index, onChange, onRemove }: {
                         {CHAIN_TYPE_OPTIONS.map(c => <option key={c}>{c}</option>)}
                     </select>
                 </div>
-                <div><label className="text-xs text-gray-500">Price ($)</label><Input className={inp} type="number" step="0.01" value={item.price || 0} onChange={e => f('price', Number(e.target.value))} /></div>
             </div>
         </div>
     );
@@ -890,7 +889,7 @@ export default function AdminOrderDetails() {
                                                 <Fragment key={itemKey}>
                                                 <tr className="border-b transition-colors hover:bg-muted/50 group">
                                                     <td className="p-4 align-middle">
-                                                        {hasBreakdown && !isWarehouse && (
+                                                        {!isWarehouse && (
                                                             <button onClick={() => setExpandedItem(isExpanded ? null : itemKey)}>
                                                                 {isExpanded
                                                                     ? <ChevronUp className="h-4 w-4 text-muted-foreground" />
@@ -914,7 +913,7 @@ export default function AdminOrderDetails() {
                                                         </td>
                                                     )}
                                                 </tr>
-                                                {isExpanded && hasBreakdown && !isWarehouse && (
+                                                {isExpanded && !isWarehouse && (
                                                 <tr className="border-b bg-blue-50">
                                                     <td colSpan={6} className="px-8 py-4">
                                                         <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-1 text-sm mb-3">
