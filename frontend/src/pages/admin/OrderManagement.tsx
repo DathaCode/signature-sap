@@ -148,7 +148,7 @@ export default function OrderManagement() {
     };
 
     return (
-        <div className="space-y-6 p-8 max-w-[1600px] mx-auto">
+        <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">Order Management</h1>
@@ -239,36 +239,36 @@ export default function OrderManagement() {
                         </div>
                     ) : (
                         <div className="relative w-full overflow-x-auto">
-                            <table className="min-w-[960px] w-full caption-bottom text-sm text-left">
+                            <table className="min-w-[1200px] w-full caption-bottom text-sm text-left">
                                 <thead className="[&_tr]:border-b">
                                     <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                                        <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Order #</th>
-                                        <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Date</th>
-                                        <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Customer</th>
-                                        <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Reference</th>
-                                        <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Type</th>
-                                        {!isWarehouse && <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Label</th>}
-                                        <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Items</th>
-                                        {!isWarehouse && <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Total</th>}
-                                        <th className="h-12 px-4 align-middle font-medium text-muted-foreground text-right">Actions</th>
+                                        <th className="h-11 px-3 align-middle font-medium text-muted-foreground">Order #</th>
+                                        <th className="h-11 px-3 align-middle font-medium text-muted-foreground">Date</th>
+                                        <th className="h-11 px-3 align-middle font-medium text-muted-foreground">Customer</th>
+                                        <th className="h-11 px-3 align-middle font-medium text-muted-foreground">Reference</th>
+                                        <th className="h-11 px-3 align-middle font-medium text-muted-foreground">Type</th>
+                                        {!isWarehouse && <th className="h-11 px-3 align-middle font-medium text-muted-foreground">Label</th>}
+                                        <th className="h-11 px-3 align-middle font-medium text-muted-foreground">Items</th>
+                                        {!isWarehouse && <th className="h-11 px-3 align-middle font-medium text-muted-foreground">Total</th>}
+                                        <th className="h-11 px-3 align-middle font-medium text-muted-foreground text-right">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody className="[&_tr:last-child]:border-0">
                                     {orders.map((order) => (
                                         <tr key={order.id} className="border-b transition-colors hover:bg-muted/50">
-                                            <td className="p-4 align-middle font-medium">
+                                            <td className="px-3 py-3 align-middle font-medium">
                                                 <Link to={`${basePath}/orders/${order.orderNumber}?tab=${statusFilter}`} className="text-blue-700 hover:underline">
                                                     {order.orderNumber}
                                                 </Link>
                                             </td>
-                                            <td className="p-4 align-middle">{format(new Date(order.createdAt), 'MMM d, yyyy')}</td>
-                                            <td className="p-4 align-middle">
+                                            <td className="px-3 py-3 align-middle whitespace-nowrap">{format(new Date(order.createdAt), 'MMM d, yyyy')}</td>
+                                            <td className="px-3 py-3 align-middle">
                                                 <div className="flex flex-col">
                                                     <span className="font-medium">{order.customerName}</span>
                                                     {!isWarehouse && <span className="text-xs text-muted-foreground">{order.customerEmail}</span>}
                                                 </div>
                                             </td>
-                                            <td className="p-4 align-middle">
+                                            <td className="px-3 py-3 align-middle">
                                                 {order.customerReference ? (
                                                     <Link to={`${basePath}/orders/${order.orderNumber}?tab=${statusFilter}`} className="text-sm font-medium text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded hover:bg-indigo-100">
                                                         {order.customerReference}
@@ -277,7 +277,7 @@ export default function OrderManagement() {
                                                     <span className="text-xs text-muted-foreground">&mdash;</span>
                                                 )}
                                             </td>
-                                            <td className="p-4 align-middle">
+                                            <td className="px-3 py-3 align-middle">
                                                 {order.productType === 'CURTAINS' ? (
                                                     <span className="text-xs font-medium bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">Sheers</span>
                                                 ) : (
@@ -285,7 +285,7 @@ export default function OrderManagement() {
                                                 )}
                                             </td>
                                             {!isWarehouse && (
-                                                <td className="p-4 align-middle">
+                                                <td className="px-3 py-3 align-middle">
                                                     {order.label ? (
                                                         <span className="inline-flex items-center gap-1 text-xs font-medium bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">
                                                             <Tag className="h-3 w-3" />
@@ -296,19 +296,19 @@ export default function OrderManagement() {
                                                     )}
                                                 </td>
                                             )}
-                                            <td className="p-4 align-middle">{order.items.length} items</td>
-                                            {!isWarehouse && <td className="p-4 align-middle">${Number(order.total).toFixed(2)}</td>}
-                                            <td className="p-2 align-middle text-right whitespace-nowrap min-w-[220px]">
-                                                <div className="flex justify-end flex-wrap gap-1.5">
+                                            <td className="px-3 py-3 align-middle">{order.items.length} items</td>
+                                            {!isWarehouse && <td className="px-3 py-3 align-middle">${Number(order.total).toFixed(2)}</td>}
+                                            <td className="px-3 py-3 align-middle whitespace-nowrap">
+                                                <div className="flex items-center justify-end gap-1">
                                                     <Link to={`${basePath}/orders/${order.orderNumber}?tab=${statusFilter}`}>
-                                                        <Button variant="ghost" size="icon" title="View Details">
+                                                        <Button variant="ghost" size="icon" title="View Details" className="h-8 w-8 shrink-0">
                                                             <Eye className="h-4 w-4" />
                                                         </Button>
                                                     </Link>
 
                                                     {!isWarehouse && order.status === 'PENDING' && (
-                                                        <Button size="sm" onClick={() => handleApprove(order.id)} className="bg-green-600 hover:bg-green-700">
-                                                            <Check className="mr-2 h-4 w-4" />
+                                                        <Button size="sm" onClick={() => handleApprove(order.id)} className="h-8 bg-green-600 hover:bg-green-700 px-3 shrink-0">
+                                                            <Check className="mr-1.5 h-3.5 w-3.5" />
                                                             Approve
                                                         </Button>
                                                     )}
@@ -318,37 +318,42 @@ export default function OrderManagement() {
                                                             size="sm"
                                                             onClick={() => handleSendToProduction(order)}
                                                             disabled={sendingToProduction === order.id}
+                                                            className="h-8 px-3 shrink-0"
                                                         >
                                                             {sendingToProduction === order.id ? (
-                                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
                                                             ) : (
-                                                                <Factory className="mr-2 h-4 w-4" />
+                                                                <Factory className="mr-1.5 h-3.5 w-3.5" />
                                                             )}
-                                                            {sendingToProduction === order.id ? 'Optimizing...' : 'Production'}
+                                                            {sendingToProduction === order.id ? 'Optimizing…' : 'Production'}
                                                         </Button>
                                                     )}
 
                                                     {(order.status === 'PRODUCTION' || order.status === 'COMPLETED') && (
                                                         <Button
-                                                            size="sm"
+                                                            size="icon"
                                                             variant="outline"
                                                             onClick={() => handleViewWorksheets(order)}
+                                                            className="h-8 w-8 shrink-0 text-blue-700 border-blue-300 hover:bg-blue-50"
+                                                            title="View Worksheets"
                                                         >
-                                                            <FileText className="mr-2 h-4 w-4" />
-                                                            Worksheets
+                                                            <FileText className="h-4 w-4" />
                                                         </Button>
                                                     )}
 
-                                                    {/* Complete button — admin + warehouse for PRODUCTION */}
                                                     {order.status === 'PRODUCTION' && (
                                                         <Button
-                                                            size="sm"
+                                                            size="icon"
                                                             variant="outline"
                                                             onClick={() => handleStatusChange(order, 'COMPLETED')}
                                                             disabled={updatingStatus === order.id}
+                                                            className="h-8 w-8 shrink-0 text-green-700 border-green-300 hover:bg-green-50"
+                                                            title="Mark as Completed"
                                                         >
-                                                            <CheckCircle className="mr-2 h-4 w-4" />
-                                                            Complete
+                                                            {updatingStatus === order.id
+                                                                ? <Loader2 className="h-4 w-4 animate-spin" />
+                                                                : <CheckCircle className="h-4 w-4" />
+                                                            }
                                                         </Button>
                                                     )}
                                                 </div>

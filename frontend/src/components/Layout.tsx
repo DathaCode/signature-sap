@@ -31,7 +31,7 @@ export default function Layout({ children }: LayoutProps) {
         <div className="min-h-screen bg-gray-50">
             {/* Header */}
             <header className="bg-white border-b border-gray-200 shadow-sm">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+                <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10 py-3">
                     <div className="flex items-center justify-between">
                         {/* Logo */}
                         <div className="flex items-center space-x-4">
@@ -118,13 +118,13 @@ export default function Layout({ children }: LayoutProps) {
             />
 
             {/* Main Content */}
-            <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <main className="relative z-10 max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10 py-6">
                 {children}
             </main>
 
             {/* Footer */}
             <footer className="relative z-10 bg-white border-t border-gray-200 mt-auto">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10 py-6">
                     <p className="text-center text-gray-600 text-sm">
                         &copy; 2026 Signature Shades | Blinds | Curtains | Shutters
                     </p>
