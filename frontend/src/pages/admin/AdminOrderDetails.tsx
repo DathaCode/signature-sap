@@ -883,7 +883,6 @@ export default function AdminOrderDetails() {
                                             const item = rawItem as BlindItem;
                                             const itemKey = (item as any).id || index;
                                             const isExpanded = expandedItem === itemKey;
-                                            const hasBreakdown = hasPriceBreakdown(item);
 
                                             return (
                                                 <Fragment key={itemKey}>
