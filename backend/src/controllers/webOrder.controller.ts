@@ -400,7 +400,7 @@ export const createOrder = async (
                             fabricGroup: item.fabricGroup,
                             requiresDropDeduction: item.requiresDropDeduction !== false,
                             dropDeductionValue: item.dropDeductionValue ? Number(item.dropDeductionValue) : 35,
-                            requiresTracks: item.requiresTracks,
+                            requiresTracks: item.requiresTracks ?? undefined,
                             trackType: item.trackType,
                             motorType: item.motorType,
                             remotes: item.remotes,
