@@ -76,6 +76,8 @@ terraform/.terraform.lock.hcl
 terraform/terraform.tfvars
 *.tfvars
 !terraform.tfvars.example
+terraform/tfplan
+tfplan
 
 # Misc
 .cache/
