@@ -6,7 +6,7 @@ output "ec2_instance_id" {
 }
 
 output "ec2_public_ip" {
-  description = "Elastic IP address of the EC2 instance"
+  description = "Elastic IP address of the EC2 instance (Melbourne)"
   value       = aws_eip.app.public_ip
 }
 
@@ -21,16 +21,32 @@ output "application_url" {
 }
 
 output "route53_zone_id" {
-  description = "Route 53 hosted zone ID for the subdomain"
+  description = "Route 53 hosted zone ID"
   value       = aws_route53_zone.subdomain.zone_id
 }
 
 output "nameservers_for_route53" {
-  description = "Nameservers to configure in your domain registrar for subdomain delegation"
+  description = "Nameservers to configure in your domain registrar"
   value       = aws_route53_zone.subdomain.name_servers
 }
 
 output "s3_backup_bucket" {
-  description = "S3 bucket name for backups"
+  description = "S3 bucket name for backups (stays in Sydney)"
   value       = aws_s3_bucket.backups.id
+}
+
+output "rds_endpoint" {
+  description = "RDS hostname — use in DATABASE_URL"
+  value       = aws_db_instance.postgres.address
+}
+
+output "rds_port" {
+  description = "RDS port"
+  value       = aws_db_instance.postgres.port
+}
+
+output "rds_database_url" {
+  description = "Full DATABASE_URL — paste this into .env on EC2"
+  value       = "postgresql://${var.db_username}:${var.db_password}@${aws_db_instance.postgres.address}:5432/${var.db_name}"
+  sensitive   = true
 }

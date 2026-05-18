@@ -1,28 +1,8 @@
 version: '3.8'
 
 services:
-  # PostgreSQL Database
-  postgres:
-    image: postgres:15-alpine
-    container_name: signatureshades-db-prod
-    restart: always
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
-    ports:
-      - "127.0.0.1:5432:5432"  # localhost only — accessible via SSH tunnel, NOT from internet
-    volumes:
-      - postgres_data_prod:/var/lib/postgresql/data
-    healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER}" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - signatureshades-network
-
   # Backend API (Production)
+  # Database: AWS RDS PostgreSQL in Melbourne (ap-southeast-4)
   backend:
     build:
       context: ./backend
@@ -39,9 +19,6 @@ services:
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN}
       AWS_REGION: ${AWS_REGION}
       AWS_S3_BUCKET: ${AWS_S3_BUCKET}
-    depends_on:
-      postgres:
-        condition: service_healthy
     networks:
       - signatureshades-network
 
@@ -73,10 +50,6 @@ services:
       - frontend
     networks:
       - signatureshades-network
-
-volumes:
-  postgres_data_prod:
-    driver: local
 
 networks:
   signatureshades-network:

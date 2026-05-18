@@ -19,6 +19,8 @@ terraform {
   # }
 }
 
+# Primary provider — Melbourne (ap-southeast-4)
+# EC2, RDS, security groups, key pair all go here
 provider "aws" {
   region = var.aws_region
 
@@ -31,7 +33,22 @@ provider "aws" {
   }
 }
 
-# Data source for latest Ubuntu AMI
+# Secondary provider — Sydney (ap-southeast-2)
+# Used only for the existing S3 backup bucket (stays in Sydney)
+provider "aws" {
+  alias  = "sydney"
+  region = "ap-southeast-2"
+
+  default_tags {
+    tags = {
+      Project     = var.project_name
+      Environment = var.environment
+      ManagedBy   = "Terraform"
+    }
+  }
+}
+
+# Data source for latest Ubuntu AMI (queries Melbourne region)
 data "aws_ami" "ubuntu" {
   most_recent = true
   owners      = ["099720109477"] # Canonical
@@ -47,7 +64,7 @@ data "aws_ami" "ubuntu" {
   }
 }
 
-# VPC - Use default VPC to save costs
+# Default VPC in Melbourne
 data "aws_vpc" "default" {
   default = true
 }
@@ -69,11 +86,12 @@ resource "aws_key_pair" "ec2_key" {
   }
 }
 
-# EC2 Instance
+# EC2 Instance (Melbourne)
 resource "aws_instance" "app" {
-  ami           = data.aws_ami.ubuntu.id
-  instance_type = var.instance_type
-  key_name      = aws_key_pair.ec2_key.key_name
+  ami                  = data.aws_ami.ubuntu.id
+  instance_type        = var.instance_type
+  key_name             = aws_key_pair.ec2_key.key_name
+  iam_instance_profile = var.ec2_iam_instance_profile
 
   vpc_security_group_ids = [aws_security_group.app.id]
   subnet_id              = tolist(data.aws_subnets.default.ids)[0]
@@ -95,7 +113,7 @@ resource "aws_instance" "app" {
   }
 }
 
-# Elastic IP
+# Elastic IP (Melbourne)
 resource "aws_eip" "app" {
   instance = aws_instance.app.id
   domain   = "vpc"
@@ -105,7 +123,7 @@ resource "aws_eip" "app" {
   }
 }
 
-# Route 53 Hosted Zone for subdomain
+# Route 53 Hosted Zone — global service, region doesn't matter
 resource "aws_route53_zone" "subdomain" {
   name = "${var.subdomain}.${var.domain_name}"
 
@@ -114,7 +132,7 @@ resource "aws_route53_zone" "subdomain" {
   }
 }
 
-# Route 53 A Record pointing to Elastic IP
+# Route 53 A Record pointing to new Melbourne Elastic IP
 resource "aws_route53_record" "subdomain_a" {
   zone_id = aws_route53_zone.subdomain.zone_id
   name    = "${var.subdomain}.${var.domain_name}"
@@ -123,7 +141,7 @@ resource "aws_route53_record" "subdomain_a" {
   records = [aws_eip.app.public_ip]
 }
 
-# Route 53 WWW CNAME (optional)
+# Route 53 WWW CNAME
 resource "aws_route53_record" "subdomain_www" {
   zone_id = aws_route53_zone.subdomain.zone_id
   name    = "www.${var.subdomain}.${var.domain_name}"
