@@ -623,22 +623,28 @@ export default function PricingManagement() {
                                     <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
                                 </div>
                             ) : (
-                                <div className="relative w-full overflow-auto max-h-[70vh]">
-                                    <table className="w-full caption-bottom text-sm text-left border-collapse">
-                                        <thead className="bg-muted sticky top-0 z-10">
+                                <div className="w-full overflow-auto max-h-[70vh] border rounded-md">
+                                    <table className="caption-bottom text-sm text-left border-separate border-spacing-0 min-w-max">
+                                        <thead>
                                             <tr>
-                                                <th className="p-2 border font-medium sticky left-0 bg-muted z-20">Drop \ Width</th>
+                                                <th className="p-2 border-b border-r font-medium sticky top-0 left-0 bg-gray-100 z-30 whitespace-nowrap">
+                                                    Drop \ Width
+                                                </th>
                                                 {widths.map(width => (
-                                                    <th key={width} className="p-2 border font-medium text-center min-w-[80px]">{width}</th>
+                                                    <th key={width} className="p-2 border-b border-r font-medium text-center min-w-[88px] sticky top-0 bg-gray-100 z-20 whitespace-nowrap">
+                                                        {width}
+                                                    </th>
                                                 ))}
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {drops.map(drop => (
                                                 <tr key={drop}>
-                                                    <th className="p-2 border font-medium sticky left-0 bg-muted">{drop}</th>
+                                                    <th className="p-2 border-b border-r font-medium sticky left-0 bg-gray-100 z-10 whitespace-nowrap">
+                                                        {drop}
+                                                    </th>
                                                     {widths.map(width => (
-                                                        <td key={`${width}-${drop}`} className="p-1 border text-center">
+                                                        <td key={`${width}-${drop}`} className="p-1 border-b border-r text-center bg-white">
                                                             <Input
                                                                 type="number"
                                                                 className="h-8 w-full text-center px-1"
