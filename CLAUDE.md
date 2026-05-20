@@ -505,19 +505,59 @@ npx prisma migrate status
 
 ## Deployment Notes
 
-**Docker Compose Structure:**
-- `postgres` service: Port 5432, persistent volume
-- `backend` service: Port 5000, hot-reload via volume mount
-- `frontend` service: Port 3000, hot-reload via volume mount
-- Network: `signatureshades-network` (bridge)
+**Production Infrastructure (AWS ap-southeast-4 Melbourne):**
+- EC2 `t3.micro` — runs backend, frontend, nginx containers
+- RDS `db.t4g.micro` PostgreSQL 15 — managed database (private, EC2 access only)
+- S3 `signatureshades-backups-production` (ap-southeast-2) — daily DB backups
+- S3 `signatureshades-bend-drawings` — application file storage
+- Route 53 — DNS for `orders.signatureshades.com.au`
+- Terraform state: `terraform/` directory (local state)
+
+**Production Docker Compose Structure:**
+- `backend` service: Port 5000 (internal) — connects to RDS via `DATABASE_URL`
+- `frontend` service: Port 80 (internal) — static Vite build served by nginx
+- `nginx` service: Ports 80/443 — reverse proxy + TLS termination (Let's Encrypt)
+- No database container — RDS handles PostgreSQL
+
+**Production `.env` on EC2 (`/home/ubuntu/signature-sap/.env`):**
+```bash
+DATABASE_URL=postgresql://signatureshades_prod:PASSWORD@signatureshades-db-production.cr6yg6a2cnx1.ap-southeast-4.rds.amazonaws.com:5432/signatureshades_prod
+NODE_ENV=production
+PORT=5000
+CORS_ORIGIN=https://orders.signatureshades.com.au
+JWT_SECRET=<strong-random-64-char>
+JWT_EXPIRES_IN=8h
+AWS_REGION=ap-southeast-4
+AWS_S3_BUCKET=signatureshades-bend-drawings
+VITE_API_URL=https://orders.signatureshades.com.au/api
+```
+
+**SSH access:**
+```bash
+ssh -i ~/.ssh/signatureshades-ec2 ubuntu@16.26.30.228
+cd /home/ubuntu/signature-sap
+```
 
 **Health checks:**
-- PostgreSQL: `pg_isready -U signatureshades_dev`
-- Backend depends on healthy postgres
-- Frontend depends on backend
+- API: `curl https://orders.signatureshades.com.au/api/health`
+- Containers: `docker compose -f docker-compose.prod.yml ps`
+- RDS: verified via DBeaver SSH tunnel (host: 16.26.30.228, key: signatureshades-ec2)
 
-**Production considerations:**
-- Change JWT_SECRET to strong random value
+**Automated backups:**
+- Cron: `0 17 * * *` (3am AEST) → `/home/ubuntu/scripts/db-backup.sh`
+- Uploads to: `s3://signatureshades-backups-production/daily/YYYY/MM/`
+- TLS auto-renew: certbot systemd timer with pre/post hooks to stop/start nginx
+
+**Terraform — apply changes:**
+```bash
+cd terraform
+terraform plan
+terraform apply                                    # all resources
+terraform apply -target="aws_db_instance.postgres" # RDS only
+```
+
+**Local development considerations:**
+- Change JWT_SECRET to strong random value (`openssl rand -base64 64` — output is one string, remove newlines)
 - Use production Dockerfile targets (not `development`)
 - Enable Prisma connection pooling for high concurrency
 - Consider read replicas for reporting queries

@@ -1,77 +1,49 @@
 #!/bin/bash
+# Local development backup script
+# For PRODUCTION backups see: /home/ubuntu/scripts/db-backup.sh on EC2
+# Production runs automatically via cron at 3am AEST daily → S3
 
 set -e
 
 BACKUP_DIR="./backups"
 DATE=$(date +%Y%m%d_%H%M%S)
 
-echo "🔄 Starting backup process..."
+echo "Starting backup process..."
 
-# Create backup directory if it doesn't exist
 mkdir -p $BACKUP_DIR
 
-# Determine if running in development or production
-if docker ps | grep -q "signatureshades-db-prod"; then
-    CONTAINER_NAME="signatureshades-db-prod"
-    DB_USER="signatureshades_prod"
-    DB_NAME="signatureshades_prod"
-    ENV_TYPE="prod"
-elif docker ps | grep -q "signatureshades-db-local"; then
+# Development only — backs up local Docker DB
+if docker ps | grep -q "signatureshades-db-local"; then
     CONTAINER_NAME="signatureshades-db-local"
     DB_USER="signatureshades_dev"
     DB_NAME="signatureshades_dev"
     ENV_TYPE="dev"
 else
-    echo "❌ Error: No database container found running"
+    echo "Error: Local dev database container not found."
+    echo "For production backups, run /home/ubuntu/scripts/db-backup.sh on the EC2 server."
     exit 1
 fi
 
-echo "📊 Backing up database: $DB_NAME from $CONTAINER_NAME..."
+echo "Backing up local database: $DB_NAME..."
 
-# Backup database
 docker exec $CONTAINER_NAME pg_dump -U $DB_USER $DB_NAME > $BACKUP_DIR/db_backup_${ENV_TYPE}_$DATE.sql
 
-if [ $? -eq 0 ]; then
-    echo "✅ Database backup completed: db_backup_${ENV_TYPE}_$DATE.sql"
-else
-    echo "❌ Database backup failed"
-    exit 1
-fi
+echo "Database backup completed: db_backup_${ENV_TYPE}_$DATE.sql"
 
-# Backup uploads folder if it exists
+# Backup uploads folder
 if [ -d "./uploads" ]; then
-    echo "📁 Backing up uploads folder..."
+    echo "Backing up uploads folder..."
     tar -czf $BACKUP_DIR/uploads_backup_${ENV_TYPE}_$DATE.tar.gz ./uploads
-    
-    if [ $? -eq 0 ]; then
-        echo "✅ Uploads backup completed: uploads_backup_${ENV_TYPE}_$DATE.tar.gz"
-    else
-        echo "⚠️  Uploads backup failed (non-critical)"
-    fi
+    echo "Uploads backup completed"
 fi
 
-# Backup environment files (production only)
-if [ "$ENV_TYPE" == "prod" ] && [ -f ".env.production" ]; then
-    echo "🔐 Backing up environment file..."
-    cp .env.production $BACKUP_DIR/env_backup_$DATE.txt
-    echo "✅ Environment file backed up"
-fi
-
-# Display backup summary
 echo ""
-echo "📦 Backup Summary:"
+echo "Backup Summary:"
 echo "  Date: $DATE"
-echo "  Environment: $ENV_TYPE"
 echo "  Location: $BACKUP_DIR"
-ls -lh $BACKUP_DIR/*$DATE*
+ls -lh $BACKUP_DIR/*$DATE* 2>/dev/null || true
 
-# Keep only last 7 days of backups
-echo ""
-echo "🗑️  Cleaning up old backups (keeping last 7 days)..."
+# Keep only last 7 days
 find $BACKUP_DIR -type f -mtime +7 -delete
 
-REMAINING=$(ls -1 $BACKUP_DIR | wc -l)
-echo "📊 Total backups retained: $REMAINING"
-
-echo ""
-echo "✅ Backup process completed successfully!"
+echo "Backup process completed!"

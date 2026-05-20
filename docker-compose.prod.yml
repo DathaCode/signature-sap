@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # Backend API (Production)
   # Database: AWS RDS PostgreSQL in Melbourne (ap-southeast-4)

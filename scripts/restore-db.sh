@@ -1,67 +1,80 @@
 #!/bin/bash
 # Database Restore Script for Signature Shades
-# Restores PostgreSQL database from S3 backup
+# Restores RDS PostgreSQL 15 from S3 backup (ap-southeast-2)
+# Usage: ./restore-db.sh <backup-filename>
+# Example: ./restore-db.sh signatureshades-db-20260520_020000.dump
 
 set -e
 
-# Check if backup file is provided
 if [ -z "$1" ]; then
     echo "Usage: $0 <backup-filename>"
-    echo "Example: $0 signatureshades-db-20260210_020000.sql.gz"
+    echo "Example: $0 signatureshades-db-20260520_020000.dump"
     echo ""
-    echo "Available backups:"
-    aws s3 ls s3://signatureshades-backups-production/database/ --region ap-southeast-2
+    echo "Available backups in S3:"
+    aws s3 ls s3://signatureshades-backups-production/daily/ --recursive --region ap-southeast-2 | sort | tail -20
     exit 1
 fi
 
+# ── Configuration ─────────────────────────────────────────────────────────────
 BACKUP_FILE="$1"
 S3_BUCKET="signatureshades-backups-production"
-DB_CONTAINER="signatureshades-db-prod"
+RDS_HOST="signatureshades-db-production.cr6yg6a2cnx1.ap-southeast-4.rds.amazonaws.com"
+DB_USER="signatureshades_prod"
+DB_NAME="signatureshades_prod"
+DB_PASS="${DB_PASSWORD:-$(grep DATABASE_URL /home/ubuntu/signature-sap/.env | sed 's/.*:\(.*\)@.*/\1/')}"
 RESTORE_DIR="/tmp/db-restore"
 
-# Create restore directory
 mkdir -p "$RESTORE_DIR"
 
 echo "[$(date)] Downloading backup from S3..."
 
-# Download from S3
-aws s3 cp "s3://${S3_BUCKET}/database/${BACKUP_FILE}" "${RESTORE_DIR}/${BACKUP_FILE}" --region ap-southeast-2
+# Try common S3 path prefixes
+S3_PATH=$(aws s3 ls s3://${S3_BUCKET}/daily/ --recursive --region ap-southeast-2 | grep "$BACKUP_FILE" | awk '{print $4}' | head -1)
+
+if [ -z "$S3_PATH" ]; then
+    echo "[$(date)] ERROR: Backup file '$BACKUP_FILE' not found in S3!"
+    exit 1
+fi
+
+aws s3 cp "s3://${S3_BUCKET}/${S3_PATH}" "${RESTORE_DIR}/${BACKUP_FILE}" --region ap-southeast-2
 
 if [ ! -f "${RESTORE_DIR}/${BACKUP_FILE}" ]; then
     echo "[$(date)] ERROR: Failed to download backup file!"
     exit 1
 fi
 
-echo "[$(date)] Backup downloaded successfully!"
+echo "[$(date)] Downloaded: $(du -sh ${RESTORE_DIR}/${BACKUP_FILE} | cut -f1)"
 
-# Confirm with user
-read -p "⚠️  This will OVERWRITE the current database. Are you sure? (yes/no): " CONFIRM
+# Confirm before overwriting
+read -p "⚠️  This will OVERWRITE the current RDS database. Are you sure? (yes/no): " CONFIRM
 if [ "$CONFIRM" != "yes" ]; then
     echo "Restore cancelled."
+    rm -f "${RESTORE_DIR}/${BACKUP_FILE}"
     exit 0
 fi
 
-echo "[$(date)] Stopping application containers..."
-cd /opt/signatureshades/signature-sap
-docker compose -f docker-compose.prod.yml stop backend frontend nginx
+echo "[$(date)] Stopping backend and nginx..."
+cd /home/ubuntu/signature-sap
+docker compose -f docker-compose.prod.yml stop backend nginx
 
-echo "[$(date)] Restoring database..."
+echo "[$(date)] Restoring database to RDS..."
 
-# Restore database
-gunzip -c "${RESTORE_DIR}/${BACKUP_FILE}" | docker exec -i "$DB_CONTAINER" psql -U signatureshades signatureshades_prod
+PGPASSWORD="$DB_PASS" pg_restore \
+  --host="$RDS_HOST" \
+  --port=5432 \
+  --username="$DB_USER" \
+  --dbname="$DB_NAME" \
+  --no-owner \
+  --no-acl \
+  --clean \
+  "${RESTORE_DIR}/${BACKUP_FILE}"
 
-if [ $? -eq 0 ]; then
-    echo "[$(date)] Database restored successfully!"
-else
-    echo "[$(date)] ERROR: Failed to restore database!"
-    exit 1
-fi
+echo "[$(date)] Database restored successfully!"
 
-# Restart containers
 echo "[$(date)] Restarting application..."
-docker compose -f docker-compose.prod.yml start backend frontend nginx
+docker compose -f docker-compose.prod.yml start backend nginx
 
 # Clean up
 rm -f "${RESTORE_DIR}/${BACKUP_FILE}"
 
-echo "[$(date)] Restore completed successfully!"
+echo "[$(date)] Restore completed! Verify at https://orders.signatureshades.com.au"
