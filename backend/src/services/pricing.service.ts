@@ -5,11 +5,11 @@ import { logger } from '../config/logger';
 
 const prisma = new PrismaClient();
 
-// Width tiers (mm)
-const WIDTH_TIERS = [600, 800, 1000, 1200, 1400, 1600, 1800, 2000, 2200, 2400, 2600, 2800, 3000];
+// Width tiers (mm) — NEW PRICING 2026
+const WIDTH_TIERS = [700, 900, 1100, 1300, 1500, 1700, 1900, 2100, 2300, 2500, 2700, 2900, 3101, 3500, 4000];
 
-// Drop tiers (mm)
-const DROP_TIERS = [1200, 1400, 1600, 1800, 2000, 2200, 2400, 2600, 2800, 3000];
+// Drop tiers (mm) — NEW PRICING 2026
+const DROP_TIERS = [1260, 1460, 1660, 1860, 2060, 2260, 2460, 2660, 2860, 3060, 3260, 3460, 3660, 3860, 4060, 4260, 4460];
 
 // Fabric group discount rates
 // G1: 20%, G2: 25%, G3: 30%
