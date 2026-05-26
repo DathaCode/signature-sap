@@ -68,14 +68,14 @@ function getMotorDeduction(motorType: string | undefined): number {
 
 /**
  * Chain length (mm) to use based on blind drop.
- * Inventory chains: 500 / 900 / 1200 / 1500 / 2000 mm
+ * Must match getChainSize() in worksheetExport.service.ts.
  */
 function getChainLength(drop: number): number {
     if (drop <= 850) return 500;
-    if (drop <= 1200) return 900;
-    if (drop <= 1600) return 1200;
-    if (drop <= 2200) return 1500;
-    return 2000;
+    if (drop <= 1100) return 750;
+    if (drop <= 1600) return 1000;
+    if (drop <= 2200) return 1200;
+    return 1500;
 }
 
 /**
