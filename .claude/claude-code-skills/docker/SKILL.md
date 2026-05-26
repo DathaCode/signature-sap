@@ -36,6 +36,22 @@ applies-to: signature-sap
 - `security/docker-security.md` — when editing Dockerfiles
 - [feedback_prod_compose.md](C:\Users\vdula\.claude\projects\f--SIGNATUR-SHADES-signature-sap\memory\feedback_prod_compose.md) — production compose flag rule
 
+## Production Deploy Rule — Signature Shades
+
+**NEVER automatically SSH into production or run commands on the EC2 server.**
+When production changes are needed, provide the commands for the user to run — never execute them directly.
+
+```bash
+# Provide these commands, don't run them:
+ssh -i ~/.ssh/signatureshades-ec2 ubuntu@16.26.30.228
+cd /home/ubuntu/signature-sap
+docker compose -f docker-compose.prod.yml build --no-cache <service>
+docker compose -f docker-compose.prod.yml up -d <service>
+docker restart signatureshades-nginx
+docker exec signatureshades-api-prod <cmd>
+docker cp <local-file> signatureshades-api-prod:<container-path>
+```
+
 ## Core Docker Rules
 1. **One process per container** — don't run multiple services in one container
 2. **Use multi-stage builds** — separate build and runtime stages

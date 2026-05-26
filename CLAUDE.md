@@ -642,6 +642,23 @@ terraform apply -target="aws_db_instance.postgres" # RDS only
 
 ---
 
+## Production Deploy Rule
+
+**NEVER automatically run SSH commands or execute anything on production.**
+When a task requires production changes, provide the commands for the user to run — do not execute them.
+
+```bash
+# Production commands to PROVIDE (never run yourself):
+ssh -i ~/.ssh/signatureshades-ec2 ubuntu@16.26.30.228
+docker cp ./backend/scripts/<file>.ts signatureshades-api-prod:/app/scripts/<file>.ts
+docker exec signatureshades-api-prod npx ts-node --compiler-options '{"module":"CommonJS"}' scripts/<file>.ts
+docker compose -f docker-compose.prod.yml build --no-cache frontend
+docker compose -f docker-compose.prod.yml up -d frontend
+docker restart signatureshades-nginx
+```
+
+---
+
 ## Development Workflow
 
 **When adding new features:**

@@ -65,6 +65,19 @@ Infrastructure as Code for provisioning and managing AWS and Oracle Cloud Infras
 - `security/cloud-security.md` — IAM, encryption, network security
 - `cost-reducer/cloud-and-infra.md` — Right-sizing, free tiers, spot instances
 
+## Production Deploy Rule — Signature Shades
+
+**NEVER automatically run `terraform apply` or any destructive/production command.**
+When production infrastructure changes are needed, provide the commands for the user to run — never execute them directly.
+
+```bash
+# Provide these commands, don't run them:
+cd terraform
+terraform plan -out=tfplan
+terraform apply tfplan
+terraform apply -target="aws_<resource>.<name>"
+```
+
 ## Core Terraform Rules
 1. **Never modify state manually** — use `terraform state` commands or `terraform import`
 2. **Never apply without plan** — always run `terraform plan` first
