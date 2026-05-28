@@ -2338,92 +2338,149 @@ export const editOrderDetails = async (
             // Delete existing items and recreate from submitted data
             await prisma.orderItem.deleteMany({ where: { orderId } });
 
-            // Recalculate prices for each item using comprehensive pricing
+            const isCurtainEdit = order.productType === 'CURTAINS';
             const newItems = [];
             for (let index = 0; index < body.items.length; index++) {
                 const item: any = body.items[index];
                 const w = parseInt(item.width) || 0;
                 const d = parseInt(item.drop) || 0;
-                const motorDeduction = getMotorDeduction(item.chainOrMotor);
 
-                let price = item.price || 0;
-                let fabricGroup = item.fabricGroup || null;
-                let discountPercent = item.discountPercent || 0;
-                let fabricPrice = item.fabricPrice || null;
-                let motorPrice = item.motorPrice || null;
-                let bracketPrice = item.bracketPrice || null;
-                // Chain, clips, componentPrice are no longer charged
-                const chainPrice: number | null = null;
-                const clipsPrice: number | null = null;
-                const componentPrice: number | null = null;
+                if (isCurtainEdit) {
+                    // ── Curtain item ──
+                    let price = item.price || 0;
+                    let curtainCalc: any = null;
+                    const fabricGroup = item.fabricGroup || (item.fabric ? null : null);
 
-                // Recalculate price if required fields are present
-                if (w > 0 && d > 0 && item.material && item.fabricType && item.fabricColour && item.chainOrMotor && item.bracketType && item.bracketColour && item.bottomRailType && item.bottomRailColour) {
-                    try {
-                        const breakdown = await comprehensivePricingService.calculateBlindPrice({
-                            width: w,
-                            drop: d,
-                            material: item.material,
-                            fabricType: item.fabricType,
-                            fabricColour: item.fabricColour,
-                            chainOrMotor: item.chainOrMotor,
-                            chainType: item.chainType || undefined,
-                            bracketType: item.bracketType,
-                            bracketColour: item.bracketColour,
-                            bottomRailType: item.bottomRailType,
-                            bottomRailColour: item.bottomRailColour,
-                        });
-                        price = breakdown.totalPrice;
-                        fabricGroup = breakdown.fabricGroup;
-                        discountPercent = breakdown.discountPercent;
-                        fabricPrice = breakdown.fabricPrice;
-                        motorPrice = breakdown.motorChainPrice;
-                        bracketPrice = breakdown.bracketPrice;
-                    } catch (err) {
-                        logger.warn(`Price recalc failed for item ${index + 1}: ${err}`);
-                        // Keep submitted price as fallback
+                    if (w > 0 && d > 0 && item.fabric && item.openingType && item.fullness && item.bracketType) {
+                        const fg = fabricGroup ||
+                            (await prisma.sheerFabricPricing.findFirst({ where: { fabricName: item.fabric, userId: null } }))?.fabricGroup ||
+                            null;
+                        if (fg) {
+                            try {
+                                curtainCalc = await sheerCurtainPricingService.calculateCurtainMetrics({
+                                    width: w, drop: d,
+                                    openingType: item.openingType,
+                                    fullness: Number(item.fullness),
+                                    bracketType: item.bracketType,
+                                    fabric: item.fabric,
+                                    fabricGroup: fg,
+                                    requiresDropDeduction: item.requiresDropDeduction !== false,
+                                    dropDeductionValue: item.dropDeductionValue ? Number(item.dropDeductionValue) : 35,
+                                    requiresTracks: item.requiresTracks ?? undefined,
+                                    trackType: item.trackType,
+                                    motorType: item.motorType,
+                                    remotes: item.remotes,
+                                    chargerHub: item.chargerHub,
+                                });
+                                price = curtainCalc.total;
+                            } catch (err) {
+                                logger.warn(`Curtain price recalc failed for item ${index + 1}: ${err}`);
+                            }
+                        }
                     }
-                }
 
-                newItems.push({
-                    orderId,
-                    itemNumber: index + 1,
-                    itemType: 'blind',
-                    location: item.location || '',
-                    width: w,
-                    drop: d,
-                    fixing: item.fixing || null,
-                    bracketType: item.bracketType || null,
-                    bracketColour: item.bracketColour || null,
-                    controlSide: item.controlSide || 'Left',
-                    chainOrMotor: item.chainOrMotor || null,
-                    chainType: item.chainType || null,
-                    roll: item.roll || 'Front',
-                    material: item.material || null,
-                    fabricType: item.fabricType || null,
-                    fabricColour: item.fabricColour || null,
-                    bottomRailType: item.bottomRailType || null,
-                    bottomRailColour: item.bottomRailColour || null,
-                    calculatedWidth: w > 0 ? w - motorDeduction : null,
-                    calculatedDrop: d > 0 ? d + 200 : null,
-                    fabricCutWidth: w > 0 ? w - motorDeduction : null,
-                    price,
-                    fabricGroup,
-                    discountPercent,
-                    fabricPrice,
-                    motorPrice,
-                    bracketPrice,
-                    chainPrice,
-                    clipsPrice,
-                    componentPrice,
-                    remotes: item.remotes || null,
-                    chargerHub: item.chargerHub || null,
-                    requiresPelmet: item.requiresPelmet ?? null,
-                    pelmetType: item.pelmetType || null,
-                    pelmetColor: item.pelmetColor || null,
-                    pelmetSize: item.pelmetSize || null,
-                    pelmetCustomSize: item.pelmetCustomSize || null,
-                });
+                    newItems.push({
+                        orderId,
+                        itemNumber: index + 1,
+                        itemType: 'curtain',
+                        location: item.location || '',
+                        width: w,
+                        drop: d,
+                        fabricColour: item.fabricColour || null,
+                        bracketType: item.bracketType || null,
+                        material: item.fabric || null,
+                        price,
+                        fabricGroup: item.fabricGroup || null,
+                        curtainType: item.curtainType || 'S Fold',
+                        hem: item.hem ? Number(item.hem) : 70,
+                        installation: item.installation || null,
+                        trackColour: item.trackColour || null,
+                        openingType: item.openingType || null,
+                        wandSize: item.wandSize ? Number(item.wandSize) : 1250,
+                        fullness: item.fullness ? Number(item.fullness) : null,
+                        requiresTracks: item.requiresTracks || false,
+                        trackType: item.trackType || null,
+                        motorType: item.motorType || null,
+                        trackControlSide: item.trackControlSide || null,
+                        remotes: item.remotes || null,
+                        chargerHub: item.chargerHub?.length ? JSON.stringify(item.chargerHub) : null,
+                        trackColor: item.trackColor || null,
+                        requiresBentTracks: item.requiresBentTracks || false,
+                        bendType: item.bendType || null,
+                        bendQty: item.bendQty ? Number(item.bendQty) : null,
+                        dropSurcharge: curtainCalc?.dropSurcharge || 0,
+                        hookCount: curtainCalc?.hookCount || null,
+                        bracketCount: curtainCalc?.bracketCount || null,
+                        wandCount: curtainCalc?.wandCount || null,
+                        fabricLength: curtainCalc?.fabricLength || null,
+                        fabricPrice: curtainCalc?.fabricCost || null,
+                        hookCost: curtainCalc?.fullnessSurcharge ?? null,
+                        motorPrice: curtainCalc?.motorCost || null,
+                        chainPrice: curtainCalc?.remoteCost || null,
+                        clipsPrice: curtainCalc?.chargerCost || null,
+                    });
+                } else {
+                    // ── Blind item ──
+                    const motorDeduction = getMotorDeduction(item.chainOrMotor);
+                    let price = item.price || 0;
+                    let fabricGroup = item.fabricGroup || null;
+                    let discountPercent = item.discountPercent || 0;
+                    let fabricPrice = item.fabricPrice || null;
+                    let motorPrice = item.motorPrice || null;
+                    let bracketPrice = item.bracketPrice || null;
+                    const chainPrice: number | null = null;
+                    const clipsPrice: number | null = null;
+                    const componentPrice: number | null = null;
+
+                    if (w > 0 && d > 0 && item.material && item.fabricType && item.fabricColour && item.chainOrMotor && item.bracketType && item.bracketColour && item.bottomRailType && item.bottomRailColour) {
+                        try {
+                            const breakdown = await comprehensivePricingService.calculateBlindPrice({
+                                width: w, drop: d,
+                                material: item.material, fabricType: item.fabricType, fabricColour: item.fabricColour,
+                                chainOrMotor: item.chainOrMotor, chainType: item.chainType || undefined,
+                                bracketType: item.bracketType, bracketColour: item.bracketColour,
+                                bottomRailType: item.bottomRailType, bottomRailColour: item.bottomRailColour,
+                            });
+                            price = breakdown.totalPrice;
+                            fabricGroup = breakdown.fabricGroup;
+                            discountPercent = breakdown.discountPercent;
+                            fabricPrice = breakdown.fabricPrice;
+                            motorPrice = breakdown.motorChainPrice;
+                            bracketPrice = breakdown.bracketPrice;
+                        } catch (err) {
+                            logger.warn(`Price recalc failed for item ${index + 1}: ${err}`);
+                        }
+                    }
+
+                    newItems.push({
+                        orderId,
+                        itemNumber: index + 1,
+                        itemType: 'blind',
+                        location: item.location || '',
+                        width: w, drop: d,
+                        fixing: item.fixing || null,
+                        bracketType: item.bracketType || null,
+                        bracketColour: item.bracketColour || null,
+                        controlSide: item.controlSide || 'Left',
+                        chainOrMotor: item.chainOrMotor || null,
+                        chainType: item.chainType || null,
+                        roll: item.roll || 'Front',
+                        material: item.material || null,
+                        fabricType: item.fabricType || null,
+                        fabricColour: item.fabricColour || null,
+                        bottomRailType: item.bottomRailType || null,
+                        bottomRailColour: item.bottomRailColour || null,
+                        calculatedWidth: w > 0 ? w - motorDeduction : null,
+                        calculatedDrop: d > 0 ? d + 200 : null,
+                        fabricCutWidth: w > 0 ? w - motorDeduction : null,
+                        price, fabricGroup, discountPercent, fabricPrice, motorPrice, bracketPrice,
+                        chainPrice, clipsPrice, componentPrice,
+                        remotes: item.remotes || null, chargerHub: item.chargerHub || null,
+                        requiresPelmet: item.requiresPelmet ?? null,
+                        pelmetType: item.pelmetType || null, pelmetColor: item.pelmetColor || null,
+                        pelmetSize: item.pelmetSize || null, pelmetCustomSize: item.pelmetCustomSize || null,
+                    });
+                }
             }
 
             await prisma.orderItem.createMany({ data: newItems });

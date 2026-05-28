@@ -4,7 +4,7 @@ import { Button } from '../ui/Button';
 import { Pencil, Trash2, Save, FileText, ChevronDown, ChevronUp, PlusCircle, CheckSquare, Square, Settings2 } from 'lucide-react';
 import { BlindItem } from '../../types/order';
 import { isWinderMotor } from '../../data/hardware';
-import { getMaterials, getFabricTypes, getFabricColors } from '../../data/fabrics';
+import { useFabrics, getMaterialsFromData, getFabricTypesFromData, getFabricColorsFromData } from '../../hooks/useFabrics';
 import {
     FIXING_TYPES, BRACKET_TYPES, BRACKET_COLOURS, MOTORS, CHAIN_TYPES,
     BOTTOM_RAIL_TYPES, BOTTOM_RAIL_COLOURS, CONTROL_SIDES, ROLL_DIRECTIONS
@@ -79,6 +79,7 @@ export default function OrderSummary({
     onNotesChange,
     customerReference,
 }: OrderSummaryProps) {
+    const { data: fabricData = {} } = useFabrics();
     const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
     const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
     const [showBulkEdit, setShowBulkEdit] = useState(false);
@@ -138,8 +139,8 @@ export default function OrderSummary({
         setShowBulkEdit(false);
     };
 
-    const fabricTypes = bulk.material ? getFabricTypes(bulk.material) : [];
-    const fabricColours = bulk.material && bulk.fabricType ? getFabricColors(bulk.material, bulk.fabricType) : [];
+    const fabricTypes = bulk.material ? getFabricTypesFromData(fabricData, bulk.material) : [];
+    const fabricColours = bulk.material && bulk.fabricType ? getFabricColorsFromData(fabricData, bulk.material, bulk.fabricType) : [];
 
     return (
         <div className="space-y-6">
@@ -385,7 +386,7 @@ export default function OrderSummary({
                                         <SelectField
                                             label="Material"
                                             value={bulk.material}
-                                            options={getMaterials()}
+                                            options={getMaterialsFromData(fabricData)}
                                             onChange={v => setBulkField('material', v)}
                                         />
                                         <SelectField

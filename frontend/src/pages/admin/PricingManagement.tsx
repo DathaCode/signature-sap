@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { adminPricingApi, pricingApi } from '../../services/api';
+import BlindFabricsTab from '../../components/admin/BlindFabricsTab';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Loader2, Save, Plus, Trash2 } from 'lucide-react';
@@ -78,7 +79,7 @@ function buildBracketGroups(items: ComponentItem[]): BracketGroup[] {
 }
 
 export default function PricingManagement() {
-    const [activeTab, setActiveTab] = useState<'fabric' | 'components' | 'sheerFabric'>('fabric');
+    const [activeTab, setActiveTab] = useState<'fabric' | 'components' | 'sheerFabric' | 'blindFabrics'>('fabric');
 
     // Fabric matrix state
     const [loading, setLoading] = useState(true);
@@ -577,6 +578,7 @@ export default function PricingManagement() {
             <div className="flex gap-2 border-b pb-0">
                 {([
                     ['fabric', 'Fabric Matrix'],
+                    ['blindFabrics', 'Blind Fabrics'],
                     ['sheerFabric', 'Sheer Fabric'],
                     ['components', 'Automatic'],
                 ] as [typeof activeTab, string][]).map(([tab, label]) => (
@@ -1068,6 +1070,10 @@ export default function PricingManagement() {
                         </CardContent>
                     </Card>
                 </div>
+            )}
+
+            {activeTab === 'blindFabrics' && (
+                <BlindFabricsTab />
             )}
 
         </div>

@@ -435,7 +435,16 @@ export const webOrderApi = {
      */
     getOrder: async (id: string): Promise<import('../types/order').Order> => {
         const response = await api.get(`/web-orders/${id}`)
-        return response.data.data.order
+        const order = response.data.data.order
+        // Map DB column names to frontend CurtainItem type names
+        if (order?.productType === 'CURTAINS' && Array.isArray(order.items)) {
+            order.items = order.items.map((item: any) => ({
+                ...item,
+                fabricCost: item.fabricPrice ?? item.fabricCost,
+                fullnessSurcharge: item.hookCost ?? item.fullnessSurcharge,
+            }))
+        }
+        return order
     },
 
     /**
@@ -703,5 +712,42 @@ export const adminPricingApi = {
         await api.put(`/pricing/${fabricGroup}/${width}/${drop}`, { price })
     }
 }
+
+export type FabricDataFormatted = Record<string, Record<string, { group: string; colors: string[] }>>;
+
+export interface AdminFabricSupplier {
+    name: string;
+    fabrics: Array<{
+        id: string;
+        fabricType: string;
+        fabricGroup: string;
+        colors: string[];
+    }>;
+}
+
+export const fabricsApi = {
+    getAll: async (): Promise<FabricDataFormatted> => {
+        const response = await api.get('/fabrics');
+        return response.data.data;
+    },
+    getAdmin: async (): Promise<AdminFabricSupplier[]> => {
+        const response = await api.get('/fabrics/admin');
+        return response.data.data;
+    },
+    addFabric: async (data: { supplier: string; fabricType: string; fabricGroup: string; colors: string[] }) => {
+        const response = await api.post('/fabrics', data);
+        return response.data.data;
+    },
+    updateFabric: async (id: string, data: { fabricType?: string; fabricGroup?: string; colors?: string[] }) => {
+        const response = await api.put(`/fabrics/${id}`, data);
+        return response.data.data;
+    },
+    deleteFabric: async (id: string): Promise<void> => {
+        await api.delete(`/fabrics/${id}`);
+    },
+    deleteSupplier: async (supplier: string): Promise<void> => {
+        await api.delete(`/fabrics/supplier/${encodeURIComponent(supplier)}`);
+    },
+};
 
 export default api

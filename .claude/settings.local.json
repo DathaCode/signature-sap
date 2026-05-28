@@ -30,7 +30,10 @@
       "PowerShell(docker exec signatureshades-db-local psql -U signatureshades_dev -d signatureshades_dev -c \"SELECT motor_type, width_from, width_to, price FROM sheer_motor_pricing ORDER BY motor_type, width_from;\")",
       "PowerShell(docker exec signatureshades-db-local psql -U signatureshades_dev -d signatureshades_dev -c \"SELECT fabric_group, drop_surcharge_per_m, fullness_130_surcharge, fullness_140_surcharge, fullness_150_surcharge FROM sheer_group_settings ORDER BY fabric_group;\")",
       "PowerShell(docker exec signatureshades-db-local psql -U signatureshades_dev -d signatureshades_dev -c \"SELECT fabric_name, price_per_meter FROM sheer_fabric_pricing WHERE user_id IS NULL AND fabric_group='Group 1' LIMIT 5;\")",
-      "Bash(git rm *)"
+      "Bash(git rm *)",
+      "Bash(winpty docker *)",
+      "PowerShell(docker exec signatureshades-db-local psql -U signatureshades_dev -d signatureshades_dev -c \"SELECT order_number, subtotal, total FROM orders WHERE order_number LIKE '260093%' OR order_number LIKE '260092%';\")",
+      "PowerShell(docker exec signatureshades-db-local psql -U signatureshades_dev -d signatureshades_dev -c \"SELECT order_number, product_type, subtotal, total FROM orders ORDER BY created_at DESC LIMIT 10;\")"
     ]
   }
 }

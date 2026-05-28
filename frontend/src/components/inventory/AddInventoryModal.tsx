@@ -4,7 +4,7 @@ import { X } from 'lucide-react'
 import { gooeyToast } from 'goey-toast'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { inventoryApi } from '../../services/api'
-import { getMaterials, getFabricTypes, getFabricColors } from '../../data/fabrics'
+import { useFabrics, getMaterialsFromData, getFabricTypesFromData, getFabricColorsFromData } from '../../hooks/useFabrics'
 import type { InventoryCategory } from '../../types'
 
 interface AddInventoryModalProps {
@@ -154,9 +154,10 @@ export default function AddInventoryModal({ isOpen, onClose }: AddInventoryModal
 
     if (!isOpen) return null
 
-    const materials     = getMaterials()
-    const fabricTypes   = fabricBrand ? getFabricTypes(fabricBrand) : []
-    const fabricColours = (fabricBrand && fabricType) ? getFabricColors(fabricBrand, fabricType) : []
+    const { data: fabricData = {} } = useFabrics()
+    const materials     = getMaterialsFromData(fabricData)
+    const fabricTypes   = fabricBrand ? getFabricTypesFromData(fabricData, fabricBrand) : []
+    const fabricColours = (fabricBrand && fabricType) ? getFabricColorsFromData(fabricData, fabricBrand, fabricType) : []
 
     // Label for the colour dropdown (chains use "Material Type" instead of "Colour")
     const colourLabel = category === 'CHAIN' ? 'Chain Type *' : 'Colour *'

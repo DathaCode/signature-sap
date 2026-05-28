@@ -15,6 +15,7 @@ import pricingRoutes from './routes/pricingRoutes';
 import userRoutes from './routes/userRoutes';
 import quoteRoutes from './routes/quoteRoutes';
 import adminWorksheetRoutes from './routes/adminWorksheetRoutes';
+import blindFabricRoutes from './routes/blindFabricRoutes';
 
 // Load environment variables
 dotenv.config();
@@ -94,6 +95,7 @@ app.use('/api/pricing', pricingRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/quotes', quoteRoutes);
 app.use('/api/admin/worksheets', adminWorksheetRoutes);
+app.use('/api/fabrics', blindFabricRoutes);
 
 // ============================================================================
 // ERROR HANDLING
