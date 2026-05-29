@@ -13,12 +13,16 @@ applies-to: signature-sap
 - **API client:** [frontend/src/services/api.ts](frontend/src/services/api.ts) — axios instance with JWT interceptor. Add new endpoints here.
 - **Routing convention:** `/new-order` (not `/orders/new`). Role-gated routes wrap `<ProtectedRoute role="ADMIN"|"WAREHOUSE">` in [frontend/src/App.tsx](frontend/src/App.tsx).
 - **Page locations:**
-  - `pages/auth/` — Login, Register
+  - `pages/auth/` — Login, Register, ForgotPassword, ResetPassword
   - `pages/customer/` — Dashboard, MyOrders
   - `pages/orders/` — NewOrder, OrderDetails
-  - `pages/admin/` — OrderManagement, AdminOrderDetails, UserManagement, PricingManagement, InventoryDashboard
+  - `pages/quotes/` — MyQuotes, QuoteDetails
+  - `pages/admin/` — OrderManagement, AdminOrderDetails, UserManagement, PricingManagement (incl. BlindFabricsTab), InventoryDashboard, TrashOrders
   - `pages/warehouse/` — warehouse-only views
 - **Reusable UI:** [frontend/src/components/ui/](frontend/src/components/ui/) (Button, Input, Card, etc.) — reuse before creating new.
+- **Fabric catalog:** [frontend/src/hooks/useFabrics.ts](frontend/src/hooks/useFabrics.ts) — TanStack Query hook that fetches live from `GET /api/blind-fabrics`. Use this in order forms; do NOT import the old static `fabrics.ts`.
+- **Curtain form:** [frontend/src/components/orders/CurtainItemForm.tsx](frontend/src/components/orders/CurtainItemForm.tsx) — separate form for sheer curtain items. `NewOrder.tsx` renders either BlindItemForm or CurtainItemForm based on product type.
+- **Admin fabric management:** [frontend/src/components/admin/BlindFabricsTab.tsx](frontend/src/components/admin/BlindFabricsTab.tsx) — live inside PricingManagement page. Full CRUD for the BlindFabric catalog.
 - **Pricing util:** [frontend/src/utils/pricing.ts](frontend/src/utils/pricing.ts) mirrors backend matrix; rounds to NEAREST tier (backend rounds UP — known divergence, see CLAUDE.md).
 - **British spelling required:** `fabricColour`, `bottomRailColour` (NOT `Color`) — Prisma schema uses British spelling.
 - **Field name discipline:** when extending forms, mirror Prisma schema names exactly (see [backend/prisma/schema.prisma](backend/prisma/schema.prisma)).
@@ -60,26 +64,36 @@ frontend/src/
 ├── App.tsx                   # Routes + ProtectedRoute role gates
 ├── context/
 │   └── AuthContext.tsx       # JWT auth, user role
+├── hooks/
+│   ├── useFabrics.ts         # Fetches BlindFabric catalog from /api/blind-fabrics (TanStack Query)
+│   └── useDebounce.ts        # Generic debounce hook
 ├── pages/
-│   ├── auth/                 # Login, Register, ForgotPassword
+│   ├── auth/                 # Login, Register, ForgotPassword, ResetPassword
 │   ├── customer/             # Dashboard, MyOrders
 │   ├── orders/               # NewOrder, OrderDetails
-│   ├── admin/                # OrderManagement, AdminOrderDetails, PricingManagement, InventoryDashboard, UserManagement
+│   ├── quotes/               # MyQuotes, QuoteDetails
+│   ├── admin/                # OrderManagement, AdminOrderDetails, PricingManagement,
+│   │                         # InventoryDashboard, UserManagement, TrashOrders
 │   └── warehouse/            # warehouse-role views
 ├── components/
 │   ├── ui/                   # Button, Input, Card, Modal, Spinner — reuse first
 │   ├── layout/               # ProtectedRoute, navbar
-│   ├── orders/               # BlindItemForm, CurtainItemForm
-│   └── admin/                # FabricCutWorksheet, TubeCutWorksheet, WorksheetPreview
+│   ├── orders/               # BlindItemForm (useFabrics hook), CurtainItemForm
+│   ├── inventory/            # AddInventoryModal, AdjustQuantityModal, ItemHistoryModal
+│   └── admin/                # FabricCutWorksheet, TubeCutWorksheet, WorksheetPreview,
+│                             # CurtainWorksheet, BlindFabricsTab
 ├── services/
-│   └── api.ts                # axios + JWT interceptor + endpoint groups (orderApi, pricingApi, inventoryApi, etc.)
+│   └── api.ts                # axios + JWT interceptor + all API groups (orderApi, pricingApi,
+│                             # inventoryApi, blindFabricApi, quoteApi, authApi, userApi)
 ├── types/
 │   └── order.ts              # Order, OrderItem, Quote types — mirror schema.prisma
 ├── utils/
 │   └── pricing.ts            # Frontend pricing matrix (mirrors backend pricing.service.ts)
 └── data/
-    ├── sheerFabrics.ts       # Static reference data
-    └── sheerHardware.ts
+    ├── fabrics.ts            # DEPRECATED — static blind fabric data (use useFabrics hook instead)
+    ├── hardware.ts           # Blind hardware options
+    ├── sheerFabrics.ts       # Sheer curtain fabric options
+    └── sheerHardware.ts      # Sheer curtain hardware options
 ```
 
 ## Essential Commands

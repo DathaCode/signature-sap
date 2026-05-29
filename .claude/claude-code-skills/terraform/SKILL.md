@@ -8,14 +8,15 @@ applies-to: signature-sap
 
 ## Project Context
 - **Folder:** [terraform/](terraform/) — files: `main.tf`, `s3.tf`, `security.tf`, `variables.tf`, `outputs.tf`, `user-data.sh`
-- **Region:** `ap-southeast-2` (Sydney)
+- **Region:** `ap-southeast-4` (Melbourne) — **not** ap-southeast-2; updated 2026-05-19
 - **Provider:** `hashicorp/aws ~> 5.0`, Terraform `>= 1.0`
 - **Resources currently managed:**
   - EC2 instance (Ubuntu 22.04 jammy, in default VPC, gp3 30 GB encrypted root)
   - Elastic IP attached to EC2
+  - RDS instance (`aws_db_instance.postgres`) — `db.t4g.micro` PostgreSQL 15, private, EC2-only access
   - Route53 zone + A record for `orders.signatureshades.com.au`, plus `www` CNAME
   - SSH key pair from `var.ssh_public_key_path`
-  - Security group (`security.tf`)
+  - Security group (`security.tf`) — includes RDS inbound rule from EC2 SG
   - S3 backup bucket (`s3.tf`) — versioned, AES256, blocked-public, 7-day → Glacier, 30-day expiry
   - EC2 user-data bootstrap script (`user-data.sh`)
 - **State backend:** local `terraform.tfstate` in the folder. **S3 backend is commented out** in `main.tf` — single-operator OK for now; switch to S3+DynamoDB lock if a second person ever runs Terraform.

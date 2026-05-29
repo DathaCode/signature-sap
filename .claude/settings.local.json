@@ -33,7 +33,9 @@
       "Bash(git rm *)",
       "Bash(winpty docker *)",
       "PowerShell(docker exec signatureshades-db-local psql -U signatureshades_dev -d signatureshades_dev -c \"SELECT order_number, subtotal, total FROM orders WHERE order_number LIKE '260093%' OR order_number LIKE '260092%';\")",
-      "PowerShell(docker exec signatureshades-db-local psql -U signatureshades_dev -d signatureshades_dev -c \"SELECT order_number, product_type, subtotal, total FROM orders ORDER BY created_at DESC LIMIT 10;\")"
+      "PowerShell(docker exec signatureshades-db-local psql -U signatureshades_dev -d signatureshades_dev -c \"SELECT order_number, product_type, subtotal, total FROM orders ORDER BY created_at DESC LIMIT 10;\")",
+      "Bash(git -C \"f:\\\\SIGNATUR SHADES\\\\signature-sap\" log --oneline -10)",
+      "Bash(Get-ChildItem -Path \"f:\\\\SIGNATUR SHADES\\\\signature-sap\\\\backend\\\\src\\\\services\" -Name)"
     ]
   }
 }

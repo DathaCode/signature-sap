@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Signature Shades Order Management System** - A full-stack warehouse management and order processing system for a custom blinds manufacturing company. The system handles web-based order creation, Excel upload workflows, cutlist optimization, inventory management, and worksheet generation for production.
+**Signature Shades Order Management System** - A full-stack warehouse management and order processing system for a custom blinds and sheer curtains manufacturing company. The system handles web-based order/quote creation, cutlist optimization, inventory management, worksheet generation for production, label printing, and a dynamic fabric catalog managed by admins.
 
 **Tech Stack:**
 - **Frontend:** React 18 + TypeScript + Vite + TailwindCSS + TanStack Query
@@ -57,9 +57,17 @@ npm run prisma:push          # Push schema without migration
 npm run prisma:studio        # Open Prisma Studio GUI
 
 # Seed data
-npm run seed                 # Seed all data
-npm run seed:pricing         # Seed pricing matrix only
+npm run seed                 # Seed all inventory data
+npm run seed:pricing         # Seed blind pricing matrix (650 entries)
 npm run create:admin         # Create admin user interactively
+npm run create:warehouse     # Create warehouse user
+
+# One-off seed scripts (run inside container with ts-node)
+# backend/scripts/seed-blind-fabrics.ts      — populates BlindFabric table
+# backend/scripts/seed-sheer-pricing.ts      — populates sheer curtain pricing matrix
+# backend/scripts/seed-sheer-inventory.ts    — seeds sheer curtain inventory items
+# backend/scripts/seed-sheer-motor-pricing.ts — seeds sheer motor price entries
+# backend/scripts/update-pricing-2026.ts     — re-seeds blind pricing matrix
 
 # Linting & Testing
 npm run lint
@@ -148,6 +156,18 @@ src/
    - Motor-specific logic for chain selection and bracket compatibility
    - Returns detailed price breakdown for transparency
 
+7. **Sheer Curtain Pricing Service** (`services/sheerCurtainPricing.service.ts`)
+   - Calculates full sheer curtain price (fabric cost + motor/wand/runner/hook components)
+   - References DB-backed pricing for motor and accessories
+   - Supports wand-operated and motorised curtain configurations
+
+8. **Blind Fabric Service** (`services/blindFabric.service.ts`)
+   - Admin-managed fabric catalog stored in the `BlindFabric` DB table
+   - Replaces hardcoded fabric data; order form fetches fabrics dynamically
+   - CRUD: add / update / delete individual fabrics and whole supplier groups
+   - `getAllFabricsFormatted()` — returns nested `{ supplier → { fabricType → { group, colors } } }` shape used by the order form
+   - `getAllFabricsAdmin()` — returns flat supplier list for the admin Blind Fabrics tab
+
 ### Frontend Architecture
 
 **React Context + TanStack Query Pattern:**
@@ -157,19 +177,35 @@ src/
 ├── main.tsx                 # React root + providers
 ├── context/
 │   └── AuthContext.tsx      # JWT auth state + user role
+├── hooks/
+│   ├── useFabrics.ts        # TanStack Query hook — fetches BlindFabric catalog from /api/blind-fabrics
+│   └── useDebounce.ts       # Generic debounce hook
 ├── pages/                   # Route components
-│   ├── auth/                # Login, Register
+│   ├── auth/                # Login, Register, ForgotPassword, ResetPassword
 │   ├── customer/            # Dashboard, MyOrders
 │   ├── orders/              # NewOrder, OrderDetails
-│   └── admin/               # OrderManagement, UserManagement, PricingManagement
+│   ├── quotes/              # MyQuotes, QuoteDetails
+│   ├── admin/               # OrderManagement, AdminOrderDetails, UserManagement,
+│   │                        # PricingManagement (incl. BlindFabricsTab), TrashOrders
+│   └── warehouse/           # Warehouse-role views
 ├── components/
 │   ├── ui/                  # Reusable UI components (Button, Input, Card, etc.)
 │   ├── auth/                # LoginForm, RegisterForm
 │   ├── layout/              # ProtectedRoute
-│   ├── orders/              # BlindItemForm
-│   └── admin/               # FabricCutWorksheet, TubeCutWorksheet, WorksheetPreview
-├── lib/
-│   └── api.ts               # Axios instance with JWT interceptor
+│   ├── orders/              # BlindItemForm (dynamic fabrics), CurtainItemForm
+│   ├── inventory/           # AddInventoryModal, AdjustQuantityModal, ItemHistoryModal
+│   └── admin/               # FabricCutWorksheet, TubeCutWorksheet, WorksheetPreview,
+│                            # CurtainWorksheet, BlindFabricsTab
+├── services/
+│   └── api.ts               # Axios instance + all endpoint groups (orderApi, pricingApi,
+│                            # inventoryApi, blindFabricApi, etc.)
+├── data/
+│   ├── fabrics.ts           # Static fallback fabric data (deprecated — use BlindFabric DB)
+│   ├── sheerFabrics.ts      # Sheer curtain fabric options
+│   ├── hardware.ts          # Blind hardware options
+│   └── sheerHardware.ts     # Sheer curtain hardware options
+├── types/
+│   └── order.ts             # TypeScript interfaces mirroring Prisma schema
 └── utils/
     └── pricing.ts           # Frontend pricing calculation (mirrors backend)
 ```
@@ -178,6 +214,7 @@ src/
 - **Global auth state:** AuthContext (JWT token + user)
 - **Server state:** TanStack Query (caching, optimistic updates)
 - **Form state:** React Hook Form + local useState
+- **Fabric catalog:** `useFabrics` hook — fetches live from DB, cached by TanStack Query
 
 ---
 
@@ -196,6 +233,17 @@ Order (1) ──> (N) OrderItem
 **Inventory Tracking:**
 ```
 InventoryItem (1) ──> (N) InventoryTransaction
+```
+
+**Fabric Catalog (admin-managed):**
+```
+BlindFabric — standalone, no FK to orders
+  supplier (String)     e.g. "Textstyle"
+  fabricType (String)   e.g. "Focus"
+  fabricGroup (String)  e.g. "G1", "G2", "G3"
+  colors (String[])     PostgreSQL text array
+
+  Unique constraint: (supplier, fabricType)
 ```
 
 ### Critical Field Conventions
@@ -242,13 +290,14 @@ Authorization: Bearer <JWT_TOKEN>
 {
   userId: string,
   email: string,
-  role: "CUSTOMER" | "ADMIN"
+  role: "CUSTOMER" | "ADMIN" | "WAREHOUSE"
 }
 ```
 
 **Role-based access:**
-- Customer routes: `/api/web-orders/*`, `/api/orders/my-orders`
-- Admin routes: `/api/users/*`, `/api/pricing/*`, `/api/inventory/*`, `/api/web-orders/:id/send-to-production`
+- Customer routes: `/api/web-orders/*`, `/api/quotes/*`
+- Admin routes: `/api/users/*`, `/api/pricing/*`, `/api/inventory/*`, `/api/web-orders/:id/send-to-production`, `/api/blind-fabrics` (write)
+- Warehouse routes: `GET /api/web-orders/admin/all` (PRODUCTION-only filter), `GET /api/inventory`, `GET /api/web-orders/:id/labels/download`
 
 ### Key Endpoints
 
@@ -286,6 +335,16 @@ GET /api/web-orders/:id/worksheets/download/fabric-cut-csv
 GET /api/web-orders/:id/worksheets/download/fabric-cut-pdf
 GET /api/web-orders/:id/worksheets/download/tube-cut-csv
 GET /api/web-orders/:id/worksheets/download/tube-cut-pdf
+```
+
+**Blind Fabric Catalog:**
+```
+GET    /api/blind-fabrics              — All fabrics (formatted for order form), any auth
+GET    /api/blind-fabrics/admin        — Admin flat view (by supplier), admin only
+POST   /api/blind-fabrics              — Add fabric entry, admin only
+PUT    /api/blind-fabrics/:id          — Update fabric entry, admin only
+DELETE /api/blind-fabrics/:id          — Delete single fabric, admin only
+DELETE /api/blind-fabrics/supplier/:s  — Delete all fabrics for a supplier, admin only
 ```
 
 ---
@@ -508,6 +567,8 @@ npx prisma migrate status
 **Production Infrastructure (AWS ap-southeast-4 Melbourne):**
 - EC2 `t3.micro` — runs backend, frontend, nginx containers
 - RDS `db.t4g.micro` PostgreSQL 15 — managed database (private, EC2 access only)
+  - Endpoint: `signatureshades-db-production.cr6yg6a2cnx1.ap-southeast-4.rds.amazonaws.com`
+  - Region: `ap-southeast-4` (Melbourne) — Terraform region is also `ap-southeast-4`
 - S3 `signatureshades-backups-production` (ap-southeast-2) — daily DB backups
 - S3 `signatureshades-bend-drawings` — application file storage
 - Route 53 — DNS for `orders.signatureshades.com.au`
@@ -569,19 +630,19 @@ terraform apply -target="aws_db_instance.postgres" # RDS only
 **G3 Pricing Anomaly:**
 - `PRICING_DATA[3][2000][3000] = 113.4` seems unusually low
 - Surrounding values are 150-180 AUD
-- Verify with business before correcting
+- Matches `SAMPLE.html` — keep as-is unless business confirms otherwise
 
-**Missing Pricing Breakdown Fields (Part 7.1):**
-- OrderItem model needs additional fields for transparency:
-  - `fabricPrice`, `motorPrice`, `bracketPrice`
-  - `chainPrice`, `clipsPrice`, `componentPrice`
-- Currently only storing total `price` field
-- **Status:** Schema update needed + migration
+**Email Notifications:**
+- Order confirmation and status-change emails are not yet implemented
+- **Status:** Not started — needs SMTP/SES integration
 
-**Quote System (Part 2.3 from UPGRADE.md):**
-- Schema includes `Quote` model (already exists)
-- Frontend has quote vs order workflow in UPGRADE.md spec
-- **Status:** Controllers/routes not yet implemented
+**Sheer Curtain Worksheet Export:**
+- Fabric cut CSV/PDF export for sheer curtain orders is not yet wired to the worksheet download endpoints
+- **Status:** `CurtainWorksheet.tsx` renders in UI, download pipeline TBD
+
+**API Documentation:**
+- No Swagger/OpenAPI spec yet
+- **Status:** Not started
 
 ---
 
@@ -594,51 +655,58 @@ terraform apply -target="aws_db_instance.postgres" # RDS only
 
 ---
 
-## Recent Updates (2026-02-10)
+## Recent Updates
 
-### ✅ Part 5: Comprehensive Pricing (Completed)
-**4 commits:** c6b8e7d, 9aef6d1, 22de2b7, 60bc929
-
-**Implemented:**
-- `comprehensivePricing.service.ts` - Complete blind pricing with 7 component types
-- Frontend API integration (`pricingApi.calculateBlindPrice()`)
-- "Check Price" button in BlindItemForm with price breakdown display
-- Updated seed script with all 11 motors and correct bracket colors
-- Helper functions: `getChainLength()`, `isWinder()`, `validateBracketSelection()`
-
-**Features:**
-- Fabric price from matrix with group discounts (G1=20%, G2=25%, G3=30%)
-- Motor/Chain price from inventory
-- Bracket price (brand + type specific, validates TBS + Extended incompatibility)
-- Chain price (length selection based on drop: 500/750/1000/1200/1500mm)
-- Clips price (2 clips required)
-- Idler & Clutch price (conditional on Dual brackets)
-- Stop bolt & Safety lock (if winder/chain motor)
-
-### ✅ Part 6: Enhanced Worksheet Generation (Completed)
-**1 commit:** cbfd097
+### ✅ Blind Fabric Dynamic Catalog (2026-05-28)
+**Commit:** 08c1fe4
 
 **Implemented:**
-- Motor-specific width deductions in `worksheet.service.ts`
-- PDF cutting layout visualization in `worksheetExport.service.ts`
-- 13-column Fabric Cut Worksheet (added "Fabric Cut Width (mm)")
-- Helper functions with MOTOR_DEDUCTIONS mapping
+- `BlindFabric` Prisma model — admin-managed fabric table (supplier, fabricType, fabricGroup, colors[])
+- `blindFabric.service.ts` + `blindFabric.controller.ts` + `blindFabricRoutes.ts` (`/api/blind-fabrics`)
+- `BlindFabricsTab.tsx` — admin UI in PricingManagement for CRUD on fabric catalog
+- `useFabrics.ts` React hook — order form fetches fabrics live from DB (replaces hardcoded `fabrics.ts`)
+- `seed-blind-fabrics.ts` script — initial population of BlindFabric table
+- Updated `BlindItemForm.tsx` to use dynamic fabrics via `useFabrics`
 
-**Features:**
-- **Motor-specific deductions:**
-  * Winders: 28mm
-  * Automate: 29mm
-  * Alpha Battery: 30mm
-  * Alpha AC: 35mm
-  * Tube cuts: always 28mm
-- **PDF Page 1:** Visual cutting layout diagram
-  * Scaled stock sheets (3000mm × 10000mm)
-  * Color-coded panels by fabric group
-  * Panel dimensions and location labels
-  * Rotation indicators
-  * Sheet statistics (panels, efficiency, waste)
-- **PDF Page 2+:** Detailed 13-column worksheet table
-- Fixed hardcoded width/drop values with motor-specific calculations
+### ✅ Sheer Curtains Product Type (2026-05-07 – 2026-05-14)
+**Commits:** 4640e8e, e53b0b5
+
+**Implemented:**
+- `sheerCurtainPricing.service.ts` — full curtain pricing (fabric + motor/wand/runner/hook components)
+- `CurtainItemForm.tsx` — order form for sheer curtain line items
+- `CurtainWorksheet.tsx` — admin worksheet view for curtain orders
+- Sheer curtain pricing seeded via `seed-sheer-pricing.ts`, `seed-sheer-inventory.ts`, `seed-sheer-motor-pricing.ts`
+- Extended `PricingManagement.tsx` with sheer curtain pricing section
+- Extended `webOrder.controller.ts` + `quote.controller.ts` to handle mixed blind/curtain orders
+
+### ✅ Production Migration to AWS RDS Melbourne (2026-05-19)
+**Commits:** 0a8a410, 1a18fdc
+
+**Implemented:**
+- Migrated from local PostgreSQL container to AWS RDS `db.t4g.micro` in `ap-southeast-4` (Melbourne)
+- Terraform manages RDS instance (`aws_db_instance.postgres`) and security group
+- Production `DATABASE_URL` now points to RDS endpoint
+- Nginx configuration + deployment shell scripts added (commit 6096e28)
+
+### ✅ Warehouse Role + Labels (2026-03-24)
+**Commit:** see MEMORY.md — warehouse-role.md
+
+- `WAREHOUSE` role added to `UserRole` enum and `requireAdminOrWarehouse` middleware
+- PDF labels endpoint: `GET /api/web-orders/:id/labels/download` (100mm × 80mm per blind)
+- Warehouse user: `productionsignatureshades@gmail.com` — create with `npm run create:warehouse`
+
+### ✅ Comprehensive Pricing (2026-02-10)
+**Commits:** c6b8e7d, 9aef6d1, 22de2b7, 60bc929
+
+- `comprehensivePricing.service.ts` — 7-component blind pricing (fabric, motor, bracket, chain, clips, idler, stop bolt)
+- "Check Price" button in BlindItemForm with full price breakdown
+- Pricing breakdown fields added to OrderItem schema (`fabricPrice`, `motorPrice`, `bracketPrice`, `chainPrice`, `clipsPrice`, `componentPrice`)
+
+### ✅ Enhanced Worksheet Generation (2026-02-10)
+**Commit:** cbfd097
+
+- Motor-specific width deductions (28/29/30/35mm) in `worksheet.service.ts`
+- PDF cutting layout visualization (Page 1 = diagram, Page 2+ = 13-column table)
 
 ---
 
@@ -684,6 +752,13 @@ docker restart signatureshades-nginx
    - Test backend endpoint via Postman/curl
    - Test frontend via browser
    - Check Docker logs for errors
+
+5. **Documentation (REQUIRED for every feature or change):**
+   - Update `CLAUDE.md` — architecture overview, DB schema, API endpoints, Recent Updates
+   - Update `README.md` — feature list, project structure, API endpoints, database schema
+   - Update any relevant skill files under `.claude/claude-code-skills/` whose triggers cover the changed stack
+   - If adding a new service/route/page, add it to the relevant `SKILL.md` Project Context section
+   - This step is mandatory — do not skip it even for small changes
 
 **When debugging:**
 

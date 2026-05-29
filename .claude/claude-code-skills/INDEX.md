@@ -61,3 +61,22 @@ Skills move between the two tables as the project evolves. **Always check the li
 - `SKILL.md` must have YAML frontmatter with `name`, `description`, and `applies-to: signature-sap` (or `not-signature-sap`).
 - Add a row to the appropriate table above.
 - Add a memory entry only if the skill encodes a non-obvious project rule (otherwise the description in `SKILL.md` is enough — `INDEX.md` is loaded via the `reference_skills_index.md` memory pointer).
+
+---
+
+## Mandatory Documentation Update Rule
+
+**Every new feature or code change MUST be followed by documentation updates.**
+
+When any feature, route, model, service, component, or config changes:
+
+1. **`CLAUDE.md`** — Update the relevant sections: architecture overview, DB schema, API endpoints, Recent Updates
+2. **`README.md`** — Update feature list, project structure, API endpoints, database schema
+3. **Skill files** — Update the `SKILL.md` Project Context section of any skill whose trigger covers the changed stack:
+   - New React page/component/hook → update `react/SKILL.md`
+   - New AWS resource or Terraform change → update `terraform/SKILL.md`
+   - New route or auth change → update `security/SKILL.md` hot-spots section
+   - New Docker configuration → update `docker/SKILL.md`
+4. **This INDEX.md** — If a skill was promoted, demoted, or added, update the Active/Reference tables above.
+
+This rule applies to all contributors including Claude. **No feature is complete until its documentation is updated.**
