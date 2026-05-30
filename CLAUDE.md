@@ -156,7 +156,17 @@ src/
    - Motor-specific logic for chain selection and bracket compatibility
    - Returns detailed price breakdown for transparency
 
-7. **Sheer Curtain Pricing Service** (`services/sheerCurtainPricing.service.ts`)
+7. **Metrics** (`config/metrics.ts`)
+   - Single shared `prom-client` Registry exported as `register`
+   - `collectDefaultMetrics` — Node.js process heap, GC, event-loop lag, handles
+   - **Counters:** `ordersCreatedTotal [productType]`, `ordersStatusChangedTotal [fromStatus, toStatus]`, `authAttemptsTotal [outcome]`, `worksheetAcceptedTotal`, `inventoryDeductionsTotal [category]`, `quotesCreatedTotal`, `quotesConvertedTotal`, `apiErrorsTotal [route, statusCode]`
+   - **Histograms:** `httpRequestDurationSeconds [method, route, statusCode]`, `worksheetGenerationSeconds [orderType]`, `dbQueryDurationSeconds [operation]`
+   - **Gauges:** `inventoryQuantityGauge [itemName, category, colorVariant]`, `activeOrdersGauge [status]`
+   - `startMetricsRefresh()` — called once by `server.ts`; refreshes gauges from DB every 60 s
+   - **Endpoint:** `GET /metrics` (unauthenticated, Prometheus text format; security boundary = Docker network)
+   - **Route normalisation:** `normaliseRoute()` collapses UUIDs and numeric path segments to `:id`
+
+8. **Sheer Curtain Pricing Service** (`services/sheerCurtainPricing.service.ts`)
    - Calculates full sheer curtain price (fabric cost + motor/wand/runner/hook components)
    - References DB-backed pricing for motor and accessories
    - Supports wand-operated and motorised curtain configurations
@@ -656,6 +666,26 @@ terraform apply -target="aws_db_instance.postgres" # RDS only
 ---
 
 ## Recent Updates
+
+### ✅ Prometheus Metrics Instrumentation (2026-05-29)
+
+**Files added/modified:**
+- `backend/src/config/metrics.ts` — prom-client Registry, all metric instruments, gauge refresh loop
+- `backend/src/middleware/httpMetrics.ts` — per-request duration middleware (records `httpRequestDurationSeconds`)
+- `backend/src/server.ts` — `GET /metrics` endpoint, `httpMetrics` middleware, `startMetricsRefresh()` call
+- `backend/src/middleware/errorHandler.ts` — increments `apiErrorsTotal` on every error response
+- `backend/src/controllers/auth.controller.ts` — `authAttemptsTotal` on login success/failure
+- `backend/src/controllers/webOrder.controller.ts` — `ordersCreatedTotal`, `ordersStatusChangedTotal`, `worksheetGenerationSeconds`, `worksheetAcceptedTotal`, `inventoryDeductionsTotal`
+- `backend/src/controllers/quote.controller.ts` — `quotesCreatedTotal`, `quotesConvertedTotal`
+- `backend/package.json` — added `prom-client ^15.1.3`
+
+**Install after pulling:**
+```bash
+# Inside container or after rebuild:
+docker-compose up -d --build
+# or
+docker exec signatureshades-api-local npm install
+```
 
 ### ✅ Blind Fabric Dynamic Catalog (2026-05-28)
 **Commit:** 08c1fe4

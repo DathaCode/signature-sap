@@ -4,6 +4,8 @@ import helmet from 'helmet';
 import dotenv from 'dotenv';
 import { logger } from './config/logger';
 import { errorHandler } from './middleware/errorHandler';
+import { httpMetrics } from './middleware/httpMetrics';
+import { register, startMetricsRefresh } from './config/metrics';
 
 // Existing routes
 import inventoryRoutes from './routes/inventoryRoutes';
@@ -65,6 +67,9 @@ app.use(cors({
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 
+// HTTP request timing — records httpRequestDurationSeconds for every response
+app.use(httpMetrics);
+
 // Request logging
 app.use((req, _res, next) => {
     logger.info(`${req.method} ${req.path}`, {
@@ -97,6 +102,12 @@ app.use('/api/quotes', quoteRoutes);
 app.use('/api/admin/worksheets', adminWorksheetRoutes);
 app.use('/api/fabrics', blindFabricRoutes);
 
+// Prometheus metrics — unauthenticated, security boundary is the Docker network
+app.get('/metrics', async (_req, res) => {
+    res.set('Content-Type', register.contentType);
+    res.end(await register.metrics());
+});
+
 // ============================================================================
 // ERROR HANDLING
 // ============================================================================
@@ -111,6 +122,8 @@ app.listen(PORT, () => {
     logger.info(`🚀 Signature Shades API Server running on port ${PORT}`);
     logger.info(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
     logger.info(`🔗 Health check: http://localhost:${PORT}/api/health`);
+    logger.info(`📈 Metrics endpoint: http://localhost:${PORT}/metrics`);
+    startMetricsRefresh();
 });
 
 export default app;

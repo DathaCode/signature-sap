@@ -37,5 +37,14 @@
       "Bash(git -C \"f:\\\\SIGNATUR SHADES\\\\signature-sap\" log --oneline -10)",
       "Bash(Get-ChildItem -Path \"f:\\\\SIGNATUR SHADES\\\\signature-sap\\\\backend\\\\src\\\\services\" -Name)"
     ]
+  },
+  "env": {
+    "CLAUDE_CODE_ENABLE_TELEMETRY": "1",
+    "OTEL_METRICS_EXPORTER": "otlp",
+    "OTEL_LOGS_EXPORTER": "otlp",
+    "OTEL_EXPORTER_OTLP_PROTOCOL": "http/protobuf",
+    "OTEL_EXPORTER_OTLP_ENDPOINT": "https://otlp-gateway-prod-ap-south-1.grafana.net/otlp",
+    "OTEL_EXPORTER_OTLP_HEADERS": "Authorization=Basic MTYwOTg1MzpnbGNfZXlKdklqb2lNVGMwTlRjek15SXNJbTRpT2lKemRHRmpheTB4TmpBNU9EVXpMV2x1ZEdWbmNtRjBhVzl1TFdOc1lYVmtaUzF6YVdkdVlYUjFjbVV0YzJoaFpHVnpJaXdpYXlJNklrUkhiRmd3UWxjMk9GVXlOVFl4Unpjd1dsVk9jMnRFTWlJc0ltMGlPbnNpY2lJNkluQnliMlF0WVhBdGMyOTFkR2d0TVNKOWZRPT0=",
+    "OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE": "cumulative"
   }
 }
