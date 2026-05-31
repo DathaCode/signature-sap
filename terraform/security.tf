@@ -46,7 +46,7 @@ resource "aws_security_group" "app" {
 # RDS — only accepts PostgreSQL connections from the EC2 app server
 resource "aws_security_group" "rds" {
   name        = "${var.project_name}-rds-sg-${var.environment}"
-  description = "Security group for RDS PostgreSQL — EC2 access only"
+  description = "Security group for RDS PostgreSQL - EC2 access only"
   vpc_id      = data.aws_vpc.default.id
 
   ingress {

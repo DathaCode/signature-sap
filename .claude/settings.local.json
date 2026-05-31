@@ -29,7 +29,22 @@
       "PowerShell(docker exec signatureshades-db-local psql -U signatureshades_dev -d signatureshades_dev -c \"SELECT item_name, price FROM inventory_items WHERE category IN \\('SHEER_HOOK','SHEER_BRACKET','SHEER_WAND','SHEER_REMOTE','SHEER_CHARGER'\\) ORDER BY category, item_name;\")",
       "PowerShell(docker exec signatureshades-db-local psql -U signatureshades_dev -d signatureshades_dev -c \"SELECT motor_type, width_from, width_to, price FROM sheer_motor_pricing ORDER BY motor_type, width_from;\")",
       "PowerShell(docker exec signatureshades-db-local psql -U signatureshades_dev -d signatureshades_dev -c \"SELECT fabric_group, drop_surcharge_per_m, fullness_130_surcharge, fullness_140_surcharge, fullness_150_surcharge FROM sheer_group_settings ORDER BY fabric_group;\")",
-      "PowerShell(docker exec signatureshades-db-local psql -U signatureshades_dev -d signatureshades_dev -c \"SELECT fabric_name, price_per_meter FROM sheer_fabric_pricing WHERE user_id IS NULL AND fabric_group='Group 1' LIMIT 5;\")"
+      "PowerShell(docker exec signatureshades-db-local psql -U signatureshades_dev -d signatureshades_dev -c \"SELECT fabric_name, price_per_meter FROM sheer_fabric_pricing WHERE user_id IS NULL AND fabric_group='Group 1' LIMIT 5;\")",
+      "Bash(git rm *)",
+      "Bash(winpty docker *)",
+      "PowerShell(docker exec signatureshades-db-local psql -U signatureshades_dev -d signatureshades_dev -c \"SELECT order_number, subtotal, total FROM orders WHERE order_number LIKE '260093%' OR order_number LIKE '260092%';\")",
+      "PowerShell(docker exec signatureshades-db-local psql -U signatureshades_dev -d signatureshades_dev -c \"SELECT order_number, product_type, subtotal, total FROM orders ORDER BY created_at DESC LIMIT 10;\")",
+      "Bash(git -C \"f:\\\\SIGNATUR SHADES\\\\signature-sap\" log --oneline -10)",
+      "Bash(Get-ChildItem -Path \"f:\\\\SIGNATUR SHADES\\\\signature-sap\\\\backend\\\\src\\\\services\" -Name)"
     ]
+  },
+  "env": {
+    "CLAUDE_CODE_ENABLE_TELEMETRY": "1",
+    "OTEL_METRICS_EXPORTER": "otlp",
+    "OTEL_LOGS_EXPORTER": "otlp",
+    "OTEL_EXPORTER_OTLP_PROTOCOL": "http/protobuf",
+    "OTEL_EXPORTER_OTLP_ENDPOINT": "https://otlp-gateway-prod-ap-south-1.grafana.net/otlp",
+    "OTEL_EXPORTER_OTLP_HEADERS": "Authorization=Basic MTYwOTg1MzpnbGNfZXlKdklqb2lNVGMwTlRjek15SXNJbTRpT2lKemRHRmpheTB4TmpBNU9EVXpMV2x1ZEdWbmNtRjBhVzl1TFdOc1lYVmtaUzF6YVdkdVlYUjFjbVV0YzJoaFpHVnpJaXdpYXlJNklrUkhiRmd3UWxjMk9GVXlOVFl4Unpjd1dsVk9jMnRFTWlJc0ltMGlPbnNpY2lJNkluQnliMlF0WVhBdGMyOTFkR2d0TVNKOWZRPT0=",
+    "OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE": "cumulative"
   }
 }

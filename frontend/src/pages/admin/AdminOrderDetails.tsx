@@ -14,6 +14,8 @@ import { gooeyToast } from 'goey-toast';
 import { confirmToast } from '../../utils/confirmToast';
 import api from '../../services/api';
 import { FABRIC_DATA } from '../../utils/pricing';
+import { getAllSheerFabrics } from '../../data/sheerFabrics';
+import { OPENING_TYPES, FULLNESS_OPTIONS, INSTALLATION_TYPES, MOTOR_TYPES, TRACK_TYPES, REMOTE_OPTIONS } from '../../data/sheerHardware';
 
 const BRACKET_TYPES = ['Single', 'Single Extension', 'Dual Left', 'Dual Right'];
 const BRACKET_COLOURS = ['White', 'Black', 'Dune', 'Bone', 'Anodised'];
@@ -139,6 +141,93 @@ function EditItemRow({ item, index, onChange, onRemove }: {
     );
 }
 
+const SHEER_FABRICS = getAllSheerFabrics();
+const SHEER_BRACKET_OPTIONS = ['Standard', 'Extended', 'Ceiling'];
+
+function EditCurtainItemRow({ item, index, onChange, onRemove }: {
+    item: CurtainItem;
+    index: number;
+    onChange: (idx: number, field: keyof CurtainItem, value: any) => void;
+    onRemove: (idx: number) => void;
+}) {
+    const f = (field: keyof CurtainItem, value: any) => onChange(index, field, value);
+    const inp = "h-8 text-xs px-2";
+    const sel = "h-8 text-xs px-2 rounded-md border border-input bg-background w-full";
+    const isMotorised = item.requiresTracks && item.trackType === 'Motorised';
+    return (
+        <div className="border rounded-lg p-3 space-y-2 bg-teal-50/60 relative">
+            <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-semibold text-teal-700">Item {index + 1}</span>
+                <button onClick={() => onRemove(index)} className="text-red-400 hover:text-red-600"><X className="h-4 w-4" /></button>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div><label className="text-xs text-gray-500">Location</label><Input className={inp} value={item.location || ''} onChange={e => f('location', e.target.value)} /></div>
+                <div><label className="text-xs text-gray-500">Width (mm)</label><Input className={inp} type="number" value={item.width || ''} onChange={e => f('width', Number(e.target.value))} /></div>
+                <div><label className="text-xs text-gray-500">Drop (mm)</label><Input className={inp} type="number" value={item.drop || ''} onChange={e => f('drop', Number(e.target.value))} /></div>
+                <div><label className="text-xs text-gray-500">Fullness</label>
+                    <select className={sel} value={item.fullness || 120} onChange={e => f('fullness', Number(e.target.value))}>
+                        {FULLNESS_OPTIONS.map(v => <option key={v} value={v}>{v}mm</option>)}
+                    </select>
+                </div>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div><label className="text-xs text-gray-500">Fabric</label>
+                    <select className={sel} value={item.fabric || ''} onChange={e => f('fabric', e.target.value)}>
+                        <option value="">-</option>
+                        {SHEER_FABRICS.map(f => <option key={f.name} value={f.name}>{f.name}</option>)}
+                    </select>
+                </div>
+                <div><label className="text-xs text-gray-500">Colour</label><Input className={inp} value={item.fabricColour || ''} onChange={e => f('fabricColour', e.target.value)} /></div>
+                <div><label className="text-xs text-gray-500">Opening</label>
+                    <select className={sel} value={item.openingType || 'Single Open'} onChange={e => f('openingType', e.target.value)}>
+                        {OPENING_TYPES.map(o => <option key={o}>{o}</option>)}
+                    </select>
+                </div>
+                <div><label className="text-xs text-gray-500">Installation</label>
+                    <select className={sel} value={item.installation || 'Wall'} onChange={e => f('installation', e.target.value)}>
+                        {INSTALLATION_TYPES.map(t => <option key={t}>{t}</option>)}
+                    </select>
+                </div>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div><label className="text-xs text-gray-500">Bracket</label>
+                    <select className={sel} value={item.bracketType || 'Standard'} onChange={e => f('bracketType', e.target.value)}>
+                        {SHEER_BRACKET_OPTIONS.map(b => <option key={b}>{b}</option>)}
+                    </select>
+                </div>
+                <div><label className="text-xs text-gray-500">Track Colour</label><Input className={inp} value={item.trackColour || ''} onChange={e => f('trackColour', e.target.value)} /></div>
+                <div><label className="text-xs text-gray-500">Requires Track?</label>
+                    <select className={sel} value={item.requiresTracks ? 'yes' : 'no'} onChange={e => f('requiresTracks', e.target.value === 'yes')}>
+                        <option value="no">No</option><option value="yes">Yes</option>
+                    </select>
+                </div>
+                {item.requiresTracks && (
+                    <div><label className="text-xs text-gray-500">Track Type</label>
+                        <select className={sel} value={item.trackType || 'Standard'} onChange={e => f('trackType', e.target.value)}>
+                            {TRACK_TYPES.map(t => <option key={t}>{t}</option>)}
+                        </select>
+                    </div>
+                )}
+            </div>
+            {isMotorised && (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <div><label className="text-xs text-gray-500">Motor Type</label>
+                        <select className={sel} value={item.motorType || ''} onChange={e => f('motorType', e.target.value)}>
+                            <option value="">-</option>
+                            {MOTOR_TYPES.map(m => <option key={m}>{m}</option>)}
+                        </select>
+                    </div>
+                    <div><label className="text-xs text-gray-500">Remotes</label>
+                        <select className={sel} value={item.remotes || 'Not Required'} onChange={e => f('remotes', e.target.value)}>
+                            {REMOTE_OPTIONS.map(r => <option key={r}>{r}</option>)}
+                        </select>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
 export default function AdminOrderDetails() {
     const { orderId } = useParams<{ orderId: string }>();
     const navigate = useNavigate();
@@ -156,6 +245,7 @@ export default function AdminOrderDetails() {
     const [downloadingLabels, setDownloadingLabels] = useState(false);
     const [editing, setEditing] = useState(false);
     const [editItems, setEditItems] = useState<BlindItem[]>([]);
+    const [editCurtainItems, setEditCurtainItems] = useState<CurtainItem[]>([]);
     const [editNotes, setEditNotes] = useState('');
     const [editRef, setEditRef] = useState('');
     const [savingEdit, setSavingEdit] = useState(false);
@@ -338,7 +428,9 @@ export default function AdminOrderDetails() {
 
     const startEditing = () => {
         if (!order) return;
-        if (!isCurtainOrder) {
+        if (isCurtainOrder) {
+            setEditCurtainItems(order.items.map(it => ({ ...it })) as CurtainItem[]);
+        } else {
             setEditItems(order.items.map(it => ({ ...it })) as BlindItem[]);
         }
         setEditNotes((order as any).notes || '');
@@ -350,21 +442,34 @@ export default function AdminOrderDetails() {
         setEditItems(prev => prev.map((it, i) => i === idx ? { ...it, [field]: value } : it));
     };
 
+    const handleCurtainItemChange = (idx: number, field: keyof CurtainItem, value: any) => {
+        setEditCurtainItems(prev => prev.map((it, i) => i === idx ? { ...it, [field]: value } : it));
+    };
+
     const handleRemoveItem = (idx: number) => {
-        setEditItems(prev => prev.filter((_, i) => i !== idx));
+        if (isCurtainOrder) {
+            setEditCurtainItems(prev => prev.filter((_, i) => i !== idx));
+        } else {
+            setEditItems(prev => prev.filter((_, i) => i !== idx));
+        }
     };
 
     const handleAddItem = () => {
-        setEditItems(prev => [...prev, { location: '', width: 1000, drop: 1500, roll: 'Front', controlSide: 'Left', price: 0 }]);
+        if (isCurtainOrder) {
+            setEditCurtainItems(prev => [...prev, { location: '', width: 1000, drop: 2500, curtainType: 'S Fold', hem: 70, fabric: '', fabricColour: '', installation: 'Wall', bracketType: 'Standard', openingType: 'Single Open', wandSize: 1250, fullness: 120, requiresTracks: false, requiresBentTracks: false, price: 0 }]);
+        } else {
+            setEditItems(prev => [...prev, { location: '', width: 1000, drop: 1500, roll: 'Front', controlSide: 'Left', price: 0 }]);
+        }
     };
 
     const handleSaveEdit = async () => {
         if (!order) return;
-        if (editItems.length === 0) { gooeyToast.error('At least one item required'); return; }
+        const items = (isCurtainOrder ? editCurtainItems : editItems) as BlindItem[];
+        if (items.length === 0) { gooeyToast.error('At least one item required'); return; }
         setSavingEdit(true);
         try {
             const updated = await adminOrderApi.editOrder(order.id, {
-                items: editItems,
+                items,
                 notes: editNotes,
                 customerReference: editRef || null,
             });
@@ -689,7 +794,19 @@ export default function AdminOrderDetails() {
                                     <Input className="mt-1" value={editNotes} onChange={e => setEditNotes(e.target.value)} placeholder="Order notes" />
                                 </div>
                             </div>
-                            {!isCurtainOrder && (
+                            {isCurtainOrder ? (
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-sm font-semibold text-teal-700">Curtain Items ({editCurtainItems.length})</span>
+                                        <Button size="sm" variant="outline" onClick={handleAddItem}>
+                                            <Plus className="mr-1 h-3 w-3" />Add Item
+                                        </Button>
+                                    </div>
+                                    {editCurtainItems.map((item, idx) => (
+                                        <EditCurtainItemRow key={idx} item={item} index={idx} onChange={handleCurtainItemChange} onRemove={handleRemoveItem} />
+                                    ))}
+                                </div>
+                            ) : (
                                 <div className="space-y-3">
                                     <div className="flex items-center justify-between">
                                         <span className="text-sm font-semibold text-gray-700">Blind Items ({editItems.length})</span>
@@ -758,7 +875,7 @@ export default function AdminOrderDetails() {
                                                     <td className="p-4 align-middle">{item.width}mm × {item.drop}mm</td>
                                                     <td className="p-4 align-middle">
                                                         <span>{item.openingType}</span>
-                                                        {item.fullness && <span className="text-xs text-muted-foreground ml-1">({item.fullness}%)</span>}
+                                                        {item.fullness && <span className="text-xs text-muted-foreground ml-1">({item.fullness}mm)</span>}
                                                     </td>
                                                     {!isWarehouse && (
                                                         <td className="p-4 align-middle text-right font-medium">

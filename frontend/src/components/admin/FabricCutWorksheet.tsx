@@ -165,9 +165,10 @@ export default function FabricCutWorksheet({ fabricCutData, onPrintLabels, print
                                         return allPanels.map(({ panel, item, sheetId }, idx) => {
                                             const fabricCutW = item?.fabricCutWidth ?? (item ? item.width - getMotorDeduction(item.chainOrMotor) : '-');
                                             const calcD = item ? item.drop + 200 : 0;
-                                            const chainSize = item?.drop != null && item.drop > 0 ? getChainSize(item.drop) : '-';
-                                            const bracketType = item?.bracketType || 'Single';
                                             const motorType = item?.chainOrMotor || '';
+                                            const isWinder = motorType.toLowerCase().includes('winder');
+                                            const chainSize = isWinder && item?.drop != null && item.drop > 0 ? getChainSize(item.drop) : '-';
+                                            const bracketType = item?.bracketType || 'Single';
                                             const isBracketHighlighted = /dual/i.test(bracketType) || /extension/i.test(bracketType);
                                             const isMotorHighlighted = /motor/i.test(motorType);
                                             const rollValue = item?.roll || '-';

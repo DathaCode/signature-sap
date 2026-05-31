@@ -142,6 +142,8 @@ export default function NewOrderPage() {
                             if (draftType === 'CURTAINS') {
                                 reset({ productType: 'CURTAINS', items: [{ ...emptyCurtain }] });
                             }
+                            // Go straight to summary — items are already saved, no need to re-review
+                            setShowSummary(true);
                             gooeyToast.success('Draft restored!');
                         } else {
                             localStorage.removeItem('order_draft');

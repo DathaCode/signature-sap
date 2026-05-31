@@ -110,7 +110,8 @@ export class WorksheetExportService {
                     const motorType = item?.chainOrMotor || '';
                     const fabricCutWidth = item ? this.calculateFabricCutWidth(item.width, motorType) : '';
                     const calculatedDrop = item ? this.calculateDrop(item.drop) : 0;
-                    const chainSize = item?.drop > 0 ? getChainSize(item.drop) : '';
+                    const isWinder = motorType.toLowerCase().includes('winder');
+                    const chainSize = isWinder && item?.drop > 0 ? getChainSize(item.drop) : '';
 
                     rows.push([
                         panel.blindNumber ?? '',
@@ -517,7 +518,8 @@ export class WorksheetExportService {
                     const motorType = item?.chainOrMotor || '';
                     const fabricCutWidth = item ? this.calculateFabricCutWidth(item.width, motorType) : '';
                     const calculatedDrop = item ? this.calculateDrop(item.drop) : 0;
-                    const chainSize = item?.drop > 0 ? getChainSize(item.drop) : '';
+                    const isWinder = motorType.toLowerCase().includes('winder');
+                    const chainSize = isWinder && item?.drop > 0 ? getChainSize(item.drop) : '';
 
                     const rowY = doc.y;
                     const bracketType = item?.bracketType || 'Single';

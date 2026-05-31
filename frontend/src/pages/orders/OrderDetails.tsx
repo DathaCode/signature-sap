@@ -210,7 +210,7 @@ export default function OrderDetails() {
                                                     <td className="p-4 align-middle">{item.width}mm x {item.drop}mm</td>
                                                     <td className="p-4 align-middle">
                                                         {item.openingType}
-                                                        {item.fullness && <span className="text-xs text-muted-foreground ml-1">({item.fullness}%)</span>}
+                                                        {item.fullness && <span className="text-xs text-muted-foreground ml-1">({item.fullness}mm)</span>}
                                                     </td>
                                                     <td className="p-4 align-middle text-right font-medium">
                                                         <span className="text-blue-700">${Number(item.price || 0).toFixed(2)}</span>

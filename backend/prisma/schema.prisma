@@ -477,6 +477,22 @@ model SheerMotorPricing {
   @@map("sheer_motor_pricing")
 }
 
+model BlindFabric {
+  id          String   @id @default(cuid())
+  supplier    String   @db.VarChar(100)
+  fabricType  String   @map("fabric_type") @db.VarChar(255)
+  fabricGroup String   @map("fabric_group") @db.VarChar(10) // G1, G2, G3
+  colors      String[] // PostgreSQL text array
+
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamp(6)
+
+  @@unique([supplier, fabricType])
+  @@map("blind_fabrics")
+  @@index([supplier])
+  @@index([fabricGroup])
+}
+
 model SheerGroupSettings {
   id                    Int      @id @default(autoincrement())
   fabricGroup           String   @unique @map("fabric_group") @db.VarChar(50)

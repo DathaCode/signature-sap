@@ -16,7 +16,7 @@ export const MOTOR_TYPES = ['Alpha AC', 'Alpha DC', 'Versa AC', 'Versa DC'] as c
 export const TRACK_CONTROL_SIDES = ['Right', 'Left'] as const;
 // Curtain remote/charger options
 export const REMOTE_OPTIONS = ['Not Required', 'Single Channel', '5 Channel', '15 Channel'] as const;
-export const CHARGER_HUB_OPTIONS = ['Not Required', 'Alpha Charger', 'PULSE 2 Hub', 'Alpha Neo'] as const;
+export const CHARGER_HUB_OPTIONS = ['Alpha Charger', 'PULSE 2 Hub', 'Alpha Neo'] as const;
 
 // Blind remote/charger options (motorised blinds only — not shown for winders)
 export const BLIND_REMOTE_OPTIONS = ['Not Required', 'Single Channel', '5 Channel', '15 Channel'] as const;

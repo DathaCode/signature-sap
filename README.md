@@ -5,7 +5,7 @@ A comprehensive web-based order management platform for Signature Shades, featur
 ## Key Features
 
 ### Customer Portal
-- **Interactive Order Builder**: 16-field blind configuration with hierarchical fabric selection (Material > Fabric Type > Colour)
+- **Interactive Order Builder**: 16-field blind configuration + sheer curtain form; fabric selection is live from admin-managed catalog
 - **Real-time Pricing**: 7-component price calculation with automatic group discounts (G1=20%, G2=25%, G3=30%)
 - **Quote Workflow**: Save orders as quotes, view/manage quotes, convert to orders when ready
 - **Draft Auto-Save**: In-progress orders saved to localStorage, restored on next visit (expires after 24h)
@@ -17,13 +17,14 @@ A comprehensive web-based order management platform for Signature Shades, featur
 - **Order Approval Workflow**: Review and approve customer orders with admin notes
 - **Order Editing**: Edit order details, update admin fields, toggle fabric ordered status
 - **Production Management**: Send confirmed orders to production with automatic cutlist optimization
-- **Worksheet Generation**: 13-column fabric cut CSV/PDF + 5-column tube cut CSV/PDF with motor-specific deductions
+- **Worksheet Generation**: 13-column fabric cut CSV/PDF + 5-column tube cut CSV/PDF + sheer curtain worksheet with motor-specific deductions
 - **PDF Visualization**: Visual cutting layout with color-coded panels, rotation indicators, efficiency stats
-- **Label Printing**: Per-blind PDF labels (100mm x 62mm) with order details, fabric info, and motor/chain specifications
+- **Label Printing**: Per-blind PDF labels (100mm x 80mm) with order details, fabric info, and motor/chain specifications
 - **Inventory Management**: 89+ seeded items across 8 categories, automatic deduction on worksheet acceptance, transaction logging, low-stock alerts, CSV bulk import
 - **User Administration**: Create/manage customer accounts (activate/deactivate), admin approval for new registrations
 - **Per-Customer Discounts**: Configurable G1-G4 discount rates per customer (Acmeda/TBS/Motorised groups)
-- **Dynamic Pricing Control**: Edit fabric pricing matrix (G1-G3) + component pricing (motors, brackets, chains, clips)
+- **Dynamic Pricing Control**: Edit fabric pricing matrix (G1-G3) + component pricing (motors, brackets, chains, clips) + sheer curtain pricing
+- **Blind Fabric Catalog**: Admin-managed DB-backed fabric catalog — add/edit/delete suppliers, fabric types, groups, and colours. Order form fetches fabrics live.
 - **Trash & Restore**: Soft-delete orders with trash view, restore, and permanent purge
 
 ### Warehouse Portal
@@ -45,8 +46,10 @@ A comprehensive web-based order management platform for Signature Shades, featur
 - **Fabric Cut Optimizer**: MaxRects + Genetic algorithm for 2D bin packing
 - **Cutlist Optimizer**: Guillotine 2D bin packing (First Fit Decreasing) with rotation support
 - **Tube Cut Calculator**: Linear calculation with 10% wastage on 5800mm stock
+- **Sheer Curtain Pricing**: Full component pricing for wand and motorised curtains
 - **Motor-Specific Width Deductions**: Winders 28mm, Automate 29mm, Alpha Battery 30mm, Alpha AC 35mm
 - **Inventory Deduction**: Automatic stock deduction with full transaction logging
+- **Dynamic Fabric Catalog**: BlindFabric DB table replaces hardcoded fabric data; seeded via `seed-blind-fabrics.ts`
 
 ---
 
@@ -157,11 +160,12 @@ signature-sap/
 │   ├── src/
 │   │   ├── controllers/          # Request handlers
 │   │   │   ├── auth.controller.ts           # Login, register, password reset
-│   │   │   ├── webOrder.controller.ts       # Orders, worksheets, labels (22 functions)
+│   │   │   ├── webOrder.controller.ts       # Orders, worksheets, labels
 │   │   │   ├── quote.controller.ts          # Quote CRUD + convert to order
-│   │   │   ├── pricing.controller.ts        # Matrix lookup + 7-component pricing
+│   │   │   ├── pricing.controller.ts        # Matrix lookup + 7-component pricing + sheer
 │   │   │   ├── inventory.controller.ts      # Stock management + bulk import
 │   │   │   ├── user.controller.ts           # User CRUD + per-customer discounts
+│   │   │   ├── blindFabric.controller.ts    # Fabric catalog CRUD
 │   │   │   └── adminWorksheet.controller.ts # Worksheet operations
 │   │   ├── middleware/
 │   │   │   ├── auth.ts                      # JWT + role-based (ADMIN, WAREHOUSE, CUSTOMER)
@@ -170,12 +174,15 @@ signature-sap/
 │   │   │   ├── authRoutes.ts                # Auth (rate-limited)
 │   │   │   ├── webOrderRoutes.ts            # Orders + worksheets + labels
 │   │   │   ├── quoteRoutes.ts               # Quotes
-│   │   │   ├── pricingRoutes.ts             # Pricing matrix + components
+│   │   │   ├── pricingRoutes.ts             # Pricing matrix + components + sheer
 │   │   │   ├── inventoryRoutes.ts           # Inventory + transactions
 │   │   │   ├── userRoutes.ts                # User management
+│   │   │   ├── blindFabricRoutes.ts         # /api/blind-fabrics fabric catalog
 │   │   │   └── adminWorksheetRoutes.ts      # Admin worksheet operations
 │   │   ├── services/              # Business logic
 │   │   │   ├── comprehensivePricing.service.ts  # 7-component blind pricing
+│   │   │   ├── sheerCurtainPricing.service.ts   # Sheer curtain pricing
+│   │   │   ├── blindFabric.service.ts           # Admin-managed fabric catalog CRUD
 │   │   │   ├── pricing.service.ts               # Fabric pricing matrix lookup
 │   │   │   ├── cutlistOptimizer.service.ts      # Guillotine 2D bin packing
 │   │   │   ├── fabricCutOptimizer.service.ts    # MaxRects + genetic algorithm
@@ -192,9 +199,14 @@ signature-sap/
 │   │   ├── migrations/            # 15 version-controlled migrations
 │   │   └── seed.ts                # Inventory seeding (89+ items)
 │   └── scripts/
-│       ├── create-admin.ts        # Admin user setup
+│       ├── create-admin.ts           # Admin user setup
 │       ├── create-warehouse-user.ts  # Warehouse user setup
-│       └── seed-pricing.ts        # Pricing matrix population (650 entries)
+│       ├── seed-pricing.ts           # Blind pricing matrix (650 entries)
+│       ├── seed-blind-fabrics.ts     # BlindFabric table initial population
+│       ├── seed-sheer-pricing.ts     # Sheer curtain pricing matrix
+│       ├── seed-sheer-inventory.ts   # Sheer curtain inventory items
+│       ├── seed-sheer-motor-pricing.ts # Sheer motor price entries
+│       └── update-pricing-2026.ts    # Re-seed blind pricing matrix
 ├── frontend/
 │   ├── src/
 │   │   ├── pages/
@@ -208,12 +220,16 @@ signature-sap/
 │   │   │   ├── ui/                # Reusable UI (Button, Card, Badge, Input, Select, etc.)
 │   │   │   ├── auth/              # LoginForm, RegisterForm
 │   │   │   ├── layout/            # ProtectedRoute, Layout
-│   │   │   ├── orders/            # BlindItemForm (16 fields), OrderSummary
-│   │   │   ├── admin/             # FabricCutWorksheet, TubeCutWorksheet, WorksheetPreview
+│   │   │   ├── orders/            # BlindItemForm (dynamic fabrics), CurtainItemForm, OrderSummary
+│   │   │   ├── admin/             # FabricCutWorksheet, TubeCutWorksheet, WorksheetPreview,
+│   │   │   │                      # CurtainWorksheet, BlindFabricsTab
 │   │   │   └── inventory/         # AddInventoryModal, AdjustQuantityModal, ItemHistoryModal
-│   │   ├── services/              # API clients (auth, orders, quotes, pricing, inventory)
-│   │   ├── types/                 # TypeScript interfaces
-│   │   ├── data/                  # Fabric hierarchy + hardware options (static)
+│   │   ├── hooks/
+│   │   │   ├── useFabrics.ts      # Fetches live fabric catalog from /api/blind-fabrics
+│   │   │   └── useDebounce.ts     # Generic debounce hook
+│   │   ├── services/              # API clients (auth, orders, quotes, pricing, inventory, blindFabric)
+│   │   ├── types/                 # TypeScript interfaces (mirrors Prisma schema)
+│   │   ├── data/                  # Static sheer fabric/hardware data; blind fabrics now in DB
 │   │   ├── context/               # AuthContext (JWT + user role)
 │   │   └── App.tsx                # Route configuration
 │   └── public/
@@ -362,6 +378,16 @@ DELETE /api/users/:id            - Delete user
 PATCH  /api/users/:id/discounts  - Set per-customer G1-G4 discount rates
 ```
 
+### Blind Fabric Catalog
+```
+GET    /api/blind-fabrics              - Get all fabrics (formatted for order form) [auth]
+GET    /api/blind-fabrics/admin        - Get flat supplier list [admin]
+POST   /api/blind-fabrics              - Add fabric entry [admin]
+PUT    /api/blind-fabrics/:id          - Update fabric entry [admin]
+DELETE /api/blind-fabrics/:id          - Delete single fabric [admin]
+DELETE /api/blind-fabrics/supplier/:s  - Delete all fabrics for a supplier [admin]
+```
+
 ---
 
 ## Database Schema
@@ -369,13 +395,14 @@ PATCH  /api/users/:id/discounts  - Set per-customer G1-G4 discount rates
 ### Models
 - **User** - Customers, admins, warehouse staff with role-based access, per-customer discounts, approval workflow
 - **Order** - Orders with status tracking, soft deletes, fabric ordering flag, admin notes
-- **OrderItem** - 16-field blind configuration with pricing breakdown (7 components) and optimization placement data
+- **OrderItem** - Blind/curtain line item with 7-component pricing breakdown (fabricPrice, motorPrice, bracketPrice, chainPrice, clipsPrice, componentPrice) and optimization data
 - **WorksheetItem** - For Excel upload workflows
 - **WorksheetData** - Fabric cut and tube cut optimization results with acceptance tracking
 - **InventoryItem** - Stock items across 8 categories with pricing and low-stock alerts
 - **InventoryTransaction** - Immutable audit trail for all stock changes
 - **PricingMatrix** - Fabric pricing by group/width/drop (650 entries)
 - **Quote** - Saved quotes with 30-day expiry, convertible to orders
+- **BlindFabric** - Admin-managed fabric catalog (supplier, fabricType, fabricGroup G1-G3, colors[]). Order form reads this dynamically.
 
 ### Enums
 - **UserRole**: `CUSTOMER`, `ADMIN`, `WAREHOUSE`
@@ -405,9 +432,14 @@ npm run prisma:migrate   # Create new migration
 npm run prisma:push      # Push schema without migration
 npm run prisma:studio    # Open Prisma Studio GUI
 npm run seed             # Seed inventory items (89+ items)
-npm run seed:pricing     # Seed pricing matrix (650 entries)
+npm run seed:pricing     # Seed blind pricing matrix (650 entries)
 npm run create:admin     # Create admin user
 npm run create:warehouse # Create warehouse user
+# One-off seeds (run via docker exec ... npx ts-node --compiler-options '{"module":"CommonJS"}' scripts/<file>.ts)
+# seed-blind-fabrics.ts       — populate BlindFabric table
+# seed-sheer-pricing.ts       — sheer curtain pricing matrix
+# seed-sheer-inventory.ts     — sheer curtain inventory items
+# seed-sheer-motor-pricing.ts — sheer motor price entries
 npm run lint             # Run ESLint
 npm test                 # Run Jest tests
 ```
@@ -450,13 +482,14 @@ docker-compose.yml
 └── Frontend (port 3000, hot-reload via volume mount)
 ```
 
-### Production (AWS EC2)
+### Production (AWS — ap-southeast-4 Melbourne)
 ```
 docker-compose.prod.yml
-├── PostgreSQL 15 (localhost:5432 only, not internet-facing)
-├── Backend (production build, internal network)
-├── Frontend (production build, internal network)
+├── Backend (production build, internal network, port 5000)
+├── Frontend (production build, internal network, port 80)
 └── Nginx (ports 80/443, SSL via Let's Encrypt, reverse proxy)
+
+AWS RDS db.t4g.micro PostgreSQL 15 (separate managed DB — not a container)
 ```
 
 **Production deployment:**
@@ -526,7 +559,9 @@ Proprietary - All rights reserved by Signature Shades
 
 ## Roadmap
 
-- [ ] Sheer Curtain input form (as product type alongside Blinds)
+- [x] Sheer Curtain input form (as product type alongside Blinds) — completed 2026-05-14
+- [x] Admin-managed dynamic fabric catalog (BlindFabric) — completed 2026-05-28
+- [ ] Sheer curtain worksheet CSV/PDF export (download pipeline)
 - [ ] Email notifications (order confirmation, status updates)
 - [ ] API documentation (Swagger/OpenAPI)
 - [ ] Advanced reporting dashboard

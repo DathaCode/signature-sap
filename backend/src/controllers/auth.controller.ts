@@ -6,6 +6,7 @@ import { generateToken, AuthRequest } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
 import { logger } from '../config/logger';
 import { z } from 'zod';
+import { authAttemptsTotal } from '../config/metrics';
 
 const prisma = new PrismaClient();
 
@@ -118,6 +119,7 @@ export const login = async (
         });
 
         if (!user) {
+            authAttemptsTotal.inc({ outcome: 'failure' });
             throw new AppError(401, 'Invalid email or password');
         }
 
@@ -149,6 +151,7 @@ export const login = async (
                 logger.warn(`Account locked after ${attempts} failed attempts: ${user.email}`);
             }
             await prisma.user.update({ where: { id: user.id }, data: lockData });
+            authAttemptsTotal.inc({ outcome: 'failure' });
             throw new AppError(401, 'Invalid email or password');
         }
 
@@ -168,6 +171,7 @@ export const login = async (
             name: user.name,
         });
 
+        authAttemptsTotal.inc({ outcome: 'success' });
         logger.info(`User logged in: ${user.email}`);
 
         res.json({

@@ -6,7 +6,7 @@ import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
-import { getMaterials, getFabricTypes, getFabricColors } from '../../data/fabrics';
+import { useFabrics, getMaterialsFromData, getFabricTypesFromData, getFabricColorsFromData } from '../../hooks/useFabrics';
 import {
     FIXING_TYPES,
     BRACKET_TYPES,
@@ -65,6 +65,8 @@ export function BlindItemForm({ index, onRemove, onCopy, onContinue, canRemove =
     const remotes = useWatch({ control, name: `items.${index}.remotes` });
     const chargerHub = useWatch({ control, name: `items.${index}.chargerHub` });
 
+    const { data: fabricData = {} } = useFabrics();
+
     // Validation error state
     const [validationError, setValidationError] = useState<string | null>(null);
     const [priceBreakdown, setPriceBreakdown] = useState<SimplePriceBreakdown | null>(null);
@@ -121,7 +123,7 @@ export function BlindItemForm({ index, onRemove, onCopy, onContinue, canRemove =
     useEffect(() => {
         if (isInitialMount.current) return;
         if (prevMaterialRef.current !== undefined && prevMaterialRef.current !== material) {
-            const validTypes = material ? getFabricTypes(material) : [];
+            const validTypes = material ? getFabricTypesFromData(fabricData, material) : [];
             if (fabricType && !validTypes.includes(fabricType)) {
                 setValue(`items.${index}.fabricType`, '');
                 setValue(`items.${index}.fabricColour`, '');
@@ -133,7 +135,7 @@ export function BlindItemForm({ index, onRemove, onCopy, onContinue, canRemove =
     useEffect(() => {
         if (isInitialMount.current) return;
         if (prevFabricTypeRef.current !== undefined && prevFabricTypeRef.current !== fabricType) {
-            const validColors = (material && fabricType) ? getFabricColors(material, fabricType) : [];
+            const validColors = (material && fabricType) ? getFabricColorsFromData(fabricData, material, fabricType) : [];
             if (fabricColour && !validColors.includes(fabricColour)) {
                 setValue(`items.${index}.fabricColour`, '');
             }
@@ -206,10 +208,10 @@ export function BlindItemForm({ index, onRemove, onCopy, onContinue, canRemove =
     }, [canCalculatePrice, width, drop, material, fabricType, fabricColour, chainOrMotor, chainType, bracketType, bracketColour, bottomRailType, bottomRailColour, controlSide, showChainType, index]);
 
 
-    // Dropdown options
-    const materials = getMaterials().map(m => ({ label: m, value: m }));
-    const fabricTypes = material ? getFabricTypes(material).map(t => ({ label: t, value: t })) : [];
-    const fabricColors = (material && fabricType) ? getFabricColors(material, fabricType).map(c => ({ label: c, value: c })) : [];
+    // Dropdown options (derived from API data)
+    const materials = getMaterialsFromData(fabricData).map(m => ({ label: m, value: m }));
+    const fabricTypes = material ? getFabricTypesFromData(fabricData, material).map(t => ({ label: t, value: t })) : [];
+    const fabricColors = (material && fabricType) ? getFabricColorsFromData(fabricData, material, fabricType).map(c => ({ label: c, value: c })) : [];
 
     // Strikethrough price (fabric base, before discount)
     const strikethroughPrice = priceBreakdown ? priceBreakdown.fabricBase : null;
