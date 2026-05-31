@@ -13,13 +13,6 @@ import { FabricCutOptimizerService } from '../services/fabricCutOptimizer.servic
 import { TubeCutOptimizer, TubeBlindInput } from '../services/tubeCutOptimizer.service';
 import { InventoryService } from '../services/inventory.service';
 import { WorksheetExportService } from '../services/worksheetExport.service';
-import {
-    ordersCreatedTotal,
-    ordersStatusChangedTotal,
-    worksheetAcceptedTotal,
-    inventoryDeductionsTotal,
-    worksheetGenerationSeconds,
-} from '../config/metrics';
 
 /**
  * Determine supplier key from chainOrMotor string for customer discount lookup.
@@ -643,7 +636,6 @@ export const createOrder = async (
         });
 
         logger.info(`Order created: ${orderNumber} by ${user.email}`);
-        ordersCreatedTotal.inc({ productType: validatedData.productType });
 
         res.status(201).json({
             success: true,
@@ -922,7 +914,6 @@ export const approveOrder = async (
         });
 
         logger.info(`Order approved: ${order.orderNumber} by ${authReq.user?.email}`);
-        ordersStatusChangedTotal.inc({ fromStatus: 'PENDING', toStatus: 'CONFIRMED' });
 
         res.json({
             success: true,
@@ -959,12 +950,9 @@ export const sendToProduction = async (
             throw new AppError(400, 'Only confirmed orders can be sent to production');
         }
 
-        const orderType = order.productType === 'CURTAINS' ? 'curtains' : order.productType === 'BLINDS' ? 'blinds' : 'mixed';
-        const wsTimer = worksheetGenerationSeconds.startTimer({ orderType });
         const worksheetResult = order.productType === 'CURTAINS'
             ? await runCurtainWorksheet(order)
             : await runOptimization(order);
-        wsTimer();
 
         // Update order status
         await prisma.order.update({
@@ -972,7 +960,6 @@ export const sendToProduction = async (
             data: { status: OrderStatus.PRODUCTION },
         });
 
-        ordersStatusChangedTotal.inc({ fromStatus: 'CONFIRMED', toStatus: 'PRODUCTION' });
         logger.info(`Order sent to production: ${order.orderNumber} by ${authReq.user?.email}`);
 
         res.json({
@@ -1825,11 +1812,6 @@ export const acceptWorksheets = async (
             },
         });
 
-        worksheetAcceptedTotal.inc();
-        for (const d of deductions) {
-            inventoryDeductionsTotal.inc({ category: d.category });
-        }
-
         logger.info(`Worksheets accepted for order ${order.orderNumber} by ${authReq.user?.email}`);
 
         res.json({
@@ -2200,7 +2182,6 @@ export const updateOrderStatus = async (
         }
 
         const existing = await prisma.order.findUnique({ where: { id: req.params.id as string } });
-        const fromStatus = existing?.status ?? 'UNKNOWN';
 
         // Warehouse can only mark PRODUCTION → COMPLETED
         if (authReq.user?.role === 'WAREHOUSE') {
@@ -2214,7 +2195,6 @@ export const updateOrderStatus = async (
             data: { status },
         });
 
-        ordersStatusChangedTotal.inc({ fromStatus, toStatus: status });
         logger.info(`Order status updated: ${updated.orderNumber} → ${status} by ${authReq.user?.email}`);
 
         res.json({

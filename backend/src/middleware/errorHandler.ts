@@ -1,6 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
 import { logger } from '../config/logger';
-import { apiErrorsTotal, normaliseRoute } from '../config/metrics';
 
 export class AppError extends Error {
     constructor(
@@ -29,14 +28,8 @@ export const errorHandler = (
         method: req.method,
     });
 
-    const routePattern = req.route?.path as string | undefined;
-    const errorRoute = routePattern
-        ? normaliseRoute((req.baseUrl ?? '') + routePattern)
-        : normaliseRoute(req.path);
-
     // Handle known operational errors
     if (err instanceof AppError) {
-        apiErrorsTotal.inc({ route: errorRoute, statusCode: String(err.statusCode) });
         return res.status(err.statusCode).json({
             status: 'error',
             message: err.message,
@@ -44,7 +37,6 @@ export const errorHandler = (
     }
 
     // Handle unexpected errors — never leak details in production
-    apiErrorsTotal.inc({ route: errorRoute, statusCode: '500' });
     return res.status(500).json({
         status: 'error',
         message: 'An unexpected error occurred',

@@ -3,7 +3,6 @@ import { PrismaClient } from '@prisma/client';
 import { AuthRequest } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
 import { z } from 'zod';
-import { quotesCreatedTotal, quotesConvertedTotal } from '../config/metrics';
 
 // Motor-specific width deductions for fabric cutting
 const MOTOR_DEDUCTIONS: Record<string, number> = {
@@ -106,7 +105,7 @@ export const createQuote = async (
             },
         });
 
-        quotesCreatedTotal.inc();
+
 
         res.status(201).json({
             message: 'Quote created successfully',
@@ -396,7 +395,7 @@ export const convertQuoteToOrder = async (
             },
         });
 
-        quotesConvertedTotal.inc();
+
 
         res.json({
             message: 'Quote converted to order successfully',
