@@ -745,6 +745,12 @@ docker exec signatureshades-api-local npm install
 **NEVER automatically run SSH commands or execute anything on production.**
 When a task requires production changes, provide the commands for the user to run — do not execute them.
 
+## Destructive Command Rule
+
+**NEVER run destructive or irreversible commands without explicit user confirmation.**
+This includes: deleting files/directories (`rm`, `Remove-Item`, `rmdir`), dropping database tables, force-pushing, hard-resetting git, killing processes, or any command that cannot be easily undone.
+Always explain what the command will do and wait for the user to approve before executing. When in doubt, provide the command for the user to run themselves.
+
 ```bash
 # Production commands to PROVIDE (never run yourself):
 ssh -i ~/.ssh/signatureshades-ec2 ubuntu@16.26.30.228
