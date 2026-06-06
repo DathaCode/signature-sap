@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { AuthRequest } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
+import { emitQuoteCreated, emitQuoteConverted } from '../config/metrics';
 import { z } from 'zod';
 
 // Motor-specific width deductions for fabric cutting
@@ -105,7 +106,7 @@ export const createQuote = async (
             },
         });
 
-
+        emitQuoteCreated().catch(() => {});
 
         res.status(201).json({
             message: 'Quote created successfully',
@@ -395,7 +396,7 @@ export const convertQuoteToOrder = async (
             },
         });
 
-
+        emitQuoteConverted().catch(() => {});
 
         res.json({
             message: 'Quote converted to order successfully',

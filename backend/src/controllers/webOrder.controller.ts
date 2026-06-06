@@ -3,6 +3,13 @@ import { PrismaClient, OrderStatus, InventoryCategory } from '@prisma/client';
 import { AuthRequest } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
 import { logger } from '../config/logger';
+import {
+    emitOrderCreated,
+    emitOrderStatusChanged,
+    emitWorksheetGeneration,
+    emitWorksheetAccepted,
+    emitInventoryDeduction,
+} from '../config/metrics';
 import { z } from 'zod';
 import path from 'path';
 import pricingService from '../services/pricing.service';
@@ -636,6 +643,7 @@ export const createOrder = async (
         });
 
         logger.info(`Order created: ${orderNumber} by ${user.email}`);
+        emitOrderCreated(validatedData.productType).catch(() => {});
 
         res.status(201).json({
             success: true,
@@ -790,6 +798,7 @@ export const cancelOrder = async (
         });
 
         logger.info(`Order cancelled: ${order.orderNumber} by ${authReq.user.email}`);
+        emitOrderStatusChanged(order.status, OrderStatus.CANCELLED).catch(() => {});
 
         res.json({
             success: true,
@@ -914,6 +923,7 @@ export const approveOrder = async (
         });
 
         logger.info(`Order approved: ${order.orderNumber} by ${authReq.user?.email}`);
+        emitOrderStatusChanged(order.status, OrderStatus.CONFIRMED).catch(() => {});
 
         res.json({
             success: true,
@@ -950,9 +960,11 @@ export const sendToProduction = async (
             throw new AppError(400, 'Only confirmed orders can be sent to production');
         }
 
+        const worksheetStart = Date.now();
         const worksheetResult = order.productType === 'CURTAINS'
             ? await runCurtainWorksheet(order)
             : await runOptimization(order);
+        emitWorksheetGeneration(order.productType, Date.now() - worksheetStart).catch(() => {});
 
         // Update order status
         await prisma.order.update({
@@ -961,6 +973,7 @@ export const sendToProduction = async (
         });
 
         logger.info(`Order sent to production: ${order.orderNumber} by ${authReq.user?.email}`);
+        emitOrderStatusChanged(order.status, OrderStatus.PRODUCTION).catch(() => {});
 
         res.json({
             success: true,
@@ -1803,6 +1816,10 @@ export const acceptWorksheets = async (
         // Deduct inventory
         const deductionResults = await InventoryService.deductForOrder(order.id, deductions);
 
+        for (const deduction of deductions) {
+            emitInventoryDeduction(String(deduction.category)).catch(() => {});
+        }
+
         // Mark worksheets as accepted
         await prisma.worksheetData.update({
             where: { orderId: req.params.id as string },
@@ -1813,6 +1830,7 @@ export const acceptWorksheets = async (
         });
 
         logger.info(`Worksheets accepted for order ${order.orderNumber} by ${authReq.user?.email}`);
+        emitWorksheetAccepted().catch(() => {});
 
         res.json({
             success: true,
@@ -2196,6 +2214,7 @@ export const updateOrderStatus = async (
         });
 
         logger.info(`Order status updated: ${updated.orderNumber} → ${status} by ${authReq.user?.email}`);
+        emitOrderStatusChanged(existing?.status ?? 'UNKNOWN', status).catch(() => {});
 
         res.json({
             success: true,

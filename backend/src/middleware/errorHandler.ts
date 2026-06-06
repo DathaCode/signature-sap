@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { logger } from '../config/logger';
+import { emitApiError } from '../config/metrics';
 
 export class AppError extends Error {
     constructor(
@@ -30,6 +31,7 @@ export const errorHandler = (
 
     // Handle known operational errors
     if (err instanceof AppError) {
+        emitApiError(req.path, err.statusCode).catch(() => {});
         return res.status(err.statusCode).json({
             status: 'error',
             message: err.message,
@@ -37,6 +39,7 @@ export const errorHandler = (
     }
 
     // Handle unexpected errors — never leak details in production
+    emitApiError(req.path, 500).catch(() => {});
     return res.status(500).json({
         status: 'error',
         message: 'An unexpected error occurred',

@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import dotenv from 'dotenv';
 import { logger } from './config/logger';
 import { errorHandler } from './middleware/errorHandler';
+import { emitHttpRequest, startMetricsRefresh } from './config/metrics';
 // Existing routes
 import inventoryRoutes from './routes/inventoryRoutes';
 
@@ -73,6 +74,25 @@ app.use((req, _res, next) => {
     next();
 });
 
+// HTTP metrics — emit one EMF HttpRequestDuration metric per request on finish.
+// Collapse UUIDs and integer path segments to ":id" to keep cardinality low.
+const UUID_RE = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+const normaliseRoute = (path: string): string =>
+    path
+        .split('/')
+        .map((seg) => (UUID_RE.test(seg) || /^\d+$/.test(seg) ? ':id' : seg))
+        .join('/');
+
+app.use((req, res, next) => {
+    const start = Date.now();
+    res.on('finish', () => {
+        const elapsedMs = Date.now() - start;
+        const route = normaliseRoute(req.path);
+        emitHttpRequest(req.method, route, res.statusCode, elapsedMs).catch(() => {});
+    });
+    next();
+});
+
 // ============================================================================
 // ROUTES
 // ============================================================================
@@ -110,6 +130,9 @@ app.listen(PORT, () => {
     logger.info(`🚀 Signature Shades API Server running on port ${PORT}`);
     logger.info(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
     logger.info(`🔗 Health check: http://localhost:${PORT}/api/health`);
+
+    // Start periodic EMF gauge refresh (inventory quantities + active orders)
+    startMetricsRefresh();
 });
 
 export default app;

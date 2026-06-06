@@ -42,6 +42,7 @@
         "@types/bcryptjs": "^2.4.6",
         "@types/jsonwebtoken": "^9.0.10",
         "@types/multer": "^2.0.0",
+        "aws-embedded-metrics": "^4.2.1",
         "bcryptjs": "^2.4.3",
         "cors": "^2.8.5",
         "dotenv": "^16.4.5",

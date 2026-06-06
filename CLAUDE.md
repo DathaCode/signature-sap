@@ -156,15 +156,31 @@ src/
    - Motor-specific logic for chain selection and bracket compatibility
    - Returns detailed price breakdown for transparency
 
-7. **Metrics** (`config/metrics.ts`)
-   - Single shared `prom-client` Registry exported as `register`
-   - `collectDefaultMetrics` — Node.js process heap, GC, event-loop lag, handles
-   - **Counters:** `ordersCreatedTotal [productType]`, `ordersStatusChangedTotal [fromStatus, toStatus]`, `authAttemptsTotal [outcome]`, `worksheetAcceptedTotal`, `inventoryDeductionsTotal [category]`, `quotesCreatedTotal`, `quotesConvertedTotal`, `apiErrorsTotal [route, statusCode]`
-   - **Histograms:** `httpRequestDurationSeconds [method, route, statusCode]`, `worksheetGenerationSeconds [orderType]`, `dbQueryDurationSeconds [operation]`
-   - **Gauges:** `inventoryQuantityGauge [itemName, category, colorVariant]`, `activeOrdersGauge [status]`
-   - `startMetricsRefresh()` — called once by `server.ts`; refreshes gauges from DB every 60 s
-   - **Endpoint:** `GET /metrics` (unauthenticated, Prometheus text format; security boundary = Docker network)
-   - **Route normalisation:** `normaliseRoute()` collapses UUIDs and numeric path segments to `:id`
+7. **Metrics — AWS Embedded Metric Format / EMF** (`config/metrics.ts`)
+   - Uses `aws-embedded-metrics`; metrics are emitted as structured EMF JSON to
+     **stdout** and collected by the CloudWatch Agent from the Docker container
+     logs. There is **no HTTP `/metrics` endpoint** and no in-process registry.
+   - **Namespace:** `SignatureShades/API`; default dimension `{ Environment }`.
+   - **Output sink** is chosen by `AWS_EMF_ENVIRONMENT` (set in `config/metricsEnv.ts`
+     *before* the library loads — the library resolves its sink eagerly at import):
+     production → `Lambda` (EMF JSON to stdout), development → `Local` (EMF JSON to stdout).
+   - **Emit helpers** (all async, fire-and-forget — call with `.catch(() => {})`):
+     `emitOrderCreated(productType)`, `emitOrderStatusChanged(fromStatus, toStatus)`,
+     `emitAuthAttempt(outcome)`, `emitWorksheetAccepted()`, `emitInventoryDeduction(category)`,
+     `emitQuoteCreated()`, `emitQuoteConverted()`, `emitApiError(route, statusCode)`,
+     `emitHttpRequest(method, route, statusCode, durationMs)`,
+     `emitWorksheetGeneration(orderType, durationMs)`
+   - **Metric names:** `OrdersCreated`, `OrdersStatusChanged`, `AuthAttempts`,
+     `WorksheetsAccepted`, `InventoryDeductions`, `QuotesCreated`, `QuotesConverted`,
+     `ApiErrors`, `HttpRequestDuration` (ms), `WorksheetGeneration` (ms), and the
+     gauges `InventoryQuantity [itemName, category, colorVariant]` and
+     `ActiveOrders [status]`. Event metrics use `Unit.Count`, durations use `Unit.Milliseconds`.
+   - `startMetricsRefresh()` — called once by `server.ts`; every 60 s queries
+     `InventoryItem` (emits `InventoryQuantity`) and `Order` grouped by status
+     (emits `ActiveOrders`).
+   - **HTTP middleware** (inline in `server.ts`): records start time, then on
+     `res.on('finish')` calls `emitHttpRequest()` with the normalised route —
+     UUIDs and integer path segments collapsed to `:id`.
 
 8. **Sheer Curtain Pricing Service** (`services/sheerCurtainPricing.service.ts`)
    - Calculates full sheer curtain price (fabric cost + motor/wand/runner/hook components)
@@ -667,17 +683,35 @@ terraform apply -target="aws_db_instance.postgres" # RDS only
 
 ## Recent Updates
 
-### ✅ Prometheus Metrics Instrumentation (2026-05-29)
+### ✅ AWS Embedded Metric Format (EMF) Instrumentation (2026-06-06)
+
+Replaced the previous prom-client / Prometheus instrumentation with AWS Embedded
+Metric Format. Metrics are now emitted as structured EMF JSON to **stdout** and
+collected by the CloudWatch Agent from the Docker container logs — there is no
+`/metrics` HTTP endpoint and no in-process Prometheus registry.
 
 **Files added/modified:**
-- `backend/src/config/metrics.ts` — prom-client Registry, all metric instruments, gauge refresh loop
-- `backend/src/middleware/httpMetrics.ts` — per-request duration middleware (records `httpRequestDurationSeconds`)
-- `backend/src/server.ts` — `GET /metrics` endpoint, `httpMetrics` middleware, `startMetricsRefresh()` call
-- `backend/src/middleware/errorHandler.ts` — increments `apiErrorsTotal` on every error response
-- `backend/src/controllers/auth.controller.ts` — `authAttemptsTotal` on login success/failure
-- `backend/src/controllers/webOrder.controller.ts` — `ordersCreatedTotal`, `ordersStatusChangedTotal`, `worksheetGenerationSeconds`, `worksheetAcceptedTotal`, `inventoryDeductionsTotal`
-- `backend/src/controllers/quote.controller.ts` — `quotesCreatedTotal`, `quotesConvertedTotal`
-- `backend/package.json` — added `prom-client ^15.1.3`
+- `backend/src/config/metrics.ts` — EMF helpers + `startMetricsRefresh()`; namespace
+  `SignatureShades/API`, default dimension `{ Environment }`. Exports all `emit*` helpers.
+- `backend/src/config/metricsEnv.ts` — **new**; sets `AWS_EMF_ENVIRONMENT`
+  (`Lambda` in prod / `Local` in dev) before `aws-embedded-metrics` loads, because
+  the library resolves its output sink eagerly at import time.
+- `backend/src/server.ts` — removed `GET /metrics`; added inline HTTP metrics
+  middleware (`res.on('finish')` → `emitHttpRequest()` with normalised route);
+  calls `startMetricsRefresh()` on listen.
+- `backend/src/middleware/httpMetrics.ts` — **deleted** (replaced by inline middleware).
+- `backend/src/middleware/errorHandler.ts` — `emitApiError(req.path, statusCode)` on every error.
+- `backend/src/controllers/auth.controller.ts` — `emitAuthAttempt('success' | 'failure')`.
+- `backend/src/controllers/webOrder.controller.ts` — `emitOrderCreated`, `emitOrderStatusChanged`,
+  `emitWorksheetGeneration`, `emitWorksheetAccepted`, `emitInventoryDeduction`.
+- `backend/src/controllers/quote.controller.ts` — `emitQuoteCreated`, `emitQuoteConverted`.
+- `backend/package.json` — removed `prom-client`, added `aws-embedded-metrics ^4.2.1`.
+
+All `emit*` calls are fire-and-forget (`.catch(() => {})`) so a metrics failure
+never affects request handling.
+
+> **Note:** the library has no "CloudWatch" environment. Production uses the
+> `Lambda` sink, which serialises EMF JSON to stdout with no TCP agent dependency.
 
 **Install after pulling:**
 ```bash

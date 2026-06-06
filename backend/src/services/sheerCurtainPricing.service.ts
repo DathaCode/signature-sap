@@ -149,6 +149,148 @@ const CHART: BreakpointRow[] = RAW_CHART.map(r => ({
 }));
 
 // ---------------------------------------------------------------------------
+// HOOK CHART — hardcoded from runner_chart_15mm_gap (1).xlsx (Breakpoints sheet)
+// Spec: 15mm end gap both sides · 54mm spacing · 60–8500mm
+// Columns: [minWidth, maxWidth, coLeftHooks, coRightHooks, soTotalHooks]
+//   CENTRE OPEN: Left hooks = Right hooks (per panel); total = left + right
+//   SINGLE OPEN: Total hooks only
+// This is the SOLE source for hook counts. Fabric meters still come from CHART.
+// ---------------------------------------------------------------------------
+interface HookRow {
+  minWidth: number; maxWidth: number;
+  coLeft: number;   coRight: number;
+  soTotal: number;
+}
+
+// Raw: [minWidth, maxWidth, coLeftHooks, coRightHooks, soTotalHooks]
+const RAW_HOOK_CHART: number[][] = [
+  [60,84,2,2,2],
+  [85,138,2,2,4],
+  [139,192,4,4,4],
+  [193,300,4,4,6],
+  [301,354,4,4,8],
+  [355,408,6,6,8],
+  [409,516,6,6,10],
+  [517,570,6,6,12],
+  [571,624,8,8,12],
+  [625,732,8,8,14],
+  [733,786,8,8,16],
+  [787,840,10,10,16],
+  [841,948,10,10,18],
+  [949,1002,10,10,20],
+  [1003,1056,12,12,20],
+  [1057,1164,12,12,22],
+  [1165,1218,12,12,24],
+  [1219,1272,14,14,24],
+  [1273,1380,14,14,26],
+  [1381,1434,14,14,28],
+  [1435,1488,16,16,28],
+  [1489,1596,16,16,30],
+  [1597,1650,16,16,32],
+  [1651,1704,18,18,32],
+  [1705,1812,18,18,34],
+  [1813,1866,18,18,36],
+  [1867,1920,20,20,36],
+  [1921,2028,20,20,38],
+  [2029,2082,20,20,40],
+  [2083,2136,22,22,40],
+  [2137,2244,22,22,42],
+  [2245,2298,22,22,44],
+  [2299,2352,24,24,44],
+  [2353,2460,24,24,46],
+  [2461,2514,24,24,48],
+  [2515,2568,26,26,48],
+  [2569,2676,26,26,50],
+  [2677,2730,26,26,52],
+  [2731,2784,28,28,52],
+  [2785,2892,28,28,54],
+  [2893,2946,28,28,56],
+  [2947,3000,30,30,56],
+  [3001,3108,30,30,58],
+  [3109,3162,30,30,60],
+  [3163,3216,32,32,60],
+  [3217,3324,32,32,62],
+  [3325,3378,32,32,64],
+  [3379,3432,34,34,64],
+  [3433,3540,34,34,66],
+  [3541,3594,34,34,68],
+  [3595,3648,36,36,68],
+  [3649,3756,36,36,70],
+  [3757,3810,36,36,72],
+  [3811,3864,38,38,72],
+  [3865,3972,38,38,74],
+  [3973,4026,38,38,76],
+  [4027,4080,40,40,76],
+  [4081,4188,40,40,78],
+  [4189,4242,40,40,80],
+  [4243,4296,42,42,80],
+  [4297,4404,42,42,82],
+  [4405,4458,42,42,84],
+  [4459,4512,44,44,84],
+  [4513,4620,44,44,86],
+  [4621,4674,44,44,88],
+  [4675,4728,46,46,88],
+  [4729,4836,46,46,90],
+  [4837,4890,46,46,92],
+  [4891,4944,48,48,92],
+  [4945,5052,48,48,94],
+  [5053,5106,48,48,96],
+  [5107,5160,50,50,96],
+  [5161,5268,50,50,98],
+  [5269,5322,50,50,100],
+  [5323,5376,52,52,100],
+  [5377,5484,52,52,102],
+  [5485,5538,52,52,104],
+  [5539,5592,54,54,104],
+  [5593,5700,54,54,106],
+  [5701,5754,54,54,108],
+  [5755,5808,56,56,108],
+  [5809,5916,56,56,110],
+  [5917,5970,56,56,112],
+  [5971,6024,58,58,112],
+  [6025,6132,58,58,114],
+  [6133,6186,58,58,116],
+  [6187,6240,60,60,116],
+  [6241,6348,60,60,118],
+  [6349,6402,60,60,120],
+  [6403,6456,62,62,120],
+  [6457,6564,62,62,122],
+  [6565,6618,62,62,124],
+  [6619,6672,64,64,124],
+  [6673,6780,64,64,126],
+  [6781,6834,64,64,128],
+  [6835,6888,66,66,128],
+  [6889,6996,66,66,130],
+  [6997,7050,66,66,132],
+  [7051,7104,68,68,132],
+  [7105,7212,68,68,134],
+  [7213,7266,68,68,136],
+  [7267,7320,70,70,136],
+  [7321,7428,70,70,138],
+  [7429,7482,70,70,140],
+  [7483,7536,72,72,140],
+  [7537,7644,72,72,142],
+  [7645,7698,72,72,144],
+  [7699,7752,74,74,144],
+  [7753,7860,74,74,146],
+  [7861,7914,74,74,148],
+  [7915,7968,76,76,148],
+  [7969,8076,76,76,150],
+  [8077,8130,76,76,152],
+  [8131,8184,78,78,152],
+  [8185,8292,78,78,154],
+  [8293,8346,78,78,156],
+  [8347,8400,80,80,156],
+  [8401,8500,80,80,158],
+];
+
+const HOOK_CHART: HookRow[] = RAW_HOOK_CHART.map(r => ({
+  minWidth: r[0], maxWidth: r[1],
+  coLeft:   r[2], coRight:  r[3],
+  soTotal:  r[4],
+}));
+
+// ---------------------------------------------------------------------------
 // Exported types
 // ---------------------------------------------------------------------------
 export interface CurtainPricingData {
@@ -245,12 +387,12 @@ class SheerCurtainPricingService {
     const row = CHART.find(r => width >= r.minWidth && width <= r.maxWidth);
     if (!row) {
       logger.warn(`Width ${width}mm outside runner chart range (60–8500); using last row`);
-      return this.extractFromRow(CHART[CHART.length - 1], openingType, fullness);
+      return this.extractFromRow(CHART[CHART.length - 1], width, openingType, fullness);
     }
-    return this.extractFromRow(row, openingType, fullness);
+    return this.extractFromRow(row, width, openingType, fullness);
   }
 
-  private extractFromRow(row: BreakpointRow, openingType: string, fullness: number) {
+  private extractFromRow(row: BreakpointRow, width: number, openingType: string, fullness: number) {
     const fabricMmMap: Record<number, { co: number; so: number }> = {
       120: { co: row.co120, so: row.so120 },
       130: { co: row.co130, so: row.so130 },
@@ -259,21 +401,45 @@ class SheerCurtainPricingService {
     };
     const fabric = fabricMmMap[fullness] ?? fabricMmMap[140];
 
+    // Hook counts come SOLELY from HOOK_CHART (runner_chart_15mm_gap),
+    // keyed by the real item width (not the old fabric chart's range).
+    const hooks = this.lookupHooks(width, openingType);
+
     if (openingType === 'Centre Open') {
       return {
-        hookCount:    row.coLeft + row.coRight,
-        leftHooks:    row.coLeft,
-        rightHooks:   row.coRight,
+        hookCount:    hooks.hookCount,
+        leftHooks:    hooks.leftHooks,
+        rightHooks:   hooks.rightHooks,
         fabricMeters: fabric.co / 1000,
       };
     } else {
       return {
-        hookCount:    row.soTotal,
+        hookCount:    hooks.hookCount,
         leftHooks:    undefined,
         rightHooks:   undefined,
         fabricMeters: fabric.so / 1000,
       };
     }
+  }
+
+  // ── Hook chart lookup (15mm gap, 54mm spacing) ───────────────────────────
+  // Sole source of hook counts for both Single Open and Centre Open.
+  private lookupHooks(width: number, openingType: string): {
+    hookCount: number; leftHooks?: number; rightHooks?: number;
+  } {
+    let row = HOOK_CHART.find(h => width >= h.minWidth && width <= h.maxWidth);
+    if (!row) {
+      logger.warn(`Width ${width}mm outside hook chart range (60–8500); using last row`);
+      row = HOOK_CHART[HOOK_CHART.length - 1];
+    }
+    if (openingType === 'Centre Open') {
+      return {
+        hookCount:  row.coLeft + row.coRight,
+        leftHooks:  row.coLeft,
+        rightHooks: row.coRight,
+      };
+    }
+    return { hookCount: row.soTotal };
   }
 
   getBracketCount(width: number): number {

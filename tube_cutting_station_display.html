@@ -1,0 +1,179 @@
+
+<h2 class="sr-only">Tube cutting station display — navigate through cuts for each stock piece of D30 tube</h2>
+<style>
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
+#csd{font-family:var(--font-sans)}
+.monitor{background:#0c0c0c;border-radius:12px;border:1.5px solid #252525;overflow:hidden;margin-bottom:10px}
+.prog-bar{height:3px;background:#1a1a1a}
+.prog-fill{height:100%;background:#5a8f00;transition:width 0.4s ease}
+.mon-hdr{background:#141414;border-bottom:1px solid #252525;padding:9px 18px;display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#555;letter-spacing:.08em;font-family:var(--font-mono)}
+.mon-hdr .oid{color:#d4a800;font-weight:500}
+.mon-body{padding:32px 20px 24px;text-align:center}
+.plabel{font-size:11px;letter-spacing:.18em;color:#444;margin-bottom:28px;font-family:var(--font-mono)}
+.plabel .cur{color:#d4a800}
+.rname{font-size:52px;font-weight:600;color:#f0f0f0;line-height:1;margin-bottom:8px}
+.meas{font-size:76px;font-weight:700;color:#d4a800;line-height:1.05;margin-bottom:36px;font-family:var(--font-mono);letter-spacing:-2px}
+.seq{display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;margin-bottom:20px;min-height:32px}
+.chip{padding:5px 12px;border-radius:16px;font-size:12px;font-family:var(--font-mono);border:1px solid;transition:all 0.2s}
+.chip.done{background:#0f1f0f;border-color:#1f3f1f;color:#3a7a3a;text-decoration:line-through}
+.chip.active{background:#221c00;border-color:#d4a800;color:#d4a800}
+.chip.upcoming{background:#161616;border-color:#2a2a2a;color:#555}
+.arr{color:#333;font-size:12px}
+.sbar-wrap{margin:0 20px 16px}
+.sbar{height:5px;background:#1e1e1e;border-radius:3px;overflow:hidden}
+.sbar-fill{height:100%;background:#d4a800;border-radius:3px;transition:width 0.4s ease}
+.sinfo{font-size:11px;color:#444;font-family:var(--font-mono);margin-top:5px;text-align:center}
+.mon-ctrl{background:#0f0f0f;border-top:1px solid #222;padding:14px 18px;display:flex;gap:10px}
+.cbtn{flex:1;padding:13px 8px;border-radius:8px;border:1px solid #2a2a2a;background:#181818;color:#777;cursor:pointer;font-family:var(--font-mono);font-size:11px;letter-spacing:.1em;transition:all .15s}
+.cbtn:hover{background:#232323;border-color:#444;color:#bbb}
+.cbtn:active{transform:scale(0.97)}
+.cbtn.dbtn{flex:2;background:#0f1e00;border-color:#3d6600;color:#7ab800;font-size:13px}
+.cbtn.dbtn:hover{background:#162800;border-color:#5a9900;color:#9fd020}
+.cbtn.dbtn.done{background:#0a150a;color:#356535;border-color:#1f3f1f}
+.cbtn.dbtn.all-done{background:#0a1f0a;border-color:#3a7a3a;color:#5aaa5a}
+.cbtn:disabled{opacity:.25;cursor:default}
+.complete-screen{padding:60px 20px;text-align:center}
+.complete-screen .big{font-size:64px;color:#5aaa5a;font-weight:700;line-height:1}
+.complete-screen .sub{font-size:14px;color:#555;font-family:var(--font-mono);margin-top:12px}
+.dtoggle{font-size:12px;color:var(--color-text-secondary);cursor:pointer;padding:8px 2px;display:flex;align-items:center;gap:6px;user-select:none}
+.dpanel{background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);padding:12px;margin-top:6px}
+.dpanel textarea{width:100%;font-family:var(--font-mono);font-size:12px;min-height:100px;box-sizing:border-box;resize:vertical}
+.dpanel input{font-size:12px}
+.row{display:flex;gap:8px;margin-top:8px}
+.row input{flex:1}
+.kbd-hint{font-size:11px;color:#333;font-family:var(--font-mono);text-align:center;padding:6px 0 2px;letter-spacing:.05em}
+</style>
+
+<div id="csd">
+  <div class="monitor" id="monitor">
+    <div class="prog-bar"><div class="prog-fill" id="prog"></div></div>
+    <div class="mon-hdr">
+      <span><span class="oid" id="hdr-order">260061.S</span></span>
+      <span id="hdr-tube">D30 · ANODISED · STANDARD TUBE</span>
+      <span id="hdr-stock">3 × 5800MM</span>
+    </div>
+    <div id="main-body" class="mon-body">
+      <div class="plabel" id="plabel">PIECE <span class="cur">1</span> OF 3 · CUT <span class="cur">1</span> OF 3</div>
+      <div class="rname" id="rname">—</div>
+      <div class="meas" id="meas">—</div>
+      <div class="seq" id="seq"></div>
+    </div>
+    <div class="sbar-wrap">
+      <div class="sbar"><div class="sbar-fill" id="sfill"></div></div>
+      <div class="sinfo" id="sinfo"></div>
+    </div>
+    <div class="mon-ctrl">
+      <button class="cbtn" id="pbtn">← PREV</button>
+      <button class="cbtn dbtn" id="dbtn">✓ MARK DONE</button>
+      <button class="cbtn" id="nbtn">NEXT →</button>
+    </div>
+    <div class="kbd-hint" id="khint">← → to navigate &nbsp;·&nbsp; SPACE to mark done</div>
+  </div>
+  <div class="dtoggle" id="dtoggle" onclick="toggleD()">▸ Edit cutting data</div>
+  <div class="dpanel" id="dpanel" style="display:none">
+    <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:8px">One piece per line: &nbsp;<code>Piece 1: Room1 1234, Room2 567</code></div>
+    <textarea id="dinput" placeholder="Piece 1: Living Sd 1881, Living 1746, Bed 2 1746&#10;Piece 2: Bed3 1746, Bed 4 1746, Kitchen 1740, Laundry 540&#10;Piece 3: Master Bed W1 786, Master Bed W2 786"></textarea>
+    <div class="row">
+      <input id="oinput" placeholder="Order ID" value="260061.S"/>
+      <input id="tinput" placeholder="Tube type" value="D30 Anodised Standard Tube"/>
+      <input id="sinput" placeholder="Stock length (mm)" value="5800" style="max-width:110px"/>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <button onclick="loadD()" style="flex:1">Load Data</button>
+      <button onclick="resetD()" style="flex:1">Reset Demo</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const DEMO={orderId:'260061.S',tube:'D30 · ANODISED · STANDARD TUBE',stock:5800,pieces:[
+  {cuts:[{r:'Living Sd',l:1881},{r:'Living',l:1746},{r:'Bed 2',l:1746}],used:5373,waste:427},
+  {cuts:[{r:'Bed3',l:1746},{r:'Bed 4',l:1746},{r:'Kitchen',l:1740},{r:'Laundry',l:540}],used:5772,waste:28},
+  {cuts:[{r:'Master Bed W1',l:786},{r:'Master Bed W2',l:786}],used:1572,waste:4228}
+]};
+let S={data:JSON.parse(JSON.stringify(DEMO)),idx:0,done:new Set()};
+function all(){const a=[];S.data.pieces.forEach((p,pi)=>p.cuts.forEach((c,ci)=>a.push({pi,ci,p,c,k:`${pi}-${ci}`})));return a;}
+function render(){
+  const a=all(),n=a.length;
+  if(!n){document.getElementById('main-body').innerHTML='<div style="padding:40px;color:#555;font-family:var(--font-mono);font-size:14px">No data loaded</div>';return;}
+  const gIdx=Math.max(0,Math.min(S.idx,n-1));
+  const cur=a[gIdx];
+  const {p,c,pi,ci}=cur;
+  document.getElementById('hdr-order').textContent=S.data.orderId;
+  document.getElementById('hdr-tube').textContent=S.data.tube;
+  document.getElementById('hdr-stock').textContent=S.data.pieces.length+' × '+S.data.stock+'MM';
+  document.getElementById('plabel').innerHTML=`PIECE <span class="cur">${pi+1}</span> OF ${S.data.pieces.length} · CUT <span class="cur">${ci+1}</span> OF ${p.cuts.length}`;
+  document.getElementById('rname').textContent=c.r;
+  document.getElementById('meas').textContent=c.l+'mm';
+  const seq=document.getElementById('seq');
+  seq.innerHTML='';
+  p.cuts.forEach((cut,i)=>{
+    if(i>0){const ar=document.createElement('span');ar.className='arr';ar.textContent='→';seq.appendChild(ar);}
+    const k=`${pi}-${i}`;
+    const isDone=S.done.has(k),isActive=i===ci;
+    const ch=document.createElement('span');
+    ch.className='chip '+(isDone?'done':isActive?'active':'upcoming');
+    ch.textContent=cut.r+': '+cut.l+'mm';
+    seq.appendChild(ch);
+  });
+  const usedPct=(p.used/S.data.stock*100).toFixed(1);
+  document.getElementById('sfill').style.width=usedPct+'%';
+  document.getElementById('sinfo').textContent=`Stock piece ${pi+1}: ${p.used}mm used of ${S.data.stock}mm · Waste ${p.waste}mm`;
+  document.getElementById('prog').style.width=(S.done.size/n*100)+'%';
+  const isCurDone=S.done.has(cur.k);
+  const allDone=S.done.size===n;
+  const db=document.getElementById('dbtn');
+  if(allDone){db.textContent='ALL CUTS COMPLETE';db.className='cbtn dbtn all-done';}
+  else{db.textContent=isCurDone?'✓ DONE — UNDO':'✓ MARK DONE';db.className='cbtn dbtn'+(isCurDone?' done':'');}
+  document.getElementById('pbtn').disabled=gIdx<=0;
+  document.getElementById('nbtn').disabled=gIdx>=n-1;
+}
+document.getElementById('pbtn').onclick=()=>{S.idx=Math.max(0,S.idx-1);render();};
+document.getElementById('nbtn').onclick=()=>{const n=all().length;S.idx=Math.min(n-1,S.idx+1);render();};
+document.getElementById('dbtn').onclick=()=>{
+  const a=all(),n=a.length,cur=a[S.idx];
+  if(S.done.has(cur.k)){S.done.delete(cur.k);}
+  else{S.done.add(cur.k);if(S.idx<n-1)S.idx++;}
+  render();
+};
+document.addEventListener('keydown',e=>{
+  if(['INPUT','TEXTAREA'].includes(document.activeElement.tagName))return;
+  if(e.key==='ArrowLeft'||e.key==='ArrowUp'){S.idx=Math.max(0,S.idx-1);render();e.preventDefault();}
+  else if(e.key==='ArrowRight'||e.key==='ArrowDown'){const n=all().length;S.idx=Math.min(n-1,S.idx+1);render();e.preventDefault();}
+  else if(e.key===' '||e.key==='Enter'){document.getElementById('dbtn').click();e.preventDefault();}
+});
+function toggleD(){
+  const p=document.getElementById('dpanel'),t=document.getElementById('dtoggle');
+  const v=p.style.display!=='none';
+  p.style.display=v?'none':'block';
+  t.textContent=(v?'▸':'▾')+' Edit cutting data';
+  if(!v){
+    document.getElementById('dinput').value=S.data.pieces.map((p,pi)=>`Piece ${pi+1}: ${p.cuts.map(c=>c.r+' '+c.l).join(', ')}`).join('\n');
+    document.getElementById('oinput').value=S.data.orderId;
+    document.getElementById('sinput').value=S.data.stock;
+  }
+}
+function loadD(){
+  const raw=document.getElementById('dinput').value.trim();
+  const stock=parseInt(document.getElementById('sinput').value)||5800;
+  const orderId=document.getElementById('oinput').value.trim()||'—';
+  const tube=document.getElementById('tinput').value.trim().toUpperCase()||'TUBE';
+  const pieces=[];
+  raw.split('\n').forEach(line=>{
+    line=line.trim();if(!line)return;
+    const ci=line.indexOf(':');if(ci<0)return;
+    const cuts=line.substring(ci+1).trim().split(',').map(s=>s.trim()).filter(Boolean).map(s=>{
+      const pts=s.trim().split(/\s+/);
+      const l=parseInt(pts[pts.length-1]);
+      const r=pts.slice(0,-1).join(' ');
+      return{r:r||s,l:isNaN(l)?0:l};
+    }).filter(c=>c.l>0);
+    if(cuts.length){const used=cuts.reduce((a,c)=>a+c.l,0);pieces.push({cuts,used,waste:stock-used});}
+  });
+  if(!pieces.length){alert('No valid cutting data found. Check format.');return;}
+  S={data:{orderId,tube,stock,pieces},idx:0,done:new Set()};
+  render();toggleD();
+}
+function resetD(){S={data:JSON.parse(JSON.stringify(DEMO)),idx:0,done:new Set()};render();if(document.getElementById('dpanel').style.display!=='none')toggleD();}
+render();
+</script>

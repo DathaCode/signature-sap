@@ -5,6 +5,7 @@ import crypto from 'crypto';
 import { generateToken, AuthRequest } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
 import { logger } from '../config/logger';
+import { emitAuthAttempt } from '../config/metrics';
 import { z } from 'zod';
 
 const prisma = new PrismaClient();
@@ -118,6 +119,7 @@ export const login = async (
         });
 
         if (!user) {
+            emitAuthAttempt('failure').catch(() => {});
             throw new AppError(401, 'Invalid email or password');
         }
 
@@ -149,6 +151,7 @@ export const login = async (
                 logger.warn(`Account locked after ${attempts} failed attempts: ${user.email}`);
             }
             await prisma.user.update({ where: { id: user.id }, data: lockData });
+            emitAuthAttempt('failure').catch(() => {});
             throw new AppError(401, 'Invalid email or password');
         }
 
@@ -169,6 +172,7 @@ export const login = async (
         });
 
         logger.info(`User logged in: ${user.email}`);
+        emitAuthAttempt('success').catch(() => {});
 
         res.json({
             success: true,
