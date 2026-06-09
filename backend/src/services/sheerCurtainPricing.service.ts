@@ -322,6 +322,8 @@ export interface CurtainCalculationResult {
   wandCount:         number;
   dropSurcharge:     number;
   fabricCost:        number;
+  fabricBaseCost:    number;
+  discountPercent:   number;
   fullnessSurcharge: number;
   motorCost:         number;
   remoteCost:        number;
@@ -486,7 +488,11 @@ class SheerCurtainPricingService {
     fullnessSurcharge: number,
   ) {
     const fabricPricePerMeter = await this.getFabricPrice(item.fabric, item.fabricGroup, item.userId);
-    const fabricCost = Math.round((item.width / 1000) * fabricPricePerMeter * 100) / 100;
+    const fabricBaseCost = Math.round((item.width / 1000) * fabricPricePerMeter * 100) / 100;
+
+    // Per-customer curtain discount — applies to FABRIC COST ONLY (mirrors blinds).
+    const discountPercent = await this.getCurtainDiscount(item.userId, item.fabricGroup);
+    const fabricCost = Math.round(fabricBaseCost * (1 - discountPercent / 100) * 100) / 100;
 
     let motorCost = 0;
     if (item.requiresTracks && item.trackType === 'Motorised' && item.motorType) {
@@ -512,7 +518,9 @@ class SheerCurtainPricingService {
     const r = (n: number) => Math.round(n * 100) / 100;
 
     return {
-      fabricCost:  r(fabricCost),
+      fabricCost:     r(fabricCost),
+      fabricBaseCost: r(fabricBaseCost),
+      discountPercent,
       motorCost:   r(motorCost),
       remoteCost:  r(remoteCost),
       chargerCost: r(chargerCost),
@@ -523,6 +531,20 @@ class SheerCurtainPricingService {
       gst:         0,
       total:       r(total),
     };
+  }
+
+  // ── Per-customer curtain discount (fabric cost only) ─────────────────────
+  // Reads user.discounts.curtains["Group 1"|"Group 2"|"Budget"|"Block Out Curtains"].
+  // Returns the percentage (0 if no user, no discounts set, or group missing).
+  private async getCurtainDiscount(userId: string | undefined, fabricGroup: string): Promise<number> {
+    if (!userId) return 0;
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { discounts: true },
+    });
+    const discounts = user?.discounts as { curtains?: Record<string, number> } | null;
+    const val = discounts?.curtains?.[fabricGroup];
+    return typeof val === 'number' && val >= 0 && val <= 100 ? val : 0;
   }
 
   // ── Motor price by width range ───────────────────────────────────────────

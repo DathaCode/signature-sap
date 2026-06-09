@@ -486,7 +486,7 @@ export const createOrder = async (
                     motorPrice: curtainCalc?.motorCost || null,
                     chainPrice: curtainCalc?.remoteCost || null,
                     clipsPrice: curtainCalc?.chargerCost || null,
-                    discountPercent: 0,
+                    discountPercent: curtainCalc?.discountPercent || 0,
                 });
 
                 subtotal += price;
@@ -2391,6 +2391,7 @@ export const editOrderDetails = async (
                                     motorType: item.motorType,
                                     remotes: item.remotes,
                                     chargerHub: item.chargerHub,
+                                    userId: order.userId ?? undefined,
                                 });
                                 price = curtainCalc.total;
                             } catch (err) {
@@ -2438,6 +2439,7 @@ export const editOrderDetails = async (
                         motorPrice: curtainCalc?.motorCost || null,
                         chainPrice: curtainCalc?.remoteCost || null,
                         clipsPrice: curtainCalc?.chargerCost || null,
+                        discountPercent: curtainCalc?.discountPercent || 0,
                     });
                 } else {
                     // ── Blind item ──

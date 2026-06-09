@@ -37,11 +37,21 @@ const groupDiscountSchema = z.object({
     motorised: z.number().min(0).max(100),
 });
 
+// Curtain discounts: one percentage per fabric group (Group 1/2, Budget, Block Out Curtains)
+const curtainDiscountsSchema = z.object({
+    'Group 1': z.number().min(0).max(100),
+    'Group 2': z.number().min(0).max(100),
+    'Budget': z.number().min(0).max(100),
+    'Block Out Curtains': z.number().min(0).max(100),
+});
+
 const discountsSchema = z.object({
     G1: groupDiscountSchema,
     G2: groupDiscountSchema,
     G3: groupDiscountSchema,
     G4: groupDiscountSchema,
+    // Optional so existing blinds-only payloads keep working
+    curtains: curtainDiscountsSchema.optional(),
 });
 
 /**

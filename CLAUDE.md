@@ -186,6 +186,15 @@ src/
    - Calculates full sheer curtain price (fabric cost + motor/wand/runner/hook components)
    - References DB-backed pricing for motor and accessories
    - Supports wand-operated and motorised curtain configurations
+   - **Hook counts** come SOLELY from the hardcoded `HOOK_CHART` (from
+     `runner_chart_15mm_gap (1).xlsx` — 15mm end gap, 54mm spacing): Single Open →
+     `soTotal`; Centre Open → `coLeft + coRight`. Fabric meters come from the
+     separate `CHART`. Both charts are hardcoded — no Excel file is read at runtime.
+   - **Per-customer curtain discount** (`getCurtainDiscount`): reads
+     `user.discounts.curtains[fabricGroup]` (Group 1 / Group 2 / Budget /
+     Block Out Curtains) and applies it to **fabric cost only** (mirrors blinds).
+     `userId` is passed in from `/api/pricing/calculate-curtain`, order create,
+     and order edit (`order.userId`). Returns `discountPercent` + `fabricBaseCost`.
 
 8. **Blind Fabric Service** (`services/blindFabric.service.ts`)
    - Admin-managed fabric catalog stored in the `BlindFabric` DB table

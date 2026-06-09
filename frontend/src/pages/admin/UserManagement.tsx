@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { adminUserApi } from '../../services/api';
 import { User } from '../../types/auth';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
@@ -29,18 +30,31 @@ interface UserDetail extends UserWithCounts {
         G2: { acmeda: number; tbs: number; motorised: number };
         G3: { acmeda: number; tbs: number; motorised: number };
         G4: { acmeda: number; tbs: number; motorised: number };
+        curtains?: Record<CurtainGroup, number>;
     } | null;
 }
 
 type DialogTab = 'discounts' | 'account';
+type DiscountProduct = 'blinds' | 'curtains';
 
 const GROUPS = ['G1', 'G2', 'G3', 'G4'] as const;
+
+// Curtain fabric groups — must match backend fabricGroup values exactly
+const CURTAIN_GROUPS = ['Group 1', 'Group 2', 'Budget', 'Block Out Curtains'] as const;
+type CurtainGroup = typeof CURTAIN_GROUPS[number];
 
 const DEFAULT_DISCOUNTS = {
     G1: { acmeda: 0, tbs: 0, motorised: 0 },
     G2: { acmeda: 0, tbs: 0, motorised: 0 },
     G3: { acmeda: 0, tbs: 0, motorised: 0 },
     G4: { acmeda: 0, tbs: 0, motorised: 0 },
+};
+
+const DEFAULT_CURTAIN_DISCOUNTS: Record<CurtainGroup, number> = {
+    'Group 1': 0,
+    'Group 2': 0,
+    'Budget': 0,
+    'Block Out Curtains': 0,
 };
 
 // ─── User Detail / Edit Dialog ─────────────────────────────────────────────
@@ -56,6 +70,7 @@ function UserDialog({
     const [user, setUser] = useState<UserDetail | null>(null);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<DialogTab>('discounts');
+    const [discountProduct, setDiscountProduct] = useState<DiscountProduct>('blinds');
     const [editing, setEditing] = useState(false);
     const [saving, setSaving] = useState(false);
     const [savingDiscounts, setSavingDiscounts] = useState(false);
@@ -66,6 +81,7 @@ function UserDialog({
     const [approving, setApproving] = useState(false);
 
     const [discounts, setDiscounts] = useState(DEFAULT_DISCOUNTS);
+    const [curtainDiscounts, setCurtainDiscounts] = useState<Record<CurtainGroup, number>>(DEFAULT_CURTAIN_DISCOUNTS);
 
     useEffect(() => {
         adminUserApi.getUserById(userId).then((data) => {
@@ -85,8 +101,10 @@ function UserDialog({
                     G3: { acmeda: 0, tbs: 0, motorised: 0, ...data.discounts.G3 },
                     G4: { acmeda: 0, tbs: 0, motorised: 0, ...data.discounts.G4 },
                 });
+                setCurtainDiscounts({ ...DEFAULT_CURTAIN_DISCOUNTS, ...(data.discounts.curtains || {}) });
             } else {
                 setDiscounts(DEFAULT_DISCOUNTS);
+                setCurtainDiscounts(DEFAULT_CURTAIN_DISCOUNTS);
             }
         }).catch(() => {
             gooeyToast.error('Failed to load user details');
@@ -111,9 +129,11 @@ function UserDialog({
     const handleSaveDiscounts = async () => {
         setSavingDiscounts(true);
         try {
-            await adminUserApi.setUserDiscounts(userId, discounts);
+            // Always persist both blinds and curtains together (single JSON column)
+            const payload = { ...discounts, curtains: curtainDiscounts };
+            await adminUserApi.setUserDiscounts(userId, payload);
             gooeyToast.success('Discounts saved');
-            if (user) setUser({ ...user, discounts });
+            if (user) setUser({ ...user, discounts: payload });
         } catch {
             gooeyToast.error('Failed to save discounts');
         } finally {
@@ -122,7 +142,11 @@ function UserDialog({
     };
 
     const handleResetDiscounts = () => {
-        setDiscounts(DEFAULT_DISCOUNTS);
+        if (discountProduct === 'curtains') {
+            setCurtainDiscounts(DEFAULT_CURTAIN_DISCOUNTS);
+        } else {
+            setDiscounts(DEFAULT_DISCOUNTS);
+        }
     };
 
     const handleApprove = async () => {
@@ -145,6 +169,12 @@ function UserDialog({
         setDiscounts(prev => ({ ...prev, [group]: { ...prev[group], [supplier]: num } }));
     };
 
+    const setCurtainDiscount = (group: CurtainGroup, value: string) => {
+        const num = parseFloat(value);
+        if (isNaN(num) || num < 0 || num > 100) return;
+        setCurtainDiscounts(prev => ({ ...prev, [group]: num }));
+    };
+
     const fmtDate = (d: string) => format(new Date(d), 'MMM d, yyyy');
 
     const tabClass = (tab: DialogTab) =>
@@ -154,8 +184,8 @@ function UserDialog({
                 : 'border-transparent text-gray-500 hover:text-gray-700'
         }`;
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+    return createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50">
             <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl flex flex-col" style={{ maxHeight: '90vh' }}>
                 {/* Header */}
                 <div className="px-6 pt-5 pb-3 border-b">
@@ -225,8 +255,28 @@ function UserDialog({
                             {/* ── Discounts Tab ── */}
                             {activeTab === 'discounts' && (
                                 <div className="space-y-4">
+                                    {/* Blinds / Curtains sub-tabs */}
+                                    <div className="inline-flex rounded-lg border border-gray-200 p-0.5 bg-gray-50">
+                                        {(['blinds', 'curtains'] as const).map(p => (
+                                            <button
+                                                key={p}
+                                                onClick={() => setDiscountProduct(p)}
+                                                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors capitalize ${
+                                                    discountProduct === p
+                                                        ? 'bg-white text-blue-600 shadow-sm'
+                                                        : 'text-gray-500 hover:text-gray-700'
+                                                }`}
+                                            >
+                                                {p}
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                    {/* ── Blinds discounts ── */}
+                                    {discountProduct === 'blinds' && (
+                                    <>
                                     <p className="text-sm text-gray-500">
-                                        Set per-group fabric discounts for Acmeda, TBS, and Motorised suppliers. These override the default pricing for this customer.
+                                        Set per-group fabric discounts for Acmeda, TBS, and Motorised suppliers. These override the default blind pricing for this customer.
                                     </p>
 
                                     <div className="border rounded-lg overflow-hidden">
@@ -307,6 +357,54 @@ function UserDialog({
                                             </tbody>
                                         </table>
                                     </div>
+                                    </>
+                                    )}
+
+                                    {/* ── Curtain discounts ── */}
+                                    {discountProduct === 'curtains' && (
+                                    <>
+                                    <p className="text-sm text-gray-500">
+                                        Set a per-group discount for sheer & block-out curtains. The discount applies to the fabric cost of each curtain in this customer's orders.
+                                    </p>
+
+                                    <div className="border rounded-lg overflow-hidden">
+                                        <table className="w-full text-sm">
+                                            <thead className="bg-gray-50">
+                                                <tr>
+                                                    <th className="px-4 py-3 text-left font-medium text-gray-600 text-xs uppercase tracking-wide">Fabric Group</th>
+                                                    <th className="px-4 py-3 text-left font-medium text-purple-600 text-xs uppercase tracking-wide">
+                                                        <span className="inline-flex items-center gap-1.5">
+                                                            <span className="h-2 w-2 rounded-full bg-purple-500 inline-block" />
+                                                            Discount (%)
+                                                        </span>
+                                                    </th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y">
+                                                {CURTAIN_GROUPS.map((group) => (
+                                                    <tr key={group} className="hover:bg-gray-50/50">
+                                                        <td className="px-4 py-3 font-semibold text-gray-800">{group}</td>
+                                                        <td className="px-4 py-3">
+                                                            <div className="flex items-center gap-2">
+                                                                <input
+                                                                    type="number"
+                                                                    min={0}
+                                                                    max={100}
+                                                                    step={0.5}
+                                                                    value={curtainDiscounts[group]}
+                                                                    onChange={e => setCurtainDiscount(group, e.target.value)}
+                                                                    className="w-16 h-9 rounded-lg border border-gray-300 px-2 text-center text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                                                />
+                                                                <span className="text-gray-400 text-sm">%</span>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    </>
+                                    )}
 
                                     <div className="flex justify-end gap-2 pt-2">
                                         <Button variant="outline" onClick={handleResetDiscounts}>
@@ -396,7 +494,8 @@ function UserDialog({
                     ) : null}
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }
 

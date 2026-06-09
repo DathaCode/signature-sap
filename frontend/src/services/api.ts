@@ -288,6 +288,8 @@ export const pricingApi = {
         wandCount: number;
         dropSurcharge: number;
         fabricCost: number;
+        fabricBaseCost: number;
+        discountPercent: number;
         fullnessSurcharge: number;
         motorCost: number;
         remoteCost: number;
@@ -635,6 +637,7 @@ export const adminUserApi = {
         G2: { acmeda: number; tbs: number; motorised: number };
         G3: { acmeda: number; tbs: number; motorised: number };
         G4: { acmeda: number; tbs: number; motorised: number };
+        curtains?: Record<string, number>;
     }): Promise<void> => {
         await api.patch(`/users/${id}/discounts`, discounts)
     },
