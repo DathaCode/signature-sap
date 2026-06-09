@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { GooeyToaster } from 'goey-toast'
 import 'goey-toast/styles.css'
 import { AuthProvider } from './context/AuthContext'
+import { ThemeProvider } from './context/ThemeContext'
 import App from './App'
 import './index.css'
 
@@ -21,9 +22,11 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <React.StrictMode>
         <QueryClientProvider client={queryClient}>
             <BrowserRouter>
+                <ThemeProvider>
                 <AuthProvider>
                     <App />
                 </AuthProvider>
+                </ThemeProvider>
                 <GooeyToaster
                     position="top-right"
                     theme="dark"
