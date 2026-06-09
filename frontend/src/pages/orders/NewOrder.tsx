@@ -249,12 +249,14 @@ export default function NewOrderPage() {
             variant: 'danger',
         });
         if (confirmed) {
+            if (savedItems.length === 0) {
+                navigate('/new-order');
+                return;
+            }
             reset({ productType, items: (isCurtain ? [{ ...emptyCurtain }] : [{ ...emptyBlind }]) as any });
             setEditingIndex(null);
             setHighlightEmpty(false);
-            if (savedItems.length > 0) {
-                setShowSummary(true);
-            }
+            setShowSummary(true);
         }
     };
 
