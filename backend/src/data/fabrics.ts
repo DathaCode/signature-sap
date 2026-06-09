@@ -53,10 +53,10 @@ export function getFabricGroup(material: string, fabricType: string): number | n
         return null;
     }
 
-    const groupString = FABRICS[material][fabricType].group; // e.g., "G1"
-    const groupNumber = parseInt(groupString.substring(1)); // Remove "G" and parse number
-
-    return groupNumber >= 1 && groupNumber <= 3 ? groupNumber : null;
+    const groupString = FABRICS[material][fabricType].group; // e.g., "G1", "Budget"
+    if (groupString === 'Budget') return 4;
+    const groupNumber = parseInt(groupString.substring(1));
+    return groupNumber >= 1 && groupNumber <= 4 ? groupNumber : null;
 }
 
 /**

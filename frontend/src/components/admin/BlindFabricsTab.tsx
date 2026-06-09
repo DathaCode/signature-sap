@@ -11,8 +11,9 @@ const GROUP_STYLES: Record<string, string> = {
     G1: 'bg-blue-100 text-blue-700 border border-blue-200',
     G2: 'bg-green-100 text-green-700 border border-green-200',
     G3: 'bg-orange-100 text-orange-700 border border-orange-200',
+    Budget: 'bg-purple-100 text-purple-700 border border-purple-200',
 };
-const GROUPS = ['G1', 'G2', 'G3'];
+const GROUPS = ['G1', 'G2', 'G3', 'Budget'];
 
 interface EditState {
     fabricType: string;

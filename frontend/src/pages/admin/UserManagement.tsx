@@ -29,7 +29,7 @@ interface UserDetail extends UserWithCounts {
         G1: { acmeda: number; tbs: number; motorised: number };
         G2: { acmeda: number; tbs: number; motorised: number };
         G3: { acmeda: number; tbs: number; motorised: number };
-        G4: { acmeda: number; tbs: number; motorised: number };
+        Budget: { acmeda: number; tbs: number; motorised: number };
         curtains?: Record<CurtainGroup, number>;
     } | null;
 }
@@ -37,7 +37,7 @@ interface UserDetail extends UserWithCounts {
 type DialogTab = 'discounts' | 'account';
 type DiscountProduct = 'blinds' | 'curtains';
 
-const GROUPS = ['G1', 'G2', 'G3', 'G4'] as const;
+const GROUPS = ['G1', 'G2', 'G3', 'Budget'] as const;
 
 // Curtain fabric groups — must match backend fabricGroup values exactly
 const CURTAIN_GROUPS = ['Group 1', 'Group 2', 'Budget', 'Block Out Curtains'] as const;
@@ -47,7 +47,7 @@ const DEFAULT_DISCOUNTS = {
     G1: { acmeda: 0, tbs: 0, motorised: 0 },
     G2: { acmeda: 0, tbs: 0, motorised: 0 },
     G3: { acmeda: 0, tbs: 0, motorised: 0 },
-    G4: { acmeda: 0, tbs: 0, motorised: 0 },
+    Budget: { acmeda: 0, tbs: 0, motorised: 0 },
 };
 
 const DEFAULT_CURTAIN_DISCOUNTS: Record<CurtainGroup, number> = {
@@ -99,7 +99,7 @@ function UserDialog({
                     G1: { acmeda: 0, tbs: 0, motorised: 0, ...data.discounts.G1 },
                     G2: { acmeda: 0, tbs: 0, motorised: 0, ...data.discounts.G2 },
                     G3: { acmeda: 0, tbs: 0, motorised: 0, ...data.discounts.G3 },
-                    G4: { acmeda: 0, tbs: 0, motorised: 0, ...data.discounts.G4 },
+                    Budget: { acmeda: 0, tbs: 0, motorised: 0, ...data.discounts.Budget },
                 });
                 setCurtainDiscounts({ ...DEFAULT_CURTAIN_DISCOUNTS, ...(data.discounts.curtains || {}) });
             } else {
@@ -308,7 +308,7 @@ function UserDialog({
                                                 {GROUPS.map((group) => (
                                                     <tr key={group} className="hover:bg-gray-50/50">
                                                         <td className="px-4 py-3 font-semibold text-gray-800">
-                                                            Group {group.replace('G', '')}
+                                                            {group === 'Budget' ? 'Budget' : `Group ${group.replace('G', '')}`}
                                                         </td>
                                                         <td className="px-4 py-3">
                                                             <div className="flex items-center gap-2">

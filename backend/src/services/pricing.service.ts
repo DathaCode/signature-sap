@@ -1,5 +1,4 @@
 import { PrismaClient } from '@prisma/client';
-import { getFabricGroup } from '../data/fabrics';
 import { AppError } from '../middleware/errorHandler';
 import { logger } from '../config/logger';
 
@@ -11,14 +10,27 @@ const WIDTH_TIERS = [700, 900, 1100, 1300, 1500, 1700, 1900, 2100, 2300, 2500, 2
 // Drop tiers (mm) — NEW PRICING 2026
 const DROP_TIERS = [1260, 1460, 1660, 1860, 2060, 2260, 2460, 2660, 2860, 3060, 3260, 3460, 3660, 3860, 4060, 4260, 4460];
 
-// Fabric group discount rates
-// G1: 20%, G2: 25%, G3: 30%
-// Only groups 1-3 are applicable (G4/G5 fabrics do not exist)
+// Fabric group discount rates: G1=20%, G2=25%, G3=30%, Budget=0%
 const FABRIC_GROUP_DISCOUNTS: Record<number, number> = {
     1: 20,
     2: 25,
     3: 30,
+    4: 0,
 };
+
+// Map BlindFabric.fabricGroup string → pricing matrix integer
+const FABRIC_GROUP_MAP: Record<string, number> = {
+    G1: 1, G2: 2, G3: 3, Budget: 4,
+};
+
+async function resolveFabricGroup(material: string, fabricType: string): Promise<number | null> {
+    const row = await prisma.blindFabric.findFirst({
+        where: { supplier: material, fabricType },
+        select: { fabricGroup: true },
+    });
+    if (!row) return null;
+    return FABRIC_GROUP_MAP[row.fabricGroup] ?? null;
+}
 
 export interface BlindItemData {
     material: string;
@@ -43,8 +55,8 @@ export class PricingService {
      */
     async calculatePrice(item: BlindItemData): Promise<PriceResult> {
         try {
-            // Get fabric group
-            const fabricGroup = getFabricGroup(item.material, item.fabricType);
+            // Get fabric group from DB (supports G1/G2/G3/Budget)
+            const fabricGroup = await resolveFabricGroup(item.material, item.fabricType);
             if (fabricGroup === null) {
                 throw new AppError(400, `Unknown fabric: ${item.material} - ${item.fabricType}`);
             }

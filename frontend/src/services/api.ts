@@ -636,7 +636,7 @@ export const adminUserApi = {
         G1: { acmeda: number; tbs: number; motorised: number };
         G2: { acmeda: number; tbs: number; motorised: number };
         G3: { acmeda: number; tbs: number; motorised: number };
-        G4: { acmeda: number; tbs: number; motorised: number };
+        Budget: { acmeda: number; tbs: number; motorised: number };
         curtains?: Record<string, number>;
     }): Promise<void> => {
         await api.patch(`/users/${id}/discounts`, discounts)

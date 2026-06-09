@@ -7,7 +7,7 @@ applies-to: signature-sap
 # GitHub Skill — Signature Shades
 
 ## Project Context
-- **Branching:** `feature/<topic>` → `main`. Current active branch examples: `feature/curtains`.
+- **Branching:** `feature/<topic>` → `main`. Current active branch: `feature/blinds`.
 - **Main branch:** `main` (PRs target this).
 - **Remote:** standard GitHub origin. `gh` CLI authenticated.
 - **CI/CD status:** No GitHub Actions configured yet. Production deploy is manual to AWS EC2 via `docker-compose.prod.yml`.

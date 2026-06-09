@@ -600,7 +600,7 @@ export default function PricingManagement() {
             {activeTab === 'fabric' && (
                 <>
                     <div className="flex gap-1 border-b pb-0 overflow-x-auto">
-                        {[1, 2, 3].map(group => (
+                        {([1, 2, 3, 4] as const).map(group => (
                             <button
                                 key={group}
                                 onClick={() => setFabricGroup(group)}
@@ -610,14 +610,14 @@ export default function PricingManagement() {
                                         : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
                                 }`}
                             >
-                                Group {group}
+                                {group === 4 ? 'Budget' : `Group ${group}`}
                             </button>
                         ))}
                     </div>
 
                     <Card>
                         <CardHeader>
-                            <CardTitle>Pricing Matrix - Group {fabricGroup}</CardTitle>
+                            <CardTitle>Pricing Matrix - {fabricGroup === 4 ? 'Budget' : `Group ${fabricGroup}`}</CardTitle>
                         </CardHeader>
                         <CardContent>
                             {loading ? (

@@ -121,30 +121,39 @@ src/
    - Applies group-based discounts (20%, 25%, 30%)
    - **Rounding behavior:** Rounds UP to next tier (matches spec)
 
-2. **Cutlist Optimizer** (`services/cutlistOptimizer.service.ts`)
+2. **Fabric Cut Optimizer** (`services/fabricCutOptimizer.service.ts`)
+   - **Algorithm:** MaxRects + Genetic algorithm for advanced 2D bin packing
+   - Produces higher-efficiency layouts than the basic guillotine approach
+   - Wraps the genetic optimizer in `services/genetic-optimizer/`
+
+3. **Cutlist Optimizer** (`services/cutlistOptimizer.service.ts`)
    - **Algorithm:** Guillotine 2D Bin Packing (First Fit Decreasing)
    - **Input:** Calculated dimensions (Width-28mm, Drop+150mm)
    - **Roll specs:** 3000mm width, dynamic length from inventory
    - **Output:** Sheet layouts with panel positions, rotation flags, efficiency stats
 
-3. **Tube Cut Optimizer** (`services/tubeCutOptimizer.service.ts`)
+4. **Tube Cut Optimizer** (`services/tubeCutOptimizer.service.ts`)
    - **Algorithm:** Simple linear calculation with 10% wastage
    - **Stock length:** 5800mm per piece
    - **Uses original width** (not calculated width)
 
 4. **Inventory Service** (`services/inventory.service.ts`)
-   - Category-based inventory: FABRIC (MM), BOTTOM_BAR (UNITS), MOTOR, CHAIN
+   - Category-based inventory across 15 categories (blinds + sheer)
    - `checkAvailability()` - Validates stock before production
-   - `deductForOrder()` - Atomic inventory deductions with transaction logging
 
-5. **Worksheet Export** (`services/worksheetExport.service.ts`)
+5. **Inventory Deduction Service** (`services/inventoryDeduction.service.ts`)
+   - Handles atomic multi-item stock deductions when worksheets are accepted
+   - Creates `InventoryTransaction` records for full audit trail
+   - Called by `webOrder.controller.ts` after worksheet acceptance
+
+6. **Worksheet Export** (`services/worksheetExport.service.ts`)
    - CSV generation with motor-specific width deductions
    - PDF generation (pdfkit) with cutting layout visualization
    - **Fabric worksheet:** 13 columns including "Fabric Cut Width (mm)"
    - **Tube worksheet:** 5 columns with group calculations
    - **PDF includes:** Page 1 = Visual cutting layout diagram, Page 2+ = Detailed table
 
-6. **Comprehensive Pricing Service** (`services/comprehensivePricing.service.ts`)
+7. **Comprehensive Pricing Service** (`services/comprehensivePricing.service.ts`)
    - Calculates complete blind price with 7 component types:
      * Fabric price (from matrix with group discount)
      * Motor/Chain price (from inventory)
@@ -156,7 +165,7 @@ src/
    - Motor-specific logic for chain selection and bracket compatibility
    - Returns detailed price breakdown for transparency
 
-7. **Metrics — AWS Embedded Metric Format / EMF** (`config/metrics.ts`)
+8. **Metrics — AWS Embedded Metric Format / EMF** (`config/metrics.ts`)
    - Uses `aws-embedded-metrics`; metrics are emitted as structured EMF JSON to
      **stdout** and collected by the CloudWatch Agent from the Docker container
      logs. There is **no HTTP `/metrics` endpoint** and no in-process registry.
@@ -182,7 +191,7 @@ src/
      `res.on('finish')` calls `emitHttpRequest()` with the normalised route —
      UUIDs and integer path segments collapsed to `:id`.
 
-8. **Sheer Curtain Pricing Service** (`services/sheerCurtainPricing.service.ts`)
+9. **Sheer Curtain Pricing Service** (`services/sheerCurtainPricing.service.ts`)
    - Calculates full sheer curtain price (fabric cost + motor/wand/runner/hook components)
    - References DB-backed pricing for motor and accessories
    - Supports wand-operated and motorised curtain configurations
@@ -196,7 +205,7 @@ src/
      `userId` is passed in from `/api/pricing/calculate-curtain`, order create,
      and order edit (`order.userId`). Returns `discountPercent` + `fabricBaseCost`.
 
-8. **Blind Fabric Service** (`services/blindFabric.service.ts`)
+10. **Blind Fabric Service** (`services/blindFabric.service.ts`)
    - Admin-managed fabric catalog stored in the `BlindFabric` DB table
    - Replaces hardcoded fabric data; order form fetches fabrics dynamically
    - CRUD: add / update / delete individual fabrics and whole supplier groups
@@ -323,15 +332,16 @@ Authorization: Bearer <JWT_TOKEN>
 **JWT Payload:**
 ```typescript
 {
-  userId: string,
+  id: string,
   email: string,
-  role: "CUSTOMER" | "ADMIN" | "WAREHOUSE"
+  role: "CUSTOMER" | "ADMIN" | "WAREHOUSE",
+  name: string
 }
 ```
 
 **Role-based access:**
 - Customer routes: `/api/web-orders/*`, `/api/quotes/*`
-- Admin routes: `/api/users/*`, `/api/pricing/*`, `/api/inventory/*`, `/api/web-orders/:id/send-to-production`, `/api/blind-fabrics` (write)
+- Admin routes: `/api/users/*`, `/api/pricing/*`, `/api/inventory/*`, `/api/web-orders/:id/send-to-production`, `/api/fabrics` (write)
 - Warehouse routes: `GET /api/web-orders/admin/all` (PRODUCTION-only filter), `GET /api/inventory`, `GET /api/web-orders/:id/labels/download`
 
 ### Key Endpoints
@@ -374,12 +384,12 @@ GET /api/web-orders/:id/worksheets/download/tube-cut-pdf
 
 **Blind Fabric Catalog:**
 ```
-GET    /api/blind-fabrics              — All fabrics (formatted for order form), any auth
-GET    /api/blind-fabrics/admin        — Admin flat view (by supplier), admin only
-POST   /api/blind-fabrics              — Add fabric entry, admin only
-PUT    /api/blind-fabrics/:id          — Update fabric entry, admin only
-DELETE /api/blind-fabrics/:id          — Delete single fabric, admin only
-DELETE /api/blind-fabrics/supplier/:s  — Delete all fabrics for a supplier, admin only
+GET    /api/fabrics              — All fabrics (formatted for order form), any auth
+GET    /api/fabrics/admin        — Admin flat view (by supplier), admin only
+POST   /api/fabrics              — Add fabric entry, admin only
+PUT    /api/fabrics/:id          — Update fabric entry, admin only
+DELETE /api/fabrics/:id          — Delete single fabric, admin only
+DELETE /api/fabrics/supplier/:s  — Delete all fabrics for a supplier, admin only
 ```
 
 ---

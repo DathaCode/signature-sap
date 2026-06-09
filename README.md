@@ -181,16 +181,16 @@ signature-sap/
 │   │   │   └── adminWorksheetRoutes.ts      # Admin worksheet operations
 │   │   ├── services/              # Business logic
 │   │   │   ├── comprehensivePricing.service.ts  # 7-component blind pricing
-│   │   │   ├── sheerCurtainPricing.service.ts   # Sheer curtain pricing
+│   │   │   ├── sheerCurtainPricing.service.ts   # Sheer curtain pricing (fabric + motor/wand/runner/hook)
 │   │   │   ├── blindFabric.service.ts           # Admin-managed fabric catalog CRUD
 │   │   │   ├── pricing.service.ts               # Fabric pricing matrix lookup
-│   │   │   ├── cutlistOptimizer.service.ts      # Guillotine 2D bin packing
-│   │   │   ├── fabricCutOptimizer.service.ts    # MaxRects + genetic algorithm
-│   │   │   ├── tubeCutOptimizer.service.ts      # Linear tube cut (5800mm stock)
-│   │   │   ├── worksheetExport.service.ts       # CSV + PDF generation
+│   │   │   ├── cutlistOptimizer.service.ts      # Guillotine 2D bin packing (FFD)
+│   │   │   ├── fabricCutOptimizer.service.ts    # MaxRects + genetic algorithm optimizer
+│   │   │   ├── tubeCutOptimizer.service.ts      # Linear tube cut (5800mm stock, 10% wastage)
+│   │   │   ├── worksheetExport.service.ts       # CSV + PDF generation (pdfkit)
 │   │   │   ├── worksheet.service.ts             # Worksheet data management
-│   │   │   ├── inventory.service.ts             # Stock queries + alerts
-│   │   │   └── inventoryDeduction.service.ts    # Atomic inventory deduction
+│   │   │   ├── inventory.service.ts             # Stock queries + low-stock alerts
+│   │   │   └── inventoryDeduction.service.ts    # Atomic multi-item stock deduction + audit log
 │   │   ├── data/                  # Static data (fabrics, hardware options)
 │   │   ├── config/                # Logger configuration
 │   │   └── server.ts              # Express app entry
@@ -346,12 +346,13 @@ DELETE /api/quotes/:id                   - Delete quote
 
 ### Pricing
 ```
-POST  /api/pricing/calculate         - Calculate fabric price (matrix lookup)
-POST  /api/pricing/calculate-blind   - Calculate full 7-component blind price
-GET   /api/pricing/:fabricGroup      - Get pricing matrix for group (admin)
+POST  /api/pricing/calculate              - Calculate fabric price (matrix lookup)
+POST  /api/pricing/calculate-blind        - Calculate full 7-component blind price
+POST  /api/pricing/calculate-curtain      - Calculate full sheer curtain price
+GET   /api/pricing/:fabricGroup           - Get pricing matrix for group (admin)
 PUT   /api/pricing/:fabricGroup/:width/:drop - Update pricing cell (admin)
-GET   /api/pricing/components/all    - Get all component prices (admin)
-PATCH /api/pricing/component/:id     - Update component price (admin)
+GET   /api/pricing/components/all         - Get all component prices (admin)
+PATCH /api/pricing/component/:id          - Update component price (admin)
 ```
 
 ### Inventory — Admin
@@ -380,12 +381,12 @@ PATCH  /api/users/:id/discounts  - Set per-customer G1-G4 discount rates
 
 ### Blind Fabric Catalog
 ```
-GET    /api/blind-fabrics              - Get all fabrics (formatted for order form) [auth]
-GET    /api/blind-fabrics/admin        - Get flat supplier list [admin]
-POST   /api/blind-fabrics              - Add fabric entry [admin]
-PUT    /api/blind-fabrics/:id          - Update fabric entry [admin]
-DELETE /api/blind-fabrics/:id          - Delete single fabric [admin]
-DELETE /api/blind-fabrics/supplier/:s  - Delete all fabrics for a supplier [admin]
+GET    /api/fabrics              - Get all fabrics (formatted for order form) [auth]
+GET    /api/fabrics/admin        - Get flat supplier list [admin]
+POST   /api/fabrics              - Add fabric entry [admin]
+PUT    /api/fabrics/:id          - Update fabric entry [admin]
+DELETE /api/fabrics/:id          - Delete single fabric [admin]
+DELETE /api/fabrics/supplier/:s  - Delete all fabrics for a supplier [admin]
 ```
 
 ---
@@ -407,7 +408,7 @@ DELETE /api/blind-fabrics/supplier/:s  - Delete all fabrics for a supplier [admi
 ### Enums
 - **UserRole**: `CUSTOMER`, `ADMIN`, `WAREHOUSE`
 - **OrderStatus**: `PENDING` → `CONFIRMED` → `PRODUCTION` → `COMPLETED` | `CANCELLED`
-- **InventoryCategory**: `FABRIC`, `BOTTOM_BAR`, `BOTTOM_BAR_CLIP`, `CHAIN`, `ACMEDA`, `TBS`, `MOTOR`, `ACCESSORY`
+- **InventoryCategory**: `FABRIC`, `BOTTOM_BAR`, `BOTTOM_BAR_CLIP`, `CHAIN`, `ACMEDA`, `TBS`, `MOTOR`, `ACCESSORY`, `SHEER_HOOK`, `SHEER_BRACKET`, `SHEER_WAND`, `SHEER_FABRIC`, `SHEER_MOTOR`, `SHEER_REMOTE`, `SHEER_CHARGER`
 - **ProductType**: `BLINDS`, `CURTAINS`, `SHUTTERS`
 - **TransactionType**: `ADDITION`, `DEDUCTION`, `ADJUSTMENT`
 - **UnitType**: `MM`, `UNITS`

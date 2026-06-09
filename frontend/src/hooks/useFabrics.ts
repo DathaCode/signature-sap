@@ -28,6 +28,6 @@ export function getFabricColorsFromData(data: FabricDataFormatted, material: str
 export function getFabricGroupFromData(data: FabricDataFormatted, material: string, fabricType: string): number | null {
     const groupStr = data[material]?.[fabricType]?.group;
     if (!groupStr) return null;
-    const map: Record<string, number> = { G1: 1, G2: 2, G3: 3 };
+    const map: Record<string, number> = { G1: 1, G2: 2, G3: 3, Budget: 4 };
     return map[groupStr] ?? null;
 }

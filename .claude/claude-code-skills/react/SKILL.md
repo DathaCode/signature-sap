@@ -20,7 +20,7 @@ applies-to: signature-sap
   - `pages/admin/` — OrderManagement, AdminOrderDetails, UserManagement, PricingManagement (incl. BlindFabricsTab), InventoryDashboard, TrashOrders
   - `pages/warehouse/` — warehouse-only views
 - **Reusable UI:** [frontend/src/components/ui/](frontend/src/components/ui/) (Button, Input, Card, etc.) — reuse before creating new.
-- **Fabric catalog:** [frontend/src/hooks/useFabrics.ts](frontend/src/hooks/useFabrics.ts) — TanStack Query hook that fetches live from `GET /api/blind-fabrics`. Use this in order forms; do NOT import the old static `fabrics.ts`.
+- **Fabric catalog:** [frontend/src/hooks/useFabrics.ts](frontend/src/hooks/useFabrics.ts) — TanStack Query hook that fetches live from `GET /api/fabrics`. Use this in order forms; do NOT import the old static `fabrics.ts`.
 - **Curtain form:** [frontend/src/components/orders/CurtainItemForm.tsx](frontend/src/components/orders/CurtainItemForm.tsx) — separate form for sheer curtain items. `NewOrder.tsx` renders either BlindItemForm or CurtainItemForm based on product type.
 - **Admin fabric management:** [frontend/src/components/admin/BlindFabricsTab.tsx](frontend/src/components/admin/BlindFabricsTab.tsx) — live inside PricingManagement page. Full CRUD for the BlindFabric catalog.
 - **Pricing util:** [frontend/src/utils/pricing.ts](frontend/src/utils/pricing.ts) mirrors backend matrix; rounds to NEAREST tier (backend rounds UP — known divergence, see CLAUDE.md).
@@ -84,7 +84,7 @@ frontend/src/
 │                             # CurtainWorksheet, BlindFabricsTab
 ├── services/
 │   └── api.ts                # axios + JWT interceptor + all API groups (orderApi, pricingApi,
-│                             # inventoryApi, blindFabricApi, quoteApi, authApi, userApi)
+│                             # inventoryApi, fabricsApi, quoteApi, authApi, userApi)
 ├── types/
 │   └── order.ts              # Order, OrderItem, Quote types — mirror schema.prisma
 ├── utils/
