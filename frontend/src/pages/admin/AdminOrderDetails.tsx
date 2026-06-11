@@ -37,9 +37,9 @@ function EditItemRow({ item, index, onChange, onRemove }: {
 }) {
     const f = (field: keyof BlindItem, value: any) => onChange(index, field, value);
     const inp = "h-8 text-xs px-2";
-    const sel = "h-8 text-xs px-2 rounded-md border border-input bg-background w-full";
+    const sel = "h-8 text-xs px-2 rounded-md border border-input bg-background dark:bg-brand-navy-dark dark:border-gray-600 dark:text-gray-100 w-full";
     return (
-        <div className="border rounded-lg p-3 space-y-2 bg-gray-50 relative">
+        <div className="border dark:border-gray-700 rounded-lg p-3 space-y-2 bg-gray-50 dark:bg-brand-navy-light/30 relative">
             <div className="flex items-center justify-between mb-1">
                 <span className="text-xs font-semibold text-gray-600">Item {index + 1}</span>
                 <button onClick={() => onRemove(index)} className="text-red-400 hover:text-red-600"><X className="h-4 w-4" /></button>
@@ -152,7 +152,7 @@ function EditCurtainItemRow({ item, index, onChange, onRemove }: {
 }) {
     const f = (field: keyof CurtainItem, value: any) => onChange(index, field, value);
     const inp = "h-8 text-xs px-2";
-    const sel = "h-8 text-xs px-2 rounded-md border border-input bg-background w-full";
+    const sel = "h-8 text-xs px-2 rounded-md border border-input bg-background dark:bg-brand-navy-dark dark:border-gray-600 dark:text-gray-100 w-full";
     const isMotorised = item.requiresTracks && item.trackType === 'Motorised';
     return (
         <div className="border rounded-lg p-3 space-y-2 bg-teal-50/60 relative">
@@ -544,7 +544,7 @@ export default function AdminOrderDetails() {
                 </div>
 
                 {/* Action Bar — clean row of buttons */}
-                <div className="flex flex-wrap items-center gap-2 border rounded-lg bg-gray-50/80 px-4 py-3">
+                <div className="flex flex-wrap items-center gap-2 border dark:border-gray-700 rounded-lg bg-gray-50/80 dark:bg-brand-navy-light/30 px-4 py-3">
                     {/* Edit (admin, PENDING/CONFIRMED) */}
                     {!isWarehouse && (order.status === 'PENDING' || order.status === 'CONFIRMED') && !editing && (
                         <Button variant="outline" size="sm" onClick={startEditing} disabled={actionLoading}>
@@ -641,7 +641,7 @@ export default function AdminOrderDetails() {
                         )}
 
                         {/* Label */}
-                        <div className="flex items-center gap-2 border rounded-lg px-4 py-2 bg-white">
+                        <div className="flex items-center gap-2 border dark:border-gray-700 rounded-lg px-4 py-2 bg-white dark:bg-brand-navy">
                             <Tag className="h-4 w-4 text-amber-500 shrink-0" />
                             {editingLabel ? (
                                 <div className="flex items-center gap-1.5 flex-1">
@@ -677,12 +677,12 @@ export default function AdminOrderDetails() {
                         </div>
 
                         {/* Admin Notes */}
-                        <div className="flex items-start gap-2 border rounded-lg px-4 py-2 bg-white sm:col-span-1">
+                        <div className="flex items-start gap-2 border dark:border-gray-700 rounded-lg px-4 py-2 bg-white dark:bg-brand-navy sm:col-span-1">
                             <StickyNote className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
                             {editingNotes ? (
                                 <div className="flex flex-col gap-1.5 flex-1">
                                     <textarea
-                                        className="text-xs border border-gray-200 rounded px-2 py-1 w-full resize-none focus:outline-none focus:ring-1 focus:ring-blue-400"
+                                        className="text-xs border border-gray-200 dark:border-gray-600 rounded px-2 py-1 w-full resize-none bg-white dark:bg-brand-navy-dark text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-400"
                                         value={adminNotesValue}
                                         onChange={e => setAdminNotesValue(e.target.value)}
                                         placeholder="Internal notes..."
@@ -884,7 +884,7 @@ export default function AdminOrderDetails() {
                                                     )}
                                                 </tr>
                                                 {isExpanded && !isWarehouse && (
-                                                <tr className="border-b bg-teal-50">
+                                                <tr className="border-b bg-teal-50 dark:bg-teal-900/20">
                                                     <td colSpan={6} className="px-8 py-4">
                                                         <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-1 text-sm mb-3">
                                                             {item.curtainType && <div><span className="text-muted-foreground">Type: </span><span className="font-medium">{item.curtainType}</span></div>}
@@ -896,7 +896,7 @@ export default function AdminOrderDetails() {
                                                         </div>
                                                         {/* Track Type details */}
                                                         {item.requiresTracks && (
-                                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-1 text-sm mb-3 border-t border-teal-200 pt-2">
+                                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-1 text-sm mb-3 border-t border-teal-200 dark:border-teal-800 pt-2">
                                                                 {item.trackType && <div><span className="text-muted-foreground">Track: </span><span className="font-medium">{item.trackType}</span></div>}
                                                                 {item.motorType && <div><span className="text-muted-foreground">Motor: </span><span className="font-medium">{item.motorType}</span></div>}
                                                                 {item.trackControlSide && <div><span className="text-muted-foreground">Control: </span><span className="font-medium">{item.trackControlSide}</span></div>}
@@ -910,13 +910,13 @@ export default function AdminOrderDetails() {
                                                         )}
                                                         {/* Bend details */}
                                                         {item.requiresBentTracks && (
-                                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-1 text-sm mb-3 border-t border-teal-200 pt-2">
+                                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-1 text-sm mb-3 border-t border-teal-200 dark:border-teal-800 pt-2">
                                                                 {item.bendType && <div><span className="text-muted-foreground">Bend: </span><span className="font-medium">{item.bendType}</span></div>}
                                                                 {item.bendQty && <div><span className="text-muted-foreground">Bend Qty: </span><span className="font-medium">{item.bendQty}</span></div>}
                                                             </div>
                                                         )}
                                                         {/* Calculated values */}
-                                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-1 text-sm border-t border-teal-200 pt-2 mb-3">
+                                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-1 text-sm border-t border-teal-200 dark:border-teal-800 pt-2 mb-3">
                                                             {item.hookCount != null && <div><span className="text-muted-foreground">Hooks: </span><span className="font-medium">{item.hookCount}</span></div>}
                                                             {item.bracketCount != null && <div><span className="text-muted-foreground">Brackets: </span><span className="font-medium">{item.bracketCount}</span></div>}
                                                             {item.wandCount != null && <div><span className="text-muted-foreground">Wands: </span><span className="font-medium">{item.wandCount}</span></div>}
@@ -1030,7 +1030,7 @@ export default function AdminOrderDetails() {
                                                     )}
                                                 </tr>
                                                 {isExpanded && !isWarehouse && (
-                                                <tr className="border-b bg-blue-50">
+                                                <tr className="border-b bg-blue-50 dark:bg-blue-900/20">
                                                     <td colSpan={6} className="px-8 py-4">
                                                         <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-1 text-sm mb-3">
                                                             {item.fixing && <div><span className="text-muted-foreground">Fixing: </span><span className="font-medium">{item.fixing}</span></div>}

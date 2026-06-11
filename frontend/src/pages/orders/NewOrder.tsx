@@ -607,17 +607,17 @@ export default function NewOrderPage() {
                                         <button
                                             type="button"
                                             onClick={() => setExpandedCurtain(isOpen ? null : i)}
-                                            className="w-full flex items-center gap-3 p-3 bg-gray-50 hover:bg-gray-100 text-left"
+                                            className="w-full flex items-center gap-3 p-3 bg-gray-50 dark:bg-brand-navy-light/50 hover:bg-gray-100 dark:hover:bg-brand-navy-light text-left"
                                         >
                                             {isOpen ? <ChevronDown className="h-4 w-4 text-gray-500" /> : <ChevronRight className="h-4 w-4 text-gray-500" />}
                                             <span className="font-semibold w-12">#{i + 1}</span>
                                             <span className="flex-1 truncate">{curtain.location || '(no location)'}</span>
-                                            <span className="text-sm text-gray-600">{curtain.width} x {curtain.drop}mm</span>
-                                            <span className="text-sm text-gray-600">{curtain.fabric} - {curtain.fabricColour}</span>
+                                            <span className="text-sm text-gray-600 dark:text-gray-400">{curtain.width} x {curtain.drop}mm</span>
+                                            <span className="text-sm text-gray-600 dark:text-gray-400">{curtain.fabric} - {curtain.fabricColour}</span>
                                             <span className="font-semibold text-green-700 w-24 text-right">${(curtain.price || 0).toFixed(2)}</span>
                                         </button>
                                         {isOpen && (
-                                            <div className="p-4 bg-white space-y-2 text-sm">
+                                            <div className="p-4 bg-white dark:bg-brand-navy space-y-2 text-sm">
                                                 <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-2">
                                                     <div><span className="text-gray-500">Curtain Type:</span> <strong>{curtain.curtainType}</strong></div>
                                                     <div><span className="text-gray-500">Hem:</span> <strong>{curtain.hem}mm</strong></div>
@@ -718,7 +718,7 @@ export default function NewOrderPage() {
                             <textarea
                                 value={notes}
                                 onChange={(e) => setNotes(e.target.value)}
-                                className="mt-2 w-full border rounded-md px-3 py-2 text-sm min-h-[80px]"
+                                className="mt-2 w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm min-h-[80px] bg-white dark:bg-brand-navy-dark text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500"
                                 placeholder="Any special instructions..."
                             />
                         </CardContent>
@@ -733,7 +733,7 @@ export default function NewOrderPage() {
                                 setEditingIndex(null);
                                 setShowSummary(false);
                             }}
-                            className="bg-gray-100 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:bg-gray-200"
+                            className="bg-gray-100 dark:bg-brand-navy-light text-gray-700 dark:text-gray-200 px-6 py-3 rounded-lg font-semibold hover:bg-gray-200 dark:hover:bg-gray-600"
                         >
                             + Add More Curtains
                         </button>
@@ -859,7 +859,7 @@ export default function NewOrderPage() {
                                 disabled={savedItems.length > 0}
                                 className={`px-6 py-3 rounded-lg font-semibold transition-all ${productType === 'BLINDS'
                                     ? 'bg-brand-gold text-white shadow-md'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                    : 'bg-gray-100 dark:bg-brand-navy-light text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-brand-navy'
                                     } ${savedItems.length > 0 ? 'opacity-60 cursor-not-allowed' : ''}`}
                             >
                                 Block Out Blinds
@@ -870,7 +870,7 @@ export default function NewOrderPage() {
                                 disabled={savedItems.length > 0}
                                 className={`px-6 py-3 rounded-lg font-semibold transition-all ${productType === 'CURTAINS'
                                     ? 'bg-brand-gold text-white shadow-md'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                    : 'bg-gray-100 dark:bg-brand-navy-light text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-brand-navy'
                                     } ${savedItems.length > 0 ? 'opacity-60 cursor-not-allowed' : ''}`}
                             >
                                 Sheers
@@ -880,7 +880,7 @@ export default function NewOrderPage() {
                                 <button
                                     type="button"
                                     disabled
-                                    className="px-6 py-3 rounded-lg font-semibold bg-gray-100 text-gray-400 cursor-not-allowed opacity-70"
+                                    className="px-6 py-3 rounded-lg font-semibold bg-gray-100 dark:bg-brand-navy-light text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-70"
                                 >
                                     Plantation Shutters
                                 </button>
@@ -890,7 +890,7 @@ export default function NewOrderPage() {
                                 <button
                                     type="button"
                                     disabled
-                                    className="px-6 py-3 rounded-lg font-semibold bg-gray-100 text-gray-400 cursor-not-allowed opacity-70"
+                                    className="px-6 py-3 rounded-lg font-semibold bg-gray-100 dark:bg-brand-navy-light text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-70"
                                 >
                                     Outdoor Blinds
                                 </button>
@@ -964,7 +964,7 @@ export default function NewOrderPage() {
                     )}
 
                     {/* ACTION BUTTONS */}
-                    <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl p-6">
+                    <div className="bg-gray-50 dark:bg-brand-navy-light/20 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-6">
                         <div className="flex gap-4 flex-wrap">
                             <button
                                 type="button"
@@ -987,7 +987,7 @@ export default function NewOrderPage() {
                             <button
                                 type="button"
                                 onClick={handleDiscardCurrentItem}
-                                className="bg-gray-200 text-gray-700 px-6 py-4 rounded-lg font-semibold text-lg flex items-center justify-center gap-3 hover:bg-gray-300 transition-all"
+                                className="bg-gray-200 dark:bg-brand-navy-light text-gray-700 dark:text-gray-200 px-6 py-4 rounded-lg font-semibold text-lg flex items-center justify-center gap-3 hover:bg-gray-300 dark:hover:bg-gray-600 transition-all"
                             >
                                 <X className="h-5 w-5" />
                                 Cancel
@@ -995,7 +995,7 @@ export default function NewOrderPage() {
                         </div>
 
                         {editingIndex === null && savedItems.length > 0 && (
-                            <div className="pt-6 border-t border-gray-300 mt-6 text-center">
+                            <div className="pt-6 border-t border-gray-300 dark:border-gray-600 mt-6 text-center">
                                 <button
                                     type="button"
                                     onClick={handleFinishAndReview}

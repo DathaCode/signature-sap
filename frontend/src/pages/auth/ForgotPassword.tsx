@@ -24,12 +24,12 @@ export default function ForgotPasswordPage() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4">
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-brand-navy-dark py-12 px-4">
             <div className="w-full max-w-md">
                 <div className="flex justify-center mb-6">
-                    <h1 className="text-2xl font-bold text-gray-900">Signature Shades</h1>
+                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Signature Shades</h1>
                 </div>
-                <div className="bg-white p-8 rounded-lg shadow-md space-y-6">
+                <div className="bg-white dark:bg-brand-navy p-8 rounded-lg shadow-md space-y-6">
                     <div className="text-center">
                         <h2 className="text-2xl font-bold tracking-tight text-gray-900">Reset your password</h2>
                         <p className="mt-2 text-sm text-gray-600">

@@ -23,15 +23,15 @@ export default function ItemHistoryModal({ isOpen, onClose, item }: ItemHistoryM
             <div className="flex min-h-screen items-center justify-center p-4">
                 <div className="fixed inset-0 bg-black opacity-50" onClick={onClose}></div>
 
-                <div className="relative bg-white rounded-xl shadow-xl max-w-3xl w-full p-6 flex flex-col max-h-[85vh]">
+                <div className="relative bg-white dark:bg-brand-navy rounded-xl shadow-xl max-w-3xl w-full p-6 flex flex-col max-h-[85vh]">
                     <div className="flex items-center justify-between mb-6">
                         <div>
-                            <h2 className="text-xl font-bold text-brand-navy">Transaction History</h2>
-                            <p className="text-gray-600">
+                            <h2 className="text-xl font-bold text-brand-navy dark:text-white">Transaction History</h2>
+                            <p className="text-gray-600 dark:text-gray-400">
                                 {item.itemName} {item.colorVariant && `(${item.colorVariant})`}
                             </p>
                         </div>
-                        <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+                        <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
                             <X className="h-6 w-6" />
                         </button>
                     </div>
@@ -40,25 +40,25 @@ export default function ItemHistoryModal({ isOpen, onClose, item }: ItemHistoryM
                         {isLoading ? (
                             <div className="py-8 text-center">
                                 <div className="animate-spin h-8 w-8 border-2 border-brand-gold border-t-transparent rounded-full mx-auto mb-2" />
-                                <p className="text-gray-500">Loading history...</p>
+                                <p className="text-gray-500 dark:text-gray-400">Loading history...</p>
                             </div>
                         ) : transactions && transactions.length > 0 ? (
                             <table className="table">
-                                <thead className="bg-gray-50 sticky top-0 z-10">
+                                <thead className="bg-gray-50 dark:bg-brand-navy-dark sticky top-0 z-10">
                                     <tr>
-                                        <th className="!text-gray-600 !font-bold">Date</th>
-                                        <th className="!text-gray-600 !font-bold">Type</th>
-                                        <th className="!text-gray-600 !font-bold text-right">Change</th>
-                                        <th className="!text-gray-600 !font-bold text-right">Balance</th>
-                                        <th className="!text-gray-600 !font-bold">Notes</th>
+                                        <th className="!text-gray-600 dark:!text-gray-300 !font-bold">Date</th>
+                                        <th className="!text-gray-600 dark:!text-gray-300 !font-bold">Type</th>
+                                        <th className="!text-gray-600 dark:!text-gray-300 !font-bold text-right">Change</th>
+                                        <th className="!text-gray-600 dark:!text-gray-300 !font-bold text-right">Balance</th>
+                                        <th className="!text-gray-600 dark:!text-gray-300 !font-bold">Notes</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-gray-100">
+                                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                                     {transactions.map((tx) => (
                                         <tr key={tx.id}>
-                                            <td className="whitespace-nowrap text-sm text-gray-500">
+                                            <td className="whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                                                 <div className="flex items-center space-x-2">
-                                                    <Calendar className="h-4 w-4 text-gray-400" />
+                                                    <Calendar className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                                                     <span>{new Date(tx.createdAt).toLocaleString()}</span>
                                                 </div>
                                             </td>
@@ -77,10 +77,10 @@ export default function ItemHistoryModal({ isOpen, onClose, item }: ItemHistoryM
                                                 }`}>
                                                 {tx.quantityChange > 0 ? '+' : ''}{tx.quantityChange}
                                             </td>
-                                            <td className="text-right font-mono text-gray-900">
+                                            <td className="text-right font-mono text-gray-900 dark:text-gray-100">
                                                 {tx.newBalance}
                                             </td>
-                                            <td className="max-w-xs truncate text-sm text-gray-500">
+                                            <td className="max-w-xs truncate text-sm text-gray-500 dark:text-gray-400">
                                                 {tx.order ? (
                                                     <span className="text-brand-gold">Order #{tx.order.customerName}</span>
                                                 ) : tx.notes}
@@ -90,7 +90,7 @@ export default function ItemHistoryModal({ isOpen, onClose, item }: ItemHistoryM
                                 </tbody>
                             </table>
                         ) : (
-                            <div className="py-12 text-center text-gray-500 bg-gray-50 rounded-lg">
+                            <div className="py-12 text-center text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-brand-navy-dark rounded-lg">
                                 No transactions found for this item
                             </div>
                         )}

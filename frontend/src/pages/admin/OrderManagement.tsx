@@ -136,13 +136,13 @@ export default function OrderManagement() {
     const getTabStyle = (tab: string) => {
         const isActive = statusFilter === tab;
         const base = 'px-4 py-2 text-sm font-medium border-b-2 transition-colors cursor-pointer whitespace-nowrap';
-        if (!isActive) return `${base} border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300`;
+        if (!isActive) return `${base} border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300 dark:hover:border-gray-600`;
         switch (tab) {
-            case 'PENDING': return `${base} border-yellow-500 text-yellow-700 bg-yellow-50`;
-            case 'CONFIRMED': return `${base} border-green-500 text-green-700 bg-green-50`;
-            case 'PRODUCTION': return `${base} border-blue-500 text-blue-700 bg-blue-50`;
-            case 'COMPLETED': return `${base} border-gray-500 text-gray-700 bg-gray-50`;
-            case 'CANCELLED': return `${base} border-red-500 text-red-700 bg-red-50`;
+            case 'PENDING': return `${base} border-yellow-500 text-yellow-700 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20`;
+            case 'CONFIRMED': return `${base} border-green-500 text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20`;
+            case 'PRODUCTION': return `${base} border-blue-500 text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20`;
+            case 'COMPLETED': return `${base} border-gray-500 text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700/30`;
+            case 'CANCELLED': return `${base} border-red-500 text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/20`;
             default: return `${base} border-primary text-primary`;
         }
     };
@@ -169,7 +169,7 @@ export default function OrderManagement() {
                         className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all border ${
                             productTypeFilter === val
                                 ? 'bg-brand-gold text-white border-brand-gold shadow-sm'
-                                : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400'
+                                : 'bg-white dark:bg-brand-navy-light text-gray-600 dark:text-gray-300 border-gray-300 dark:border-brand-navy-light hover:border-gray-400 dark:hover:border-gray-500'
                         }`}
                     >
                         {label}
@@ -202,16 +202,16 @@ export default function OrderManagement() {
                         value={customerSearch}
                         onChange={(e) => setCustomerSearch(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && fetchOrders()}
-                        className="h-9 w-60 rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        className="h-9 w-60 rounded-md border border-input bg-background dark:bg-brand-navy dark:border-gray-600 dark:text-gray-100 dark:placeholder:text-gray-500 pl-9 pr-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:focus-visible:ring-brand-gold focus-visible:ring-offset-2"
                     />
                 </div>
                 <div className="flex items-center gap-2">
                     <label className="text-sm text-muted-foreground">From</label>
-                    <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-9 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" />
+                    <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-9 rounded-md border border-input bg-background dark:bg-brand-navy dark:border-gray-600 dark:text-gray-100 dark:[color-scheme:dark] px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:focus-visible:ring-brand-gold focus-visible:ring-offset-2" />
                 </div>
                 <div className="flex items-center gap-2">
                     <label className="text-sm text-muted-foreground">To</label>
-                    <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-9 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" />
+                    <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-9 rounded-md border border-input bg-background dark:bg-brand-navy dark:border-gray-600 dark:text-gray-100 dark:[color-scheme:dark] px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:focus-visible:ring-brand-gold focus-visible:ring-offset-2" />
                 </div>
                 <Button onClick={fetchOrders} size="sm" className="h-9">
                     <Search className="mr-2 h-4 w-4" />
@@ -270,7 +270,7 @@ export default function OrderManagement() {
                                             </td>
                                             <td className="px-3 py-3 align-middle">
                                                 {order.customerReference ? (
-                                                    <Link to={`${basePath}/orders/${order.orderNumber}?tab=${statusFilter}`} className="text-sm font-medium text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded hover:bg-indigo-100">
+                                                    <Link to={`${basePath}/orders/${order.orderNumber}?tab=${statusFilter}`} className="text-sm font-medium text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded hover:bg-indigo-100 dark:hover:bg-indigo-900/50">
                                                         {order.customerReference}
                                                     </Link>
                                                 ) : (

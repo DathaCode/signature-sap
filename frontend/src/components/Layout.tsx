@@ -40,7 +40,7 @@ export default function Layout({ children }: LayoutProps) {
                             <img
                                 src="/app-icon.webp"
                                 alt="Signature Shades"
-                                className="h-14 w-auto"
+                                className="h-14 w-auto rounded-md dark:bg-white dark:p-1"
                             />
                             <div className="hidden sm:block">
                                 <h1 className="text-brand-navy dark:text-white text-xl font-bold leading-tight">Signature Shades</h1>

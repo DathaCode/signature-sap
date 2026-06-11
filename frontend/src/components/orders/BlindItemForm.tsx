@@ -250,7 +250,7 @@ export function BlindItemForm({ index, onRemove, onCopy, onContinue, canRemove =
 
                 {/* Validation Error Alert */}
                 {validationError && (
-                    <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-md text-red-700">
+                    <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md text-red-700 dark:text-red-400">
                         <AlertCircle className="h-4 w-4" />
                         <span className="text-sm">{validationError}</span>
                     </div>
@@ -295,7 +295,7 @@ export function BlindItemForm({ index, onRemove, onCopy, onContinue, canRemove =
                 </div>
 
                 {/* Installation Details */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-blue-50 p-4 rounded-md">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-blue-50 dark:bg-blue-950/30 p-4 rounded-md">
                     <div className="space-y-2">
                         <Label>Fixing Type</Label>
                         <Select
@@ -315,7 +315,7 @@ export function BlindItemForm({ index, onRemove, onCopy, onContinue, canRemove =
                 </div>
 
                 {/* Bracket Details */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-amber-50 p-4 rounded-md">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-amber-50 dark:bg-amber-950/30 p-4 rounded-md">
                     <div className="space-y-2">
                         <Label>Bracket Type</Label>
                         <Select
@@ -335,7 +335,7 @@ export function BlindItemForm({ index, onRemove, onCopy, onContinue, canRemove =
                 </div>
 
                 {/* Motor/Chain Selection */}
-                <div className="bg-green-50 p-4 rounded-md space-y-4">
+                <div className="bg-green-50 dark:bg-green-950/30 p-4 rounded-md space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label>Chain/Motor</Label>
@@ -360,7 +360,7 @@ export function BlindItemForm({ index, onRemove, onCopy, onContinue, canRemove =
 
                     {/* Remote & Charger — mandatory for motorised (non-winder) blinds */}
                     {showRemoteCharger && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1 border-t border-green-200">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1 border-t border-green-200 dark:border-green-900">
                             <div className="space-y-2">
                                 <Label>Remote Control <span className="text-red-500">*</span></Label>
                                 <Select
@@ -384,7 +384,7 @@ export function BlindItemForm({ index, onRemove, onCopy, onContinue, canRemove =
                 </div>
 
                 {/* Fabric Selection */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-purple-50 p-4 rounded-md">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-purple-50 dark:bg-purple-950/30 p-4 rounded-md">
                     <div className="space-y-2">
                         <Label>Roll Direction</Label>
                         <Select
@@ -425,7 +425,7 @@ export function BlindItemForm({ index, onRemove, onCopy, onContinue, canRemove =
                 </div>
 
                 {/* Bottom Rail Details */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-md">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 dark:bg-gray-800/30 p-4 rounded-md">
                     <div className="space-y-2">
                         <Label>Bottom Rail Type</Label>
                         <Select
@@ -455,7 +455,7 @@ export function BlindItemForm({ index, onRemove, onCopy, onContinue, canRemove =
                 </div>
 
                 {/* ---- PELMET SECTION (indigo) ---- */}
-                <div className="bg-indigo-50 rounded-lg p-4 space-y-3">
+                <div className="bg-indigo-50 dark:bg-indigo-950/30 rounded-lg p-4 space-y-3">
                     <div className="flex items-center gap-4">
                         <Label className="font-semibold">Do you require Pelmet?</Label>
                         <div className="flex gap-3">

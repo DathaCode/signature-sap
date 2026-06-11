@@ -297,7 +297,7 @@ export function CurtainItemForm({ index, curtainNumber, highlightEmpty = false }
                 </div>
 
                 {/* ---- TYPE & INSTALLATION (blue) ---- */}
-                <div className="bg-blue-50 rounded-lg p-4 space-y-3">
+                <div className="bg-blue-50 dark:bg-blue-950/30 rounded-lg p-4 space-y-3">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                             <Label>Curtain Type</Label>
@@ -325,7 +325,7 @@ export function CurtainItemForm({ index, curtainNumber, highlightEmpty = false }
                 </div>
 
                 {/* ---- FABRIC (purple) ---- */}
-                <div className="bg-purple-50 rounded-lg p-4 space-y-3">
+                <div className="bg-purple-50 dark:bg-purple-950/30 rounded-lg p-4 space-y-3">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <Label>Fabric</Label>
@@ -348,7 +348,7 @@ export function CurtainItemForm({ index, curtainNumber, highlightEmpty = false }
                 </div>
 
                 {/* ---- TRACK & OPENING (amber) ---- */}
-                <div className="bg-amber-50 rounded-lg p-4 space-y-3">
+                <div className="bg-amber-50 dark:bg-amber-950/30 rounded-lg p-4 space-y-3">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                             <Label>Opening Type</Label>
@@ -388,7 +388,7 @@ export function CurtainItemForm({ index, curtainNumber, highlightEmpty = false }
                 </div>
 
                 {/* ---- TRACK TYPE SECTION (teal) ---- */}
-                <div className="bg-teal-50 rounded-lg p-4 space-y-3">
+                <div className="bg-teal-50 dark:bg-teal-950/30 rounded-lg p-4 space-y-3">
                     <div className="flex items-center gap-4">
                         <Label className="font-semibold">Do you require tracks?</Label>
                         <div className="flex gap-3">
@@ -496,7 +496,7 @@ export function CurtainItemForm({ index, curtainNumber, highlightEmpty = false }
                 </div>
 
                 {/* ---- BEND SECTION (rose) ---- */}
-                <div className="bg-rose-50 rounded-lg p-4 space-y-3">
+                <div className="bg-rose-50 dark:bg-rose-950/30 rounded-lg p-4 space-y-3">
                     <div className="flex items-center gap-4">
                         <Label className="font-semibold">Do you require bent tracks?</Label>
                         <div className="flex gap-3">
@@ -522,7 +522,7 @@ export function CurtainItemForm({ index, curtainNumber, highlightEmpty = false }
                     </div>
 
                     {requiresBentTracks && (
-                        <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800 font-medium">
+                        <div className="mt-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg text-sm text-amber-800 dark:text-amber-300 font-medium">
                             Bent track pricing will be confirmed separately — Total will be added after reviewing your drawings
                         </div>
                     )}
@@ -557,7 +557,7 @@ export function CurtainItemForm({ index, curtainNumber, highlightEmpty = false }
                             <div>
                                 <Label>Attach File</Label>
                                 {bendFilePath ? (
-                                    <div className="flex items-center gap-2 mt-2 p-3 border border-green-300 bg-green-50 rounded-lg">
+                                    <div className="flex items-center gap-2 mt-2 p-3 border border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/20 rounded-lg">
                                         <a
                                             href={getBendDrawingUrl(bendFilePath)}
                                             target="_blank"
@@ -575,17 +575,17 @@ export function CurtainItemForm({ index, curtainNumber, highlightEmpty = false }
                                         </button>
                                     </div>
                                 ) : (
-                                    <label className="flex flex-col items-center justify-center gap-2 cursor-pointer mt-2 px-6 py-8 border-2 border-dashed border-gray-300 rounded-lg hover:border-gray-400 bg-white transition-colors">
-                                        <div className="p-2 bg-gray-100 rounded-lg">
-                                            <Upload className="h-5 w-5 text-gray-500" />
+                                    <label className="flex flex-col items-center justify-center gap-2 cursor-pointer mt-2 px-6 py-8 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg hover:border-gray-400 dark:hover:border-gray-500 bg-white dark:bg-brand-navy-dark transition-colors">
+                                        <div className="p-2 bg-gray-100 dark:bg-brand-navy-light rounded-lg">
+                                            <Upload className="h-5 w-5 text-gray-500 dark:text-gray-400" />
                                         </div>
                                         <div className="text-center">
                                             <span className="text-sm font-medium text-brand-gold">
                                                 {isUploading ? 'Uploading...' : 'Click to upload'}
                                             </span>
-                                            <span className="text-sm text-gray-500"> or drag and drop</span>
+                                            <span className="text-sm text-gray-500 dark:text-gray-400"> or drag and drop</span>
                                         </div>
-                                        <p className="text-xs text-gray-400">
+                                        <p className="text-xs text-gray-400 dark:text-gray-500">
                                             JPG, PNG, CSV, XLSX, XLSM, PDF (max. 10 MB)
                                         </p>
                                         <input
@@ -603,7 +603,7 @@ export function CurtainItemForm({ index, curtainNumber, highlightEmpty = false }
                 </div>
 
                 {/* ---- DROP DEDUCTION (orange) ---- */}
-                <div className="bg-orange-50 rounded-lg p-4 space-y-3">
+                <div className="bg-orange-50 dark:bg-orange-950/30 rounded-lg p-4 space-y-3">
                     <div className="flex items-center gap-4">
                         <Label className="font-semibold">Drop Deduction?</Label>
                         <div className="flex gap-3">
@@ -631,7 +631,7 @@ export function CurtainItemForm({ index, curtainNumber, highlightEmpty = false }
                                 <Label>Deduction Amount (mm)</Label>
                                 <select
                                     {...register(`items.${index}.dropDeductionValue`, { valueAsNumber: true })}
-                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                    className="flex h-10 w-full rounded-md border border-input bg-background dark:bg-brand-navy-dark dark:border-gray-600 dark:text-gray-100 px-3 py-2 text-sm"
                                 >
                                     {[30, 35, 40, 50, 60].map(v => (
                                         <option key={v} value={v}>{v}mm</option>

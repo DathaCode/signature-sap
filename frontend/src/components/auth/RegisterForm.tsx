@@ -32,13 +32,13 @@ export function RegisterForm() {
 
     if (pendingApproval) {
         return (
-            <div className="w-full max-w-md space-y-6 bg-white p-8 rounded-lg shadow-md text-center">
+            <div className="w-full max-w-md space-y-6 bg-white dark:bg-brand-navy p-8 rounded-lg shadow-md text-center">
                 <div className="flex justify-center">
                     <div className="h-16 w-16 rounded-full bg-amber-100 flex items-center justify-center">
                         <Clock className="h-8 w-8 text-amber-600" />
                     </div>
                 </div>
-                <h2 className="text-2xl font-bold text-gray-900">Account Pending Approval</h2>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Account Pending Approval</h2>
                 <p className="text-gray-600">
                     Your account has been created and is waiting for admin approval.
                     You'll be able to sign in once your account has been approved.
@@ -54,9 +54,9 @@ export function RegisterForm() {
     }
 
     return (
-        <div className="w-full max-w-md space-y-8 bg-white p-8 rounded-lg shadow-md">
+        <div className="w-full max-w-md space-y-8 bg-white dark:bg-brand-navy p-8 rounded-lg shadow-md">
             <div className="text-center">
-                <h2 className="text-3xl font-bold tracking-tight text-gray-900">Create an account</h2>
+                <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Create an account</h2>
                 <p className="mt-2 text-sm text-gray-600">
                     Already have an account? <Link to="/login" className="font-medium text-blue-600 hover:text-blue-500">Sign in</Link>
                 </p>

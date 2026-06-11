@@ -55,23 +55,23 @@ export default function AdjustQuantityModal({ isOpen, onClose, item }: AdjustQua
             <div className="flex min-h-screen items-center justify-center p-4">
                 <div className="fixed inset-0 bg-black opacity-50" onClick={onClose}></div>
 
-                <div className="relative bg-white rounded-xl shadow-xl max-w-md w-full p-6">
-                    <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+                <div className="relative bg-white dark:bg-brand-navy rounded-xl shadow-xl max-w-md w-full p-6">
+                    <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
                         <X className="h-6 w-6" />
                     </button>
 
-                    <h2 className="text-xl font-bold text-brand-navy mb-1">Adjust Quantity</h2>
-                    <p className="text-gray-600 text-sm mb-4">
+                    <h2 className="text-xl font-bold text-brand-navy dark:text-white mb-1">Adjust Quantity</h2>
+                    <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
                         {item.itemName} {item.colorVariant && `(${item.colorVariant})`}
                     </p>
 
                     <form onSubmit={handleSubmit} className="space-y-4">
-                        <div className="flex p-1 bg-gray-100 rounded-lg">
+                        <div className="flex p-1 bg-gray-100 dark:bg-brand-navy-dark rounded-lg">
                             <button
                                 type="button"
                                 className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${adjustmentType === 'add'
-                                        ? 'bg-white text-green-700 shadow-sm'
-                                        : 'text-gray-600 hover:text-gray-900'
+                                        ? 'bg-white dark:bg-brand-navy-light text-green-700 shadow-sm'
+                                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
                                     }`}
                                 onClick={() => setAdjustmentType('add')}
                             >
@@ -83,8 +83,8 @@ export default function AdjustQuantityModal({ isOpen, onClose, item }: AdjustQua
                             <button
                                 type="button"
                                 className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${adjustmentType === 'remove'
-                                        ? 'bg-white text-red-700 shadow-sm'
-                                        : 'text-gray-600 hover:text-gray-900'
+                                        ? 'bg-white dark:bg-brand-navy-light text-red-700 shadow-sm'
+                                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
                                     }`}
                                 onClick={() => setAdjustmentType('remove')}
                             >
@@ -111,10 +111,10 @@ export default function AdjustQuantityModal({ isOpen, onClose, item }: AdjustQua
 
                         <div>
                             <label className="label">New Balance Preview</label>
-                            <div className={`p-3 rounded-lg border flex justify-between items-center ${newBalance < 0 ? 'bg-red-50 border-red-200' : 'bg-gray-50 border-gray-200'
+                            <div className={`p-3 rounded-lg border flex justify-between items-center ${newBalance < 0 ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800' : 'bg-gray-50 dark:bg-brand-navy-dark border-gray-200 dark:border-gray-700'
                                 }`}>
-                                <span className="text-gray-600">Current: {item.quantity}</span>
-                                <span className="font-bold text-brand-navy text-lg">
+                                <span className="text-gray-600 dark:text-gray-400">Current: {item.quantity}</span>
+                                <span className="font-bold text-brand-navy dark:text-brand-gold text-lg">
                                     → {newBalance} {item.unitType}
                                 </span>
                             </div>

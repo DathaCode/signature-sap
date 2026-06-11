@@ -38,8 +38,8 @@ export default function ResetPasswordPage() {
 
     if (!token) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-                <div className="bg-white p-8 rounded-lg shadow-md max-w-md w-full text-center space-y-4">
+            <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-brand-navy-dark p-4">
+                <div className="bg-white dark:bg-brand-navy p-8 rounded-lg shadow-md max-w-md w-full text-center space-y-4">
                     <h2 className="text-xl font-bold text-red-600">Invalid Reset Link</h2>
                     <p className="text-gray-600 text-sm">This reset link is missing a token. Please request a new one.</p>
                     <Link to="/forgot-password">
@@ -51,12 +51,12 @@ export default function ResetPasswordPage() {
     }
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4">
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-brand-navy-dark py-12 px-4">
             <div className="w-full max-w-md">
                 <div className="flex justify-center mb-6">
-                    <h1 className="text-2xl font-bold text-gray-900">Signature Shades</h1>
+                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Signature Shades</h1>
                 </div>
-                <div className="bg-white p-8 rounded-lg shadow-md space-y-6">
+                <div className="bg-white dark:bg-brand-navy p-8 rounded-lg shadow-md space-y-6">
                     <div className="text-center">
                         <h2 className="text-2xl font-bold tracking-tight text-gray-900">Set new password</h2>
                         <p className="mt-2 text-sm text-gray-600">Enter your new password below.</p>

@@ -587,8 +587,8 @@ export default function PricingManagement() {
                         onClick={() => setActiveTab(tab)}
                         className={`px-6 py-3 font-medium text-sm border-b-2 transition-colors rounded-t-md ${
                             activeTab === tab
-                                ? 'border-blue-600 text-blue-700 bg-blue-50'
-                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                                ? 'border-blue-600 text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20'
+                                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-brand-navy-light/50'
                         }`}
                     >
                         {label}
@@ -606,8 +606,8 @@ export default function PricingManagement() {
                                 onClick={() => setFabricGroup(group)}
                                 className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                                     fabricGroup === group
-                                        ? 'border-blue-600 text-blue-700 bg-blue-50'
-                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                                        ? 'border-blue-600 text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20'
+                                        : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-brand-navy-light/50'
                                 }`}
                             >
                                 {group === 4 ? 'Budget' : `Group ${group}`}
@@ -629,11 +629,11 @@ export default function PricingManagement() {
                                     <table className="caption-bottom text-sm text-left border-separate border-spacing-0 min-w-max">
                                         <thead>
                                             <tr>
-                                                <th className="p-2 border-b border-r font-medium sticky top-0 left-0 bg-gray-100 z-30 whitespace-nowrap">
+                                                <th className="p-2 border-b border-r font-medium sticky top-0 left-0 bg-gray-100 dark:bg-brand-navy-light dark:text-gray-200 z-30 whitespace-nowrap">
                                                     Drop \ Width
                                                 </th>
                                                 {widths.map(width => (
-                                                    <th key={width} className="p-2 border-b border-r font-medium text-center min-w-[88px] sticky top-0 bg-gray-100 z-20 whitespace-nowrap">
+                                                    <th key={width} className="p-2 border-b border-r font-medium text-center min-w-[88px] sticky top-0 bg-gray-100 dark:bg-brand-navy-light dark:text-gray-200 z-20 whitespace-nowrap">
                                                         {width}
                                                     </th>
                                                 ))}
@@ -642,11 +642,11 @@ export default function PricingManagement() {
                                         <tbody>
                                             {drops.map(drop => (
                                                 <tr key={drop}>
-                                                    <th className="p-2 border-b border-r font-medium sticky left-0 bg-gray-100 z-10 whitespace-nowrap">
+                                                    <th className="p-2 border-b border-r font-medium sticky left-0 bg-gray-100 dark:bg-brand-navy-light dark:text-gray-200 z-10 whitespace-nowrap">
                                                         {drop}
                                                     </th>
                                                     {widths.map(width => (
-                                                        <td key={`${width}-${drop}`} className="p-1 border-b border-r text-center bg-white">
+                                                        <td key={`${width}-${drop}`} className="p-1 border-b border-r text-center bg-white dark:bg-brand-navy">
                                                             <Input
                                                                 type="number"
                                                                 className="h-8 w-full text-center px-1"

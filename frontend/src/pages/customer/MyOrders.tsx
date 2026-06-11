@@ -106,7 +106,7 @@ export default function MyOrders() {
                         <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-end">
                             {/* Reference search */}
                             <div className="flex-1 min-w-[200px]">
-                                <label className="text-xs font-medium text-gray-500 mb-1 block">Search</label>
+                                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">Search</label>
                                 <div className="relative">
                                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                                     <Input
@@ -120,12 +120,12 @@ export default function MyOrders() {
 
                             {/* Date from */}
                             <div className="min-w-[160px]">
-                                <label className="text-xs font-medium text-gray-500 mb-1 block">From</label>
+                                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">From</label>
                                 <div className="relative">
                                     <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                                     <input
                                         type="date"
-                                        className="w-full pl-9 pr-3 h-9 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-brand-gold focus:border-brand-gold outline-none"
+                                        className="w-full pl-9 pr-3 h-9 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-brand-navy text-gray-900 dark:text-gray-100 dark:[color-scheme:dark] focus:ring-2 focus:ring-brand-gold focus:border-brand-gold outline-none"
                                         value={dateFrom}
                                         onChange={(e) => setDateFrom(e.target.value)}
                                         max={dateTo || undefined}
@@ -135,12 +135,12 @@ export default function MyOrders() {
 
                             {/* Date to */}
                             <div className="min-w-[160px]">
-                                <label className="text-xs font-medium text-gray-500 mb-1 block">To</label>
+                                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">To</label>
                                 <div className="relative">
                                     <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                                     <input
                                         type="date"
-                                        className="w-full pl-9 pr-3 h-9 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-brand-gold focus:border-brand-gold outline-none"
+                                        className="w-full pl-9 pr-3 h-9 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-brand-navy text-gray-900 dark:text-gray-100 dark:[color-scheme:dark] focus:ring-2 focus:ring-brand-gold focus:border-brand-gold outline-none"
                                         value={dateTo}
                                         onChange={(e) => setDateTo(e.target.value)}
                                         min={dateFrom || undefined}
@@ -191,7 +191,7 @@ export default function MyOrders() {
                 <div className="grid gap-4">
                     {filteredOrders.map((order) => (
                         <Card key={order.id} className="overflow-hidden hover:border-gray-400 transition-colors">
-                            <CardHeader className="bg-gray-50/50 py-4 flex flex-row items-center justify-between">
+                            <CardHeader className="bg-gray-50/50 dark:bg-brand-navy-light/30 py-4 flex flex-row items-center justify-between">
                                 <div className="space-y-1">
                                     <div className="flex items-center gap-2">
                                         <span className="font-semibold text-lg">{order.orderNumber}</span>

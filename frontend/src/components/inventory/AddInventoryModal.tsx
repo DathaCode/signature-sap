@@ -167,13 +167,13 @@ export default function AddInventoryModal({ isOpen, onClose }: AddInventoryModal
             <div className="flex min-h-screen items-center justify-center p-4">
                 <div className="fixed inset-0 bg-black opacity-50" onClick={onClose} />
 
-                <div className="relative bg-white rounded-xl shadow-xl max-w-md w-full p-6 animate-fade-in">
-                    <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+                <div className="relative bg-white dark:bg-brand-navy rounded-xl shadow-xl max-w-md w-full p-6 animate-fade-in">
+                    <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
                         <X className="h-6 w-6" />
                     </button>
 
-                    <h2 className="text-xl font-bold text-brand-navy mb-1">Add / Restock Item</h2>
-                    <p className="text-xs text-gray-400 mb-4">
+                    <h2 className="text-xl font-bold text-brand-navy dark:text-white mb-1">Add / Restock Item</h2>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mb-4">
                         If the item already exists, stock will be added to its current quantity.
                     </p>
 

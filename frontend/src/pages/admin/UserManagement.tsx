@@ -181,14 +181,14 @@ function UserDialog({
         `px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
             activeTab === tab
                 ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
+                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
         }`;
 
     return createPortal(
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl flex flex-col" style={{ maxHeight: '90vh' }}>
+            <div className="bg-white dark:bg-brand-navy rounded-xl shadow-2xl w-full max-w-2xl flex flex-col" style={{ maxHeight: '90vh' }}>
                 {/* Header */}
-                <div className="px-6 pt-5 pb-3 border-b">
+                <div className="px-6 pt-5 pb-3 border-b dark:border-brand-navy-light">
                     <div className="flex items-start justify-between mb-1">
                         <div className="flex items-center gap-3">
                             <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-sm">
@@ -199,7 +199,7 @@ function UserDialog({
                                     {loading ? 'Loading...' : user?.name}
                                 </h2>
                                 {!loading && user && (
-                                    <p className="text-xs text-gray-500">
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">
                                         {user.company || '—'} · Member since {user.createdAt ? fmtDate(user.createdAt) : '—'}
                                     </p>
                                 )}
@@ -256,15 +256,15 @@ function UserDialog({
                             {activeTab === 'discounts' && (
                                 <div className="space-y-4">
                                     {/* Blinds / Curtains sub-tabs */}
-                                    <div className="inline-flex rounded-lg border border-gray-200 p-0.5 bg-gray-50">
+                                    <div className="inline-flex rounded-lg border border-gray-200 dark:border-gray-700 p-0.5 bg-gray-50 dark:bg-brand-navy-dark">
                                         {(['blinds', 'curtains'] as const).map(p => (
                                             <button
                                                 key={p}
                                                 onClick={() => setDiscountProduct(p)}
                                                 className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors capitalize ${
                                                     discountProduct === p
-                                                        ? 'bg-white text-blue-600 shadow-sm'
-                                                        : 'text-gray-500 hover:text-gray-700'
+                                                        ? 'bg-white dark:bg-brand-navy-light text-blue-600 shadow-sm'
+                                                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
                                                 }`}
                                             >
                                                 {p}
@@ -275,15 +275,15 @@ function UserDialog({
                                     {/* ── Blinds discounts ── */}
                                     {discountProduct === 'blinds' && (
                                     <>
-                                    <p className="text-sm text-gray-500">
+                                    <p className="text-sm text-gray-500 dark:text-gray-400">
                                         Set per-group fabric discounts for Acmeda, TBS, and Motorised suppliers. These override the default blind pricing for this customer.
                                     </p>
 
-                                    <div className="border rounded-lg overflow-hidden">
+                                    <div className="border dark:border-gray-700 rounded-lg overflow-hidden">
                                         <table className="w-full text-sm">
-                                            <thead className="bg-gray-50">
+                                            <thead className="bg-gray-50 dark:bg-brand-navy-dark">
                                                 <tr>
-                                                    <th className="px-4 py-3 text-left font-medium text-gray-600 text-xs uppercase tracking-wide">Fabric Group</th>
+                                                    <th className="px-4 py-3 text-left font-medium text-gray-600 dark:text-gray-300 text-xs uppercase tracking-wide">Fabric Group</th>
                                                     <th className="px-4 py-3 text-left font-medium text-blue-600 text-xs uppercase tracking-wide">
                                                         <span className="inline-flex items-center gap-1.5">
                                                             <span className="h-2 w-2 rounded-full bg-blue-500 inline-block" />
@@ -306,8 +306,8 @@ function UserDialog({
                                             </thead>
                                             <tbody className="divide-y">
                                                 {GROUPS.map((group) => (
-                                                    <tr key={group} className="hover:bg-gray-50/50">
-                                                        <td className="px-4 py-3 font-semibold text-gray-800">
+                                                    <tr key={group} className="hover:bg-gray-50/50 dark:hover:bg-brand-navy-dark/50">
+                                                        <td className="px-4 py-3 font-semibold text-gray-800 dark:text-gray-100">
                                                             {group === 'Budget' ? 'Budget' : `Group ${group.replace('G', '')}`}
                                                         </td>
                                                         <td className="px-4 py-3">
@@ -319,9 +319,9 @@ function UserDialog({
                                                                     step={0.5}
                                                                     value={discounts[group].acmeda}
                                                                     onChange={e => setDiscount(group, 'acmeda', e.target.value)}
-                                                                    className="w-16 h-9 rounded-lg border border-gray-300 px-2 text-center text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                                    className="w-16 h-9 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-brand-navy-dark text-gray-900 dark:text-gray-100 px-2 text-center text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                                                                 />
-                                                                <span className="text-gray-400 text-sm">%</span>
+                                                                <span className="text-gray-400 dark:text-gray-500 text-sm">%</span>
                                                             </div>
                                                         </td>
                                                         <td className="px-4 py-3">
@@ -333,9 +333,9 @@ function UserDialog({
                                                                     step={0.5}
                                                                     value={discounts[group].tbs}
                                                                     onChange={e => setDiscount(group, 'tbs', e.target.value)}
-                                                                    className="w-16 h-9 rounded-lg border border-gray-300 px-2 text-center text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                                                                    className="w-16 h-9 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-brand-navy-dark text-gray-900 dark:text-gray-100 px-2 text-center text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                                                                 />
-                                                                <span className="text-gray-400 text-sm">%</span>
+                                                                <span className="text-gray-400 dark:text-gray-500 text-sm">%</span>
                                                             </div>
                                                         </td>
                                                         <td className="px-4 py-3">
@@ -347,9 +347,9 @@ function UserDialog({
                                                                     step={0.5}
                                                                     value={discounts[group].motorised}
                                                                     onChange={e => setDiscount(group, 'motorised', e.target.value)}
-                                                                    className="w-16 h-9 rounded-lg border border-gray-300 px-2 text-center text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                                                    className="w-16 h-9 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-brand-navy-dark text-gray-900 dark:text-gray-100 px-2 text-center text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
                                                                 />
-                                                                <span className="text-gray-400 text-sm">%</span>
+                                                                <span className="text-gray-400 dark:text-gray-500 text-sm">%</span>
                                                             </div>
                                                         </td>
                                                     </tr>
@@ -367,11 +367,11 @@ function UserDialog({
                                         Set a per-group discount for sheer & block-out curtains. The discount applies to the fabric cost of each curtain in this customer's orders.
                                     </p>
 
-                                    <div className="border rounded-lg overflow-hidden">
+                                    <div className="border dark:border-gray-700 rounded-lg overflow-hidden">
                                         <table className="w-full text-sm">
-                                            <thead className="bg-gray-50">
+                                            <thead className="bg-gray-50 dark:bg-brand-navy-dark">
                                                 <tr>
-                                                    <th className="px-4 py-3 text-left font-medium text-gray-600 text-xs uppercase tracking-wide">Fabric Group</th>
+                                                    <th className="px-4 py-3 text-left font-medium text-gray-600 dark:text-gray-300 text-xs uppercase tracking-wide">Fabric Group</th>
                                                     <th className="px-4 py-3 text-left font-medium text-purple-600 text-xs uppercase tracking-wide">
                                                         <span className="inline-flex items-center gap-1.5">
                                                             <span className="h-2 w-2 rounded-full bg-purple-500 inline-block" />
@@ -382,8 +382,8 @@ function UserDialog({
                                             </thead>
                                             <tbody className="divide-y">
                                                 {CURTAIN_GROUPS.map((group) => (
-                                                    <tr key={group} className="hover:bg-gray-50/50">
-                                                        <td className="px-4 py-3 font-semibold text-gray-800">{group}</td>
+                                                    <tr key={group} className="hover:bg-gray-50/50 dark:hover:bg-brand-navy-dark/50">
+                                                        <td className="px-4 py-3 font-semibold text-gray-800 dark:text-gray-100">{group}</td>
                                                         <td className="px-4 py-3">
                                                             <div className="flex items-center gap-2">
                                                                 <input
@@ -393,9 +393,9 @@ function UserDialog({
                                                                     step={0.5}
                                                                     value={curtainDiscounts[group]}
                                                                     onChange={e => setCurtainDiscount(group, e.target.value)}
-                                                                    className="w-16 h-9 rounded-lg border border-gray-300 px-2 text-center text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                                                    className="w-16 h-9 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-brand-navy-dark text-gray-900 dark:text-gray-100 px-2 text-center text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
                                                                 />
-                                                                <span className="text-gray-400 text-sm">%</span>
+                                                                <span className="text-gray-400 dark:text-gray-500 text-sm">%</span>
                                                             </div>
                                                         </td>
                                                     </tr>
@@ -459,30 +459,30 @@ function UserDialog({
                                     ) : (
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                             <div className="flex items-start gap-3">
-                                                <Phone className="h-4 w-4 text-gray-400 mt-1 shrink-0" />
+                                                <Phone className="h-4 w-4 text-gray-400 dark:text-gray-500 mt-1 shrink-0" />
                                                 <div>
-                                                    <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-0.5">Phone</p>
+                                                    <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide font-medium mb-0.5">Phone</p>
                                                     <p className="font-medium text-sm">{user.phone || '—'}</p>
                                                 </div>
                                             </div>
                                             <div className="flex items-start gap-3">
-                                                <Building2 className="h-4 w-4 text-gray-400 mt-1 shrink-0" />
+                                                <Building2 className="h-4 w-4 text-gray-400 dark:text-gray-500 mt-1 shrink-0" />
                                                 <div>
-                                                    <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-0.5">Company</p>
+                                                    <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide font-medium mb-0.5">Company</p>
                                                     <p className="font-medium text-sm">{user.company || '—'}</p>
                                                 </div>
                                             </div>
                                             <div className="flex items-start gap-3">
                                                 <MapPin className="h-4 w-4 text-gray-400 mt-1 shrink-0" />
                                                 <div>
-                                                    <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-0.5">Address</p>
+                                                    <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide font-medium mb-0.5">Address</p>
                                                     <p className="font-medium text-sm">{user.address || '—'}</p>
                                                 </div>
                                             </div>
                                             <div className="flex items-start gap-3">
                                                 <Calendar className="h-4 w-4 text-gray-400 mt-1 shrink-0" />
                                                 <div>
-                                                    <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-0.5">Member Since</p>
+                                                    <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide font-medium mb-0.5">Member Since</p>
                                                     <p className="font-medium text-sm">{user.createdAt ? fmtDate(user.createdAt) : '—'}</p>
                                                 </div>
                                             </div>
@@ -622,10 +622,10 @@ export default function UserManagement() {
                                             <td className="p-4">{user.email}</td>
                                             <td className="p-4">{user.company || <span className="text-gray-400">—</span>}</td>
                                             <td className="p-4 text-center">
-                                                <span className="text-xs font-medium text-gray-600">{user._count?.orders ?? 0}</span>
+                                                <span className="text-xs font-medium text-gray-600 dark:text-gray-300">{user._count?.orders ?? 0}</span>
                                             </td>
                                             <td className="p-4 text-center">
-                                                <span className="text-xs font-medium text-gray-600">{user._count?.quotes ?? 0}</span>
+                                                <span className="text-xs font-medium text-gray-600 dark:text-gray-300">{user._count?.quotes ?? 0}</span>
                                             </td>
                                             <td className="p-4">
                                                 <Badge variant={user.role === 'ADMIN' ? 'default' : 'secondary'}>

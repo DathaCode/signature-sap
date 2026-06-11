@@ -157,31 +157,31 @@ export default function CustomerDashboard() {
                 <div>
                     <h2 className="text-lg font-semibold mb-3">Admin Tools</h2>
                     <div className="grid gap-4 md:grid-cols-3">
-                        <Link to="/admin/users" className="rounded-lg border bg-white shadow-sm p-5 flex items-center gap-4 hover:shadow-md hover:border-blue-300 transition-all">
+                        <Link to="/admin/users" className="rounded-lg border bg-white dark:bg-brand-navy dark:border-brand-navy-light shadow-sm p-5 flex items-center gap-4 hover:shadow-md hover:border-blue-300 dark:hover:border-blue-600 transition-all">
                             <div className="h-11 w-11 rounded-lg bg-blue-100 flex items-center justify-center">
                                 <Users className="h-6 w-6 text-blue-600" />
                             </div>
                             <div>
-                                <p className="font-semibold text-gray-800">Manage Users</p>
-                                <p className="text-sm text-gray-500">Accounts &amp; approvals</p>
+                                <p className="font-semibold text-gray-800 dark:text-gray-100">Manage Users</p>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">Accounts &amp; approvals</p>
                             </div>
                         </Link>
-                        <Link to="/admin/inventory" className="rounded-lg border bg-white shadow-sm p-5 flex items-center gap-4 hover:shadow-md hover:border-green-300 transition-all">
+                        <Link to="/admin/inventory" className="rounded-lg border bg-white dark:bg-brand-navy dark:border-brand-navy-light shadow-sm p-5 flex items-center gap-4 hover:shadow-md hover:border-green-300 dark:hover:border-green-600 transition-all">
                             <div className="h-11 w-11 rounded-lg bg-green-100 flex items-center justify-center">
                                 <Package className="h-6 w-6 text-green-600" />
                             </div>
                             <div>
-                                <p className="font-semibold text-gray-800">Inventory</p>
-                                <p className="text-sm text-gray-500">Stock &amp; materials</p>
+                                <p className="font-semibold text-gray-800 dark:text-gray-100">Inventory</p>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">Stock &amp; materials</p>
                             </div>
                         </Link>
-                        <Link to="/admin/pricing" className="rounded-lg border bg-white shadow-sm p-5 flex items-center gap-4 hover:shadow-md hover:border-purple-300 transition-all">
+                        <Link to="/admin/pricing" className="rounded-lg border bg-white dark:bg-brand-navy dark:border-brand-navy-light shadow-sm p-5 flex items-center gap-4 hover:shadow-md hover:border-purple-300 dark:hover:border-purple-600 transition-all">
                             <div className="h-11 w-11 rounded-lg bg-purple-100 flex items-center justify-center">
                                 <DollarSign className="h-6 w-6 text-purple-600" />
                             </div>
                             <div>
-                                <p className="font-semibold text-gray-800">Pricing</p>
-                                <p className="text-sm text-gray-500">Fabric price matrix</p>
+                                <p className="font-semibold text-gray-800 dark:text-gray-100">Pricing</p>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">Fabric price matrix</p>
                             </div>
                         </Link>
                     </div>

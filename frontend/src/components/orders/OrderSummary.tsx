@@ -57,7 +57,7 @@ const SelectField = ({
             value={value}
             onChange={e => onChange(e.target.value)}
             disabled={disabled}
-            className="text-sm border border-gray-300 rounded px-2 py-1.5 bg-white disabled:opacity-40 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-1.5 bg-white dark:bg-brand-navy-dark text-gray-900 dark:text-gray-100 disabled:opacity-40 focus:outline-none focus:ring-1 focus:ring-blue-500"
         >
             <option value="">— No change —</option>
             {options.map(o => <option key={o} value={o}>{o}</option>)}
@@ -172,7 +172,7 @@ export default function OrderSummary({
                     <div className="relative w-full overflow-auto">
                         <table className="w-full caption-bottom text-sm text-left">
                             <thead>
-                                <tr className="border-b bg-gray-50">
+                                <tr className="border-b bg-gray-50 dark:bg-brand-navy-light/50">
                                     <th className="h-10 px-3 w-8">
                                         <button
                                             onClick={toggleSelectAll}
@@ -199,7 +199,7 @@ export default function OrderSummary({
                                     <>
                                         <tr
                                             key={`row-${index}`}
-                                            className={`border-b hover:bg-gray-50 cursor-pointer ${selectedIndices.has(index) ? 'bg-blue-50' : ''}`}
+                                            className={`border-b hover:bg-gray-50 dark:hover:bg-brand-navy-light/30 cursor-pointer ${selectedIndices.has(index) ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}
                                         >
                                             {/* Checkbox */}
                                             <td className="px-3 py-3" onClick={e => { e.stopPropagation(); toggleSelect(index); }}>
@@ -251,7 +251,7 @@ export default function OrderSummary({
 
                                         {/* Expanded details row */}
                                         {expandedRows.has(index) && (
-                                            <tr key={`detail-${index}`} className="bg-blue-50 border-b">
+                                            <tr key={`detail-${index}`} className="bg-blue-50 dark:bg-blue-900/20 border-b">
                                                 <td colSpan={8} className="px-8 py-4">
                                                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 text-sm">
                                                         <div className="col-span-2 md:col-span-2">
@@ -340,7 +340,7 @@ export default function OrderSummary({
 
             {/* Bulk Action Bar — appears when any blinds selected */}
             {someSelected && (
-                <Card className="border-2 border-blue-300 bg-blue-50">
+                <Card className="border-2 border-blue-300 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20">
                     <CardContent className="py-4">
                         <div className="flex items-center gap-3 flex-wrap">
                             <span className="font-semibold text-blue-800 text-sm">
@@ -459,13 +459,13 @@ export default function OrderSummary({
                         value={notes}
                         onChange={(e) => onNotesChange(e.target.value)}
                         placeholder="Any special instructions or notes..."
-                        className="w-full min-h-[80px] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        className="w-full min-h-[80px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-brand-navy-dark text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-brand-gold text-sm"
                     />
                 </CardContent>
             </Card>
 
             {/* Action Buttons */}
-            <div className="flex gap-4 sticky bottom-0 bg-white p-4 border-t shadow-lg rounded-t-lg">
+            <div className="flex gap-4 sticky bottom-0 bg-white dark:bg-brand-navy p-4 border-t dark:border-gray-700 shadow-lg rounded-t-lg">
                 <Button
                     type="button"
                     variant="outline"
